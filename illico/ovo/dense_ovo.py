@@ -28,7 +28,7 @@ def dense_ovo_mwu_kernel(
     contin_corr = 0.5 if use_continuity else 0.0
     n_ref, ncols = sorted_ref_data.shape
     n_tgt, _ = sorted_tgt_data.shape
-    
+
     U_statistics = np.empty(ncols, dtype=np.float64)
     pvals = np.empty(ncols, dtype=np.float64)
     n = n_ref + n_tgt
@@ -114,7 +114,7 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
             sorted_tgt_data=tgt_chunk,
             use_continuity=use_continuity,
         )
-    
+
     # Compute fold change
     fc = dense_fold_change(chunk, grpc, is_log1p=is_log1p)
 

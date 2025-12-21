@@ -1,7 +1,7 @@
 import os
 import re
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import memray
 import numpy as np

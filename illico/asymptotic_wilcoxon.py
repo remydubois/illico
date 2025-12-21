@@ -1,3 +1,4 @@
+import gc
 import math
 
 import anndata as ad
@@ -6,8 +7,6 @@ import pandas as pd
 from joblib import Parallel, delayed
 from loguru import logger
 from scipy import sparse
-
-import gc
 from tqdm.auto import tqdm
 
 from illico.ovo import ovo_mwu_over_contiguous_col_chunk
@@ -140,7 +139,7 @@ def asymptotic_wilcoxon(
                 results[:, col_chunk, 0] = pv
                 results[:, col_chunk, 1] = ustat
                 results[:, col_chunk, 2] = fc
-                
+
                 # Cleanup memory
                 del pv, ustat, fc
                 gc.collect()

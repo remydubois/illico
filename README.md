@@ -43,10 +43,10 @@ from illico import asymptotic_wilcoxon
 
 adata = ad.read_h5ad('dataset.h5ad') # (n_cells, n_genes)
 de_genes = asymptotic_wilcoxon(
-       adata, 
+       adata,
        # layer="Y", # <-- If you want tests to run not on .X, but a specific layer
-       group_keys="perturbation", 
-       reference="non-targeting", 
+       group_keys="perturbation",
+       reference="non-targeting",
        is_log1p=[False|True], # <-- Specify if your data underwent log1p or not
        )
 ```
@@ -291,7 +291,7 @@ The name *illico* is a wordplay inspired by the R package `presto` (now the Wilc
 # Contributing
 All contributions are welcome through merge requests. Developers are highly encouraged to rely on `tox` as the testing process is quite cumbersome.
 ## Testing
-The reason to be of this package is its speed, hence the need for extensive speed benchmarks in order to compare it exhaustively and accurately against existing solutions. `tox` is used to manage tests and testing environments. 
+The reason to be of this package is its speed, hence the need for extensive speed benchmarks in order to compare it exhaustively and accurately against existing solutions. `tox` is used to manage tests and testing environments.
 ```bash
 pip install tox # this can be system-wide, no need to install it within an environment
 ```
