@@ -1,6 +1,7 @@
 # Illico
 ## Overview
-Illico is a python library performing blazing fast asymptotic wilcoxon rank-sum tests (same as `scanpy.tl.rank_genes_groups(… tie_correct=True)`), useful for single-cell RNASeq data analyses and processing. Illico's features are:
+Illico is a python library performing blazing fast asymptotic wilcoxon rank-sum tests (same as `scanpy.tl.rank_genes_groups(… tie_correct=True)`), useful for single-cell RNASeq data analyses and processing.  
+Illico's features are:
 1. :rocket: Blazing fast: On K562 (essential) dataset (~300k cells, 8k genes, 2k perturbations), `illico` computes DE genes (with `reference="non-targeting"`) in a mere 30 seconds. That's more than 100 times faster than both `pdex` or `scanpy` with the same compute ressources (8 CPUs).
 2. :diamond_shape_with_a_dot_inside: No compromise: On VCC's H1 dataset, `illico`'s p-values matched `scipy.stats.mannwhitneyu` up to a relative difference of 1.e-12, and an absolute tol of 0.
 3. :zap: Thread-first: `illico` eventually parallelizes the processing (if specified by the user) over **threads**, never processes. This saves you from all the fixed cost of multiprocessing, such as spanning processes, duplicating data across processes, and communication costs.
@@ -331,3 +332,8 @@ tox -e memory-bench-ref # Should not be re-ran, ideally
 tox -e memory-bench-illico # Should be re-ran before every new PR
 tox -e memray-stats
 ```
+
+# Other tools available
+1. `scanpy` also implements OVO and OVR asymptotic wilcoxon rank-sum tests.
+2. `pdex` only implements OVO wilcoxon rank-sum tests.
+3. As of December 2025, `rapids-singlecell` has a pending PR adding a `rank_genes_groups` feature. I could not benchmark this solution as I had no GPU available, but it is expected that it runs at least as fast as `illico`, because GPU-based.
