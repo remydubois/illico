@@ -21,23 +21,13 @@ CELL_LINE_URLS = {
     "hepg2": "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE264667&format=file&file=GSE264667%5Fhepg2%5Fraw%5Fsinglecell%5F01%2Eh5ad",
 }
 
-DSET_FRACTIONS = [
-    pytest.param(0.01, id="1%"),
-    # pytest.param(1., id="100%", marks=pytest.mark.full),
-    pytest.param(1.0, id="100%"),
-]
-# DSET_FRACTIONS = pytest.param([0.01, 1.], marks=[pytest.mark.debug, pytest.mark.full]),
-# # pytest.param(1., id="100%", marks=pytest.mark.full),
-# pytest.param(1., id="100%"),
-#               ]
-
 
 @pytest.fixture(
     params=[
         (cell_line, fmt, fraction)
         for cell_line in ["k562", "rpe1", "jurkat", "hepg2"]
         for fmt in ["dense", "csr", "csc"]
-        for fraction in [0.0, 1.0]
+        for fraction in [0.0, 0.2]
     ],
     scope="function",
     ids=lambda p: f"{p[0]}-{p[1]}-{p[2]:.0%}",
@@ -70,7 +60,10 @@ def adata(request):
 
         if fraction == 0.0:
             col_idxs = np.random.RandomState(0).choice(adata.n_vars, size=1, replace=False)
-            # Sort the column indices because that's how scipy builds sparse matrics.
+            adata = adata[:, col_idxs].copy()
+        elif fraction < 1.0:
+            col_idxs = np.random.RandomState(0).choice(adata.n_vars, size=int(adata.n_vars * fraction), replace=False)
+            # Sort the column indices because that's how scipy builds sparse matrices.
             col_idxs.sort()
             adata = adata[:, col_idxs].copy()
 

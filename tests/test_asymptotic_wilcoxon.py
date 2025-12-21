@@ -1,7 +1,7 @@
 import os
 import re
-from datetime import datetime
 from pathlib import Path
+import warnings
 
 import memray
 import numpy as np
@@ -11,16 +11,13 @@ import scanpy as sc
 from numba import set_num_threads
 from pdex import parallel_differential_expression
 from pdex._single_cell import parallel_differential_expression_vec_wrapper
-from scanpy.tools import _rank_genes_groups
 from scipy.stats import mannwhitneyu
-from tqdm import tqdm
 
 from illico.asymptotic_wilcoxon import asymptotic_wilcoxon
 from illico.utils.compile import _precompile
 
 set_num_threads(1)  # Ensure single-threaded by default for testing consistency
 
-_rank_genes_groups.enumerate = lambda x: enumerate(tqdm(x))
 ATOL = 0.0
 RTOL = 1.0e-12
 
@@ -170,45 +167,47 @@ def test_unsorted_indices_error(rand_adata):
 
 def call_routine(data, method, test, num_threads):
     def run():
-        if method == "pdex":
-            parallel_differential_expression(
-                data,
-                groupby_key="gene",
-                reference="non-targeting",
-                num_workers=num_threads,
-            )
-        elif method == "pdexp":
-            parallel_differential_expression_vec_wrapper(
-                data,
-                groupby_key="gene",
-                reference="non-targeting",
-                num_workers=num_threads,
-            )
-        elif method == "illico":
-            reference = "non-targeting" if test == "ovo" else None
-            asymptotic_wilcoxon(
-                data,
-                is_log1p=False,
-                group_keys="gene",
-                reference_group=reference,
-                n_threads=num_threads,
-                batch_size=256,
-            )
-        elif method == "scanpy":
-            reference = "non-targeting" if test == "ovo" else "rest"
-            set_num_threads(num_threads)  # Scanpy does not set number of threads explicitely
-            group_counts = data.obs["gene"].value_counts()
-            valid_groups = group_counts.index[group_counts.values > 1].tolist()
-            sc.tl.rank_genes_groups(
-                data,
-                groupby="gene",
-                groups=valid_groups,
-                reference=reference,
-                method="wilcoxon",
-                tie_correct=True,
-            )
-        else:
-            raise ValueError(method)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            if method == "pdex":
+                parallel_differential_expression(
+                    data,
+                    groupby_key="gene",
+                    reference="non-targeting",
+                    num_workers=num_threads,
+                )
+            elif method == "pdexp":
+                parallel_differential_expression_vec_wrapper(
+                    data,
+                    groupby_key="gene",
+                    reference="non-targeting",
+                    num_workers=num_threads,
+                )
+            elif method == "illico":
+                reference = "non-targeting" if test == "ovo" else None
+                asymptotic_wilcoxon(
+                    data,
+                    is_log1p=False,
+                    group_keys="gene",
+                    reference_group=reference,
+                    n_threads=num_threads,
+                    batch_size=256,
+                )
+            elif method == "scanpy":
+                reference = "non-targeting" if test == "ovo" else "rest"
+                set_num_threads(num_threads)  # Scanpy does not set number of threads explicitely
+                group_counts = data.obs["gene"].value_counts()
+                valid_groups = group_counts.index[group_counts.values > 1].tolist()
+                sc.tl.rank_genes_groups(
+                    data,
+                    groupby="gene",
+                    groups=valid_groups,
+                    reference=reference,
+                    method="wilcoxon",
+                    tie_correct=True,
+                )
+            else:
+                raise ValueError(method)
 
     return run
 
@@ -222,10 +221,6 @@ def test_speed_benchmark(adata, method, test, num_threads, benchmark, request):
     if test != "ovo" and method in ["pdex", "pdexp"]:
         # This exits the test, not running the benchmark, and not raising an error
         pytest.skip("pdex only implements OVO test.")
-
-    _rank_genes_groups._CONST_MAX_SIZE = int(
-        2**31
-    )  # If not set, scanpy will chunk the input data making display and progress bars completely hectic
 
     # Compile
     if method == "illico":
