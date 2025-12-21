@@ -17,4 +17,4 @@ def test_precompile(rand_adata, test):
     # Assert no other signature was added
     assert len(dispatcher.nopython_signatures) == len(
         leg_sig
-    ), f"Dispatcher should not have recompiled:{'\n'.join(map(str, dispatcher.nopython_signatures))}"
+    ), f"Dispatcher should not have recompiled: {chr(10).join(map(str, dispatcher.nopython_signatures))}"
