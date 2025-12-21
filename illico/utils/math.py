@@ -38,7 +38,7 @@ def _add_at_vec(a: np.ndarray, b: np.ndarray, c: float | int) -> None:
         a[b[i]] += c[i]
 
 
-# TODO: overload properly
+# TODO: overload np.diff properly
 @njit(fastmath=True, nogil=True, cache=False)
 def diff(x: np.ndarray) -> np.ndarray:
     """Equivalent of np.diff.
@@ -192,7 +192,6 @@ def fold_change_from_summed_expr(group_agg_counts: np.ndarray, grpc: GroupContai
     return fold_change
 
 
-# TODO: rename this function as it does not take raw counts as input, only group-sorted counts
 @njit(nogil=True, fastmath=True, cache=False)
 def dense_fold_change(X: np.ndarray, grpc: GroupContainer, is_log1p: bool) -> np.ndarray:
     """Compute fold change from a dense array of expression counts.
@@ -246,12 +245,12 @@ def compute_sparsity(X: np.ndarray | sc_sparse.spmatrix) -> float:
 
 @njit(nogil=True, fastmath=True, cache=True, boundscheck=False)
 def chunk_and_fortranize(X: np.ndarray, chunk_lb: int, chunk_ub: int, indices: np.ndarray | None = None) -> np.ndarray:
-    # """Reads a chunk of a C-contiguous array and returns a Fortran-contiguous array with rows reordered according to grpc."""
     """Vertically chunk the input array and converts it to Fortran-contiguous.
 
     The reason to be of the conversion is that later operations access the columns of this array so F order is advantageous. Also,
-    storing the groups as contiguous allows all subsequent access to be done with lazy slicing ([x:y]) instead of fancy, which avoids
-    copying and allocating arrays for each group, which is very suboptimal as groups are all of differnent sizes.
+    this function performs one memory allocation instead of 2, which happens if calling np.asfortranarray on top of fancy-indexing.
+
+    NB: If indices is None, then all rows are taken as is.
 
     Args:
         X (np.ndarray): Input dense array

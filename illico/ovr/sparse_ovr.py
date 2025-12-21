@@ -16,8 +16,6 @@ from illico.utils.sparse.csr import (
     csr_get_contig_cols_into_csc,
 )
 
-# TODO: unify njit calls arg order
-
 
 @njit(fastmath=True, nogil=True, cache=False)
 def sparse_ovr_mwu_kernel(
@@ -66,7 +64,6 @@ def sparse_ovr_mwu_kernel(
 
         """Step 2: offset non-zero elements ranks by the number of zeros that precedes them"""
         if nz_idx.size:
-            # Equivalent of np.add.at
             _add_at_scalar(nnz_per_group[:, j], groups[nz_idx], 1.0)
         # Deduce number of zeros per group
         nz_per_group = group_counts - nnz_per_group[:, j]
@@ -94,8 +91,7 @@ def sparse_ovr_mwu_kernel(
     return pvals, U
 
 
-# TODO: should group indices, indptr etc be held in RLE struc as well ?
-@njit(nogil=True, fastmath=True, cache=False)  # This requires too many caching
+@njit(nogil=True, fastmath=True, cache=False)
 def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     X: CSCMatrix,
     chunk_lb: int,

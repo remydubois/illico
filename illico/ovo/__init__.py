@@ -43,7 +43,6 @@ def ovo_mwu_over_contiguous_col_chunk(
 
     # Check all possible input types
     if isinstance(X, np.ndarray):
-        # TODO: could sort reference here
         pvalues, statistics, fold_change = dense_ovo_mwu_kernel_over_contiguous_col_chunk(
             X,
             chunk_lb,

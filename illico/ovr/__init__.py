@@ -46,7 +46,6 @@ def ovr_mwu_over_col_contiguous_chunk(
     X_nb = scipy_to_nb(X)
 
     if isinstance(X_nb, np.ndarray):
-        # TODO: unify dense kernels, why is one receiving the chunk already and the other chunks itself
         pvalues, statistics, fold_change = dense_ovr_mwu_kernel_over_contiguous_col_chunk(
             X=X_nb,
             chunk_lb=chunk_lb,

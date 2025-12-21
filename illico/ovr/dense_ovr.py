@@ -33,14 +33,11 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
 
     Author: Rémy Dubois
     """
-    # TODO: handle tie correction properly
     contin_corr = 0.5 if use_continuity else 0.0
     if chunk_lb < 0 or chunk_ub > X.shape[1] or chunk_lb > chunk_ub:
         raise ValueError((chunk_lb, chunk_ub))
 
-    # TODO: check if converting to fortran helps here
-    # This comes at the cost of copying the array but it is more than twice faster so worth it. Maybe make the batch size smaller.
-    # chunk = X[:, chunk_lb:chunk_ub]
+    # Convert to F-order for faster column access and sorting later
     chunk = chunk_and_fortranize(X, chunk_lb, chunk_ub, None)
 
     # Get ranks and tie sums
@@ -55,10 +52,9 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
     n = chunk.shape[0]
     n_ref = np.expand_dims(n - grpc.counts, -1)  # (g, 1)
     n_tgt = np.expand_dims(grpc.counts, -1)  # (g, 1)
-    U = (n_ref * n_tgt + n_tgt * (n_tgt + 1) / 2) - ranksums
+    statistics = (n_ref * n_tgt + n_tgt * (n_tgt + 1) / 2) - ranksums
     mu = n_ref * n_tgt / 2.0
     # Compute pvals
-    # TODO: if the not jitted, maybe this double loop can be shelled inside a njit function
     pvals = np.empty(shape=(grpc.counts.size, chunk.shape[1]), dtype=np.float64)
     for j in range(chunk.shape[1]):
         for k in range(grpc.counts.size):
@@ -67,7 +63,7 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
                 n_tgt=n_tgt[k, 0],
                 n=n,
                 tie_sum=tie_sum[j],
-                U=U[k, j],
+                U=statistics[k, j],
                 mu=mu[k, 0],
                 contin_corr=contin_corr,
             )
@@ -75,5 +71,4 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
     # Get fold change
     fold_change = dense_fold_change(chunk, grpc=grpc, is_log1p=is_log1p)
 
-    # TODO: unify U names across funcs
-    return pvals, U, fold_change
+    return pvals, statistics, fold_change

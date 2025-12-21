@@ -7,13 +7,7 @@ from joblib import Parallel, delayed
 from loguru import logger
 from scipy import sparse
 
-# from rich.progress import (
-#     BarColumn,
-#     Progress,
-#     TextColumn,
-#     TimeElapsedColumn,
-#     TimeRemainingColumn,
-# )
+import gc
 from tqdm.auto import tqdm
 
 from illico.ovo import ovo_mwu_over_contiguous_col_chunk
@@ -40,7 +34,9 @@ def asymptotic_wilcoxon(
     layer: str | None = None,
     precompile: bool = True,
 ):
-    """Perform asymptotic Wilcoxon-Mann-Whitney tests for differential gene expression.
+    """Perform asymptotic Mann-Whitney tests for differential gene expression.
+
+    Mann-Whitney test is the same as Wilcoxon rank-sum test.
 
     This function takes as input an AnnData object of shape (n-cells, n-genes) with a group
     (e.g., perturbation) variable stored in .obs. It performs either one-versus-rest (OVR) or
@@ -96,8 +92,9 @@ def asymptotic_wilcoxon(
         if not check_indices_sorted_per_parcel(X.indices, X.indptr):
             raise ValueError(
                 "Input data matrix indices are not sorted. This is very unusual and may lead to incorrect results. "
-                "This can be the result of operations like `adata[:, np.random.choice(…)]` that do not preserve sorting"
-                "Please sort the data matrix with `adata.X.sort_indices()` indices prior to computing DE genes."
+                "This can be the result of operations like `adata[:, np.random.choice(…)]` that do not preserve sorting."
+                "Please make sure that indices used to chunk the adata or the expression matrix have been sorted "
+                "prior to computing DE genes."
             )
 
     if precompile:
@@ -130,26 +127,22 @@ def asymptotic_wilcoxon(
     logger.trace(f"Performing a total of {n_tests:,d} tests.")
     with Parallel(n_threads, prefer="threads", return_as="generator_unordered") as pool:
         with tqdm(total=n_tests, smoothing=0.0, unit="it", unit_scale=True, unit_divisor=1000) as pbar:
-            # with Progress(TextColumn()) as progress:
             if reference_group is None:  # ovr use case
-                # task = progress.add_task("Running one-versus-all MannWhitney-U tests", total=n_tests)
                 pbar.set_description("Running one-versus-all MannWhitney-U tests")
                 op = delayed(lambda *args: (ovr_mwu_over_col_contiguous_chunk(*args), args))
             else:  # ovo use case
-                # task = progress.add_task("Running one-versus-ref MannWhitney-U tests", total=n_tests)
                 pbar.set_description("Running one-versus-ref MannWhitney-U tests")
                 op = delayed(lambda *args: (ovo_mwu_over_contiguous_col_chunk(*args), args))
             for (pv, ustat, fc), args in pool(op(X, lb, ub, group_container, is_log1p) for lb, ub in iterator):
                 # progress.update(task, advance=group_container.counts.size * (args[2] - args[1]))  # refresh after processing is done
                 pbar.update(group_container.counts.size * (args[2] - args[1]))
                 col_chunk = slice(*args[1:3])
-                # TODO: the .T is weird, pandas should not index alternatively levels
                 results[:, col_chunk, 0] = pv
                 results[:, col_chunk, 1] = ustat
                 results[:, col_chunk, 2] = fc
+                
+                # Cleanup memory
                 del pv, ustat, fc
-                import gc
-
                 gc.collect()
 
         # Return a pd.DataFrame to index results
@@ -158,10 +151,6 @@ def asymptotic_wilcoxon(
             index=pd.MultiIndex.from_product([rows, cols], names=["pert", "feature"]),
             columns=["p_value", "statistic", "fold_change"],
         )
-
-        # TODO: why is this eating so much RAM ?!
-        # if reference_group is not None:
-        #     results.drop(index=reference_group, level=0, inplace=True)
 
         """
             This case is harder than the OVR use case, because:

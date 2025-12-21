@@ -28,7 +28,7 @@ def dense_ovo_mwu_kernel(
     contin_corr = 0.5 if use_continuity else 0.0
     n_ref, ncols = sorted_ref_data.shape
     n_tgt, _ = sorted_tgt_data.shape
-    # TODO: check if faster to allocate here, or once per col
+    
     U_statistics = np.empty(ncols, dtype=np.float64)
     pvals = np.empty(ncols, dtype=np.float64)
     n = n_ref + n_tgt
@@ -91,14 +91,11 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
 
     Author: Rémy Dubois
     """
-    # First of all turn the chunk Fortran order and re-order the groups
-    # TODO: still have to benchmark speedup of F order
-    # chunk = chunk_and_fortranize(X, chunk_lb, chunk_ub, grpc)
     chunk = X[:, chunk_lb:chunk_ub]
     n_groups = grpc.counts.size
 
     ref_indices = grpc.indices[grpc.indptr[grpc.encoded_ref_group] : grpc.indptr[grpc.encoded_ref_group + 1]]
-    # ref_chunk = np.asfortranarray(chunk[ref_indices, :])
+    # TODO: still have to benchmark speedup of F order
     ref_chunk = chunk_and_fortranize(X, chunk_lb, chunk_ub, ref_indices)
     _sort_along_axis_inplace(ref_chunk, axis=0)
 
@@ -117,7 +114,8 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
             sorted_tgt_data=tgt_chunk,
             use_continuity=use_continuity,
         )
-    # TODO: summed expressions are no longer correct now that chunk is ordered by group
+    
+    # Compute fold change
     fc = dense_fold_change(chunk, grpc, is_log1p=is_log1p)
 
     return pvalues, statistics, fc

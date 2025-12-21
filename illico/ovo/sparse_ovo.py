@@ -49,7 +49,6 @@ def single_group_sparse_ovo_mwu_kernel(
         raise ValueError("Uneven number of columns between ref and perturbed.")
 
     # Allocate placeholders
-    # TODO: unify dtype with sparse_ovr
     n_zeros_tgt = (n_tgt - diff(sorted_tgt_data.indptr)).astype(np.int64)
     n_zeros_ref = (n_ref - diff(sorted_ref_data.indptr)).astype(np.int64)
     U_statistics = np.empty(n_cols_ref, dtype=np.float64)
