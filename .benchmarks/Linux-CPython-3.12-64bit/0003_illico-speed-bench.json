@@ -27,14 +27,14 @@
             "arch_string_raw": "x86_64",
             "vendor_id_raw": "AuthenticAMD",
             "brand_raw": "AMD EPYC 7J13 64-Core Processor",
-            "hz_advertised_friendly": "2.5500 GHz",
-            "hz_actual_friendly": "2.5500 GHz",
+            "hz_advertised_friendly": "3.2497 GHz",
+            "hz_actual_friendly": "3.2497 GHz",
             "hz_advertised": [
-                2550000000,
+                3249746000,
                 0
             ],
             "hz_actual": [
-                2550000000,
+                3249746000,
                 0
             ],
             "stepping": 1,
@@ -199,9 +199,9 @@
         }
     },
     "commit_info": {
-        "id": "ddccea88c7bd4a685ed39c4708d658f40749f80a",
-        "time": "2025-12-19T16:06:02+00:00",
-        "author_time": "2025-12-19T16:05:59+00:00",
+        "id": "82bb02aef537b2882d806e3b879b08b4e854dff6",
+        "time": "2025-12-21T22:06:56+00:00",
+        "author_time": "2025-12-21T22:06:56+00:00",
         "dirty": true,
         "project": "illico",
         "branch": "main"
@@ -209,19 +209,19 @@
     "benchmarks": [
         {
             "group": "k562-dense-ovo",
-            "name": "test_speed_benchmark[k562-dense-20%-scanpy-ovo-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-dense-20%-scanpy-ovo-nthreads=8]",
+            "name": "test_speed_benchmark[k562-dense-20%-illico-ovo-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-dense-20%-illico-ovo-nthreads=8]",
             "params": {
                 "adata": [
                     "k562",
                     "dense",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovo",
                 "num_threads": 8
             },
-            "param": "k562-dense-20%-scanpy-ovo-nthreads=8",
+            "param": "k562-dense-20%-illico-ovo-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -232,40 +232,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 750.8396667595953,
-                "max": 750.8396667595953,
-                "mean": 750.8396667595953,
+                "min": 7.081827967427671,
+                "max": 7.081827967427671,
+                "mean": 7.081827967427671,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 750.8396667595953,
+                "median": 7.081827967427671,
                 "iqr": 0.0,
-                "q1": 750.8396667595953,
-                "q3": 750.8396667595953,
+                "q1": 7.081827967427671,
+                "q3": 7.081827967427671,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 750.8396667595953,
-                "hd15iqr": 750.8396667595953,
-                "ops": 0.0013318422617650289,
-                "total": 750.8396667595953,
+                "ld15iqr": 7.081827967427671,
+                "hd15iqr": 7.081827967427671,
+                "ops": 0.1412064801064674,
+                "total": 7.081827967427671,
                 "iterations": 1
             }
         },
         {
             "group": "k562-dense-ovr",
-            "name": "test_speed_benchmark[k562-dense-20%-scanpy-ovr-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-dense-20%-scanpy-ovr-nthreads=8]",
+            "name": "test_speed_benchmark[k562-dense-20%-illico-ovr-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-dense-20%-illico-ovr-nthreads=8]",
             "params": {
                 "adata": [
                     "k562",
                     "dense",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovr",
                 "num_threads": 8
             },
-            "param": "k562-dense-20%-scanpy-ovr-nthreads=8",
+            "param": "k562-dense-20%-illico-ovr-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -276,40 +276,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 8554.63056265749,
-                "max": 8554.63056265749,
-                "mean": 8554.63056265749,
+                "min": 5.391927444376051,
+                "max": 5.391927444376051,
+                "mean": 5.391927444376051,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 8554.63056265749,
+                "median": 5.391927444376051,
                 "iqr": 0.0,
-                "q1": 8554.63056265749,
-                "q3": 8554.63056265749,
+                "q1": 5.391927444376051,
+                "q3": 5.391927444376051,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 8554.63056265749,
-                "hd15iqr": 8554.63056265749,
-                "ops": 0.00011689575519078297,
-                "total": 8554.63056265749,
+                "ld15iqr": 5.391927444376051,
+                "hd15iqr": 5.391927444376051,
+                "ops": 0.1854624362653528,
+                "total": 5.391927444376051,
                 "iterations": 1
             }
         },
         {
             "group": "k562-csr-ovo",
-            "name": "test_speed_benchmark[k562-csr-20%-scanpy-ovo-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-csr-20%-scanpy-ovo-nthreads=8]",
+            "name": "test_speed_benchmark[k562-csr-20%-illico-ovo-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-csr-20%-illico-ovo-nthreads=8]",
             "params": {
                 "adata": [
                     "k562",
                     "csr",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovo",
                 "num_threads": 8
             },
-            "param": "k562-csr-20%-scanpy-ovo-nthreads=8",
+            "param": "k562-csr-20%-illico-ovo-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -320,40 +320,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 906.432957502082,
-                "max": 906.432957502082,
-                "mean": 906.432957502082,
+                "min": 5.418698432855308,
+                "max": 5.418698432855308,
+                "mean": 5.418698432855308,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 906.432957502082,
+                "median": 5.418698432855308,
                 "iqr": 0.0,
-                "q1": 906.432957502082,
-                "q3": 906.432957502082,
+                "q1": 5.418698432855308,
+                "q3": 5.418698432855308,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 906.432957502082,
-                "hd15iqr": 906.432957502082,
-                "ops": 0.0011032255521200012,
-                "total": 906.432957502082,
+                "ld15iqr": 5.418698432855308,
+                "hd15iqr": 5.418698432855308,
+                "ops": 0.1845461622179745,
+                "total": 5.418698432855308,
                 "iterations": 1
             }
         },
         {
             "group": "k562-csr-ovr",
-            "name": "test_speed_benchmark[k562-csr-20%-scanpy-ovr-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-csr-20%-scanpy-ovr-nthreads=8]",
+            "name": "test_speed_benchmark[k562-csr-20%-illico-ovr-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-csr-20%-illico-ovr-nthreads=8]",
             "params": {
                 "adata": [
                     "k562",
                     "csr",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovr",
                 "num_threads": 8
             },
-            "param": "k562-csr-20%-scanpy-ovr-nthreads=8",
+            "param": "k562-csr-20%-illico-ovr-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -364,40 +364,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 8083.155598872341,
-                "max": 8083.155598872341,
-                "mean": 8083.155598872341,
+                "min": 7.050332201644778,
+                "max": 7.050332201644778,
+                "mean": 7.050332201644778,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 8083.155598872341,
+                "median": 7.050332201644778,
                 "iqr": 0.0,
-                "q1": 8083.155598872341,
-                "q3": 8083.155598872341,
+                "q1": 7.050332201644778,
+                "q3": 7.050332201644778,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 8083.155598872341,
-                "hd15iqr": 8083.155598872341,
-                "ops": 0.00012371406040228983,
-                "total": 8083.155598872341,
+                "ld15iqr": 7.050332201644778,
+                "hd15iqr": 7.050332201644778,
+                "ops": 0.14183728814462235,
+                "total": 7.050332201644778,
                 "iterations": 1
             }
         },
         {
             "group": "rpe1-dense-ovo",
-            "name": "test_speed_benchmark[rpe1-dense-20%-scanpy-ovo-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-dense-20%-scanpy-ovo-nthreads=8]",
+            "name": "test_speed_benchmark[rpe1-dense-20%-illico-ovo-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-dense-20%-illico-ovo-nthreads=8]",
             "params": {
                 "adata": [
                     "rpe1",
                     "dense",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovo",
                 "num_threads": 8
             },
-            "param": "rpe1-dense-20%-scanpy-ovo-nthreads=8",
+            "param": "rpe1-dense-20%-illico-ovo-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -408,40 +408,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 989.9742162181064,
-                "max": 989.9742162181064,
-                "mean": 989.9742162181064,
+                "min": 8.233704081736505,
+                "max": 8.233704081736505,
+                "mean": 8.233704081736505,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 989.9742162181064,
+                "median": 8.233704081736505,
                 "iqr": 0.0,
-                "q1": 989.9742162181064,
-                "q3": 989.9742162181064,
+                "q1": 8.233704081736505,
+                "q3": 8.233704081736505,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 989.9742162181064,
-                "hd15iqr": 989.9742162181064,
-                "ops": 0.0010101273180832871,
-                "total": 989.9742162181064,
+                "ld15iqr": 8.233704081736505,
+                "hd15iqr": 8.233704081736505,
+                "ops": 0.12145202087334403,
+                "total": 8.233704081736505,
                 "iterations": 1
             }
         },
         {
             "group": "rpe1-dense-ovr",
-            "name": "test_speed_benchmark[rpe1-dense-20%-scanpy-ovr-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-dense-20%-scanpy-ovr-nthreads=8]",
+            "name": "test_speed_benchmark[rpe1-dense-20%-illico-ovr-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-dense-20%-illico-ovr-nthreads=8]",
             "params": {
                 "adata": [
                     "rpe1",
                     "dense",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovr",
                 "num_threads": 8
             },
-            "param": "rpe1-dense-20%-scanpy-ovr-nthreads=8",
+            "param": "rpe1-dense-20%-illico-ovr-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -452,40 +452,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 7720.416422652081,
-                "max": 7720.416422652081,
-                "mean": 7720.416422652081,
+                "min": 4.667374553158879,
+                "max": 4.667374553158879,
+                "mean": 4.667374553158879,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 7720.416422652081,
+                "median": 4.667374553158879,
                 "iqr": 0.0,
-                "q1": 7720.416422652081,
-                "q3": 7720.416422652081,
+                "q1": 4.667374553158879,
+                "q3": 4.667374553158879,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 7720.416422652081,
-                "hd15iqr": 7720.416422652081,
-                "ops": 0.00012952669198852421,
-                "total": 7720.416422652081,
+                "ld15iqr": 4.667374553158879,
+                "hd15iqr": 4.667374553158879,
+                "ops": 0.21425321422365812,
+                "total": 4.667374553158879,
                 "iterations": 1
             }
         },
         {
             "group": "rpe1-csr-ovo",
-            "name": "test_speed_benchmark[rpe1-csr-20%-scanpy-ovo-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-csr-20%-scanpy-ovo-nthreads=8]",
+            "name": "test_speed_benchmark[rpe1-csr-20%-illico-ovo-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-csr-20%-illico-ovo-nthreads=8]",
             "params": {
                 "adata": [
                     "rpe1",
                     "csr",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovo",
                 "num_threads": 8
             },
-            "param": "rpe1-csr-20%-scanpy-ovo-nthreads=8",
+            "param": "rpe1-csr-20%-illico-ovo-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -496,40 +496,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 1059.5641927234828,
-                "max": 1059.5641927234828,
-                "mean": 1059.5641927234828,
+                "min": 5.18160102237016,
+                "max": 5.18160102237016,
+                "mean": 5.18160102237016,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 1059.5641927234828,
+                "median": 5.18160102237016,
                 "iqr": 0.0,
-                "q1": 1059.5641927234828,
-                "q3": 1059.5641927234828,
+                "q1": 5.18160102237016,
+                "q3": 5.18160102237016,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 1059.5641927234828,
-                "hd15iqr": 1059.5641927234828,
-                "ops": 0.0009437842528725133,
-                "total": 1059.5641927234828,
+                "ld15iqr": 5.18160102237016,
+                "hd15iqr": 5.18160102237016,
+                "ops": 0.19299054398105348,
+                "total": 5.18160102237016,
                 "iterations": 1
             }
         },
         {
             "group": "rpe1-csr-ovr",
-            "name": "test_speed_benchmark[rpe1-csr-20%-scanpy-ovr-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-csr-20%-scanpy-ovr-nthreads=8]",
+            "name": "test_speed_benchmark[rpe1-csr-20%-illico-ovr-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-csr-20%-illico-ovr-nthreads=8]",
             "params": {
                 "adata": [
                     "rpe1",
                     "csr",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovr",
                 "num_threads": 8
             },
-            "param": "rpe1-csr-20%-scanpy-ovr-nthreads=8",
+            "param": "rpe1-csr-20%-illico-ovr-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -540,40 +540,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 8133.438186748885,
-                "max": 8133.438186748885,
-                "mean": 8133.438186748885,
+                "min": 3.825454425998032,
+                "max": 3.825454425998032,
+                "mean": 3.825454425998032,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 8133.438186748885,
+                "median": 3.825454425998032,
                 "iqr": 0.0,
-                "q1": 8133.438186748885,
-                "q3": 8133.438186748885,
+                "q1": 3.825454425998032,
+                "q3": 3.825454425998032,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 8133.438186748885,
-                "hd15iqr": 8133.438186748885,
-                "ops": 0.00012294923463354213,
-                "total": 8133.438186748885,
+                "ld15iqr": 3.825454425998032,
+                "hd15iqr": 3.825454425998032,
+                "ops": 0.26140685226935034,
+                "total": 3.825454425998032,
                 "iterations": 1
             }
         },
         {
             "group": "jurkat-dense-ovo",
-            "name": "test_speed_benchmark[jurkat-dense-20%-scanpy-ovo-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-dense-20%-scanpy-ovo-nthreads=8]",
+            "name": "test_speed_benchmark[jurkat-dense-20%-illico-ovo-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-dense-20%-illico-ovo-nthreads=8]",
             "params": {
                 "adata": [
                     "jurkat",
                     "dense",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovo",
                 "num_threads": 8
             },
-            "param": "jurkat-dense-20%-scanpy-ovo-nthreads=8",
+            "param": "jurkat-dense-20%-illico-ovo-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -584,40 +584,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 958.6771701294929,
-                "max": 958.6771701294929,
-                "mean": 958.6771701294929,
+                "min": 8.73213616758585,
+                "max": 8.73213616758585,
+                "mean": 8.73213616758585,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 958.6771701294929,
+                "median": 8.73213616758585,
                 "iqr": 0.0,
-                "q1": 958.6771701294929,
-                "q3": 958.6771701294929,
+                "q1": 8.73213616758585,
+                "q3": 8.73213616758585,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 958.6771701294929,
-                "hd15iqr": 958.6771701294929,
-                "ops": 0.0010431040095227526,
-                "total": 958.6771701294929,
+                "ld15iqr": 8.73213616758585,
+                "hd15iqr": 8.73213616758585,
+                "ops": 0.11451951513445847,
+                "total": 8.73213616758585,
                 "iterations": 1
             }
         },
         {
             "group": "jurkat-dense-ovr",
-            "name": "test_speed_benchmark[jurkat-dense-20%-scanpy-ovr-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-dense-20%-scanpy-ovr-nthreads=8]",
+            "name": "test_speed_benchmark[jurkat-dense-20%-illico-ovr-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-dense-20%-illico-ovr-nthreads=8]",
             "params": {
                 "adata": [
                     "jurkat",
                     "dense",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovr",
                 "num_threads": 8
             },
-            "param": "jurkat-dense-20%-scanpy-ovr-nthreads=8",
+            "param": "jurkat-dense-20%-illico-ovr-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -628,40 +628,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 7892.38683597371,
-                "max": 7892.38683597371,
-                "mean": 7892.38683597371,
+                "min": 6.035964439623058,
+                "max": 6.035964439623058,
+                "mean": 6.035964439623058,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 7892.38683597371,
+                "median": 6.035964439623058,
                 "iqr": 0.0,
-                "q1": 7892.38683597371,
-                "q3": 7892.38683597371,
+                "q1": 6.035964439623058,
+                "q3": 6.035964439623058,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 7892.38683597371,
-                "hd15iqr": 7892.38683597371,
-                "ops": 0.0001267043824362452,
-                "total": 7892.38683597371,
+                "ld15iqr": 6.035964439623058,
+                "hd15iqr": 6.035964439623058,
+                "ops": 0.1656736069277521,
+                "total": 6.035964439623058,
                 "iterations": 1
             }
         },
         {
             "group": "jurkat-csr-ovo",
-            "name": "test_speed_benchmark[jurkat-csr-20%-scanpy-ovo-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-csr-20%-scanpy-ovo-nthreads=8]",
+            "name": "test_speed_benchmark[jurkat-csr-20%-illico-ovo-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-csr-20%-illico-ovo-nthreads=8]",
             "params": {
                 "adata": [
                     "jurkat",
                     "csr",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovo",
                 "num_threads": 8
             },
-            "param": "jurkat-csr-20%-scanpy-ovo-nthreads=8",
+            "param": "jurkat-csr-20%-illico-ovo-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -672,40 +672,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 1164.593568580225,
-                "max": 1164.593568580225,
-                "mean": 1164.593568580225,
+                "min": 6.374995364807546,
+                "max": 6.374995364807546,
+                "mean": 6.374995364807546,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 1164.593568580225,
+                "median": 6.374995364807546,
                 "iqr": 0.0,
-                "q1": 1164.593568580225,
-                "q3": 1164.593568580225,
+                "q1": 6.374995364807546,
+                "q3": 6.374995364807546,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 1164.593568580225,
-                "hd15iqr": 1164.593568580225,
-                "ops": 0.0008586686608780745,
-                "total": 1164.593568580225,
+                "ld15iqr": 6.374995364807546,
+                "hd15iqr": 6.374995364807546,
+                "ops": 0.15686285915130055,
+                "total": 6.374995364807546,
                 "iterations": 1
             }
         },
         {
             "group": "jurkat-csr-ovr",
-            "name": "test_speed_benchmark[jurkat-csr-20%-scanpy-ovr-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-csr-20%-scanpy-ovr-nthreads=8]",
+            "name": "test_speed_benchmark[jurkat-csr-20%-illico-ovr-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-csr-20%-illico-ovr-nthreads=8]",
             "params": {
                 "adata": [
                     "jurkat",
                     "csr",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovr",
                 "num_threads": 8
             },
-            "param": "jurkat-csr-20%-scanpy-ovr-nthreads=8",
+            "param": "jurkat-csr-20%-illico-ovr-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -716,40 +716,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 6489.7839748077095,
-                "max": 6489.7839748077095,
-                "mean": 6489.7839748077095,
+                "min": 4.8208016930148005,
+                "max": 4.8208016930148005,
+                "mean": 4.8208016930148005,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 6489.7839748077095,
+                "median": 4.8208016930148005,
                 "iqr": 0.0,
-                "q1": 6489.7839748077095,
-                "q3": 6489.7839748077095,
+                "q1": 4.8208016930148005,
+                "q3": 4.8208016930148005,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 6489.7839748077095,
-                "hd15iqr": 6489.7839748077095,
-                "ops": 0.0001540883338924436,
-                "total": 6489.7839748077095,
+                "ld15iqr": 4.8208016930148005,
+                "hd15iqr": 4.8208016930148005,
+                "ops": 0.2074343778647793,
+                "total": 4.8208016930148005,
                 "iterations": 1
             }
         },
         {
             "group": "hepg2-dense-ovo",
-            "name": "test_speed_benchmark[hepg2-dense-20%-scanpy-ovo-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-dense-20%-scanpy-ovo-nthreads=8]",
+            "name": "test_speed_benchmark[hepg2-dense-20%-illico-ovo-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-dense-20%-illico-ovo-nthreads=8]",
             "params": {
                 "adata": [
                     "hepg2",
                     "dense",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovo",
                 "num_threads": 8
             },
-            "param": "hepg2-dense-20%-scanpy-ovo-nthreads=8",
+            "param": "hepg2-dense-20%-illico-ovo-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -760,40 +760,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 352.2372877113521,
-                "max": 352.2372877113521,
-                "mean": 352.2372877113521,
+                "min": 6.432395818643272,
+                "max": 6.432395818643272,
+                "mean": 6.432395818643272,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 352.2372877113521,
+                "median": 6.432395818643272,
                 "iqr": 0.0,
-                "q1": 352.2372877113521,
-                "q3": 352.2372877113521,
+                "q1": 6.432395818643272,
+                "q3": 6.432395818643272,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 352.2372877113521,
-                "hd15iqr": 352.2372877113521,
-                "ops": 0.0028389952878000524,
-                "total": 352.2372877113521,
+                "ld15iqr": 6.432395818643272,
+                "hd15iqr": 6.432395818643272,
+                "ops": 0.1554630697790176,
+                "total": 6.432395818643272,
                 "iterations": 1
             }
         },
         {
             "group": "hepg2-dense-ovr",
-            "name": "test_speed_benchmark[hepg2-dense-20%-scanpy-ovr-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-dense-20%-scanpy-ovr-nthreads=8]",
+            "name": "test_speed_benchmark[hepg2-dense-20%-illico-ovr-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-dense-20%-illico-ovr-nthreads=8]",
             "params": {
                 "adata": [
                     "hepg2",
                     "dense",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovr",
                 "num_threads": 8
             },
-            "param": "hepg2-dense-20%-scanpy-ovr-nthreads=8",
+            "param": "hepg2-dense-20%-illico-ovr-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -804,40 +804,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 4194.923310319893,
-                "max": 4194.923310319893,
-                "mean": 4194.923310319893,
+                "min": 4.081671241670847,
+                "max": 4.081671241670847,
+                "mean": 4.081671241670847,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 4194.923310319893,
+                "median": 4.081671241670847,
                 "iqr": 0.0,
-                "q1": 4194.923310319893,
-                "q3": 4194.923310319893,
+                "q1": 4.081671241670847,
+                "q3": 4.081671241670847,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 4194.923310319893,
-                "hd15iqr": 4194.923310319893,
-                "ops": 0.00023838338058288432,
-                "total": 4194.923310319893,
+                "ld15iqr": 4.081671241670847,
+                "hd15iqr": 4.081671241670847,
+                "ops": 0.24499768374060582,
+                "total": 4.081671241670847,
                 "iterations": 1
             }
         },
         {
             "group": "hepg2-csr-ovo",
-            "name": "test_speed_benchmark[hepg2-csr-20%-scanpy-ovo-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-csr-20%-scanpy-ovo-nthreads=8]",
+            "name": "test_speed_benchmark[hepg2-csr-20%-illico-ovo-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-csr-20%-illico-ovo-nthreads=8]",
             "params": {
                 "adata": [
                     "hepg2",
                     "csr",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovo",
                 "num_threads": 8
             },
-            "param": "hepg2-csr-20%-scanpy-ovo-nthreads=8",
+            "param": "hepg2-csr-20%-illico-ovo-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -848,40 +848,40 @@
                 "warmup": false
             },
             "stats": {
-                "min": 369.39027928281575,
-                "max": 369.39027928281575,
-                "mean": 369.39027928281575,
+                "min": 4.116502125747502,
+                "max": 4.116502125747502,
+                "mean": 4.116502125747502,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 369.39027928281575,
+                "median": 4.116502125747502,
                 "iqr": 0.0,
-                "q1": 369.39027928281575,
-                "q3": 369.39027928281575,
+                "q1": 4.116502125747502,
+                "q3": 4.116502125747502,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 369.39027928281575,
-                "hd15iqr": 369.39027928281575,
-                "ops": 0.002707163821261175,
-                "total": 369.39027928281575,
+                "ld15iqr": 4.116502125747502,
+                "hd15iqr": 4.116502125747502,
+                "ops": 0.24292468932429212,
+                "total": 4.116502125747502,
                 "iterations": 1
             }
         },
         {
             "group": "hepg2-csr-ovr",
-            "name": "test_speed_benchmark[hepg2-csr-20%-scanpy-ovr-nthreads=8]",
-            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-csr-20%-scanpy-ovr-nthreads=8]",
+            "name": "test_speed_benchmark[hepg2-csr-20%-illico-ovr-nthreads=8]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-csr-20%-illico-ovr-nthreads=8]",
             "params": {
                 "adata": [
                     "hepg2",
                     "csr",
                     0.2
                 ],
-                "method": "scanpy",
+                "method": "illico",
                 "test": "ovr",
                 "num_threads": 8
             },
-            "param": "hepg2-csr-20%-scanpy-ovr-nthreads=8",
+            "param": "hepg2-csr-20%-illico-ovr-nthreads=8",
             "extra_info": {},
             "options": {
                 "disable_gc": false,
@@ -892,26 +892,26 @@
                 "warmup": false
             },
             "stats": {
-                "min": 3687.24320421461,
-                "max": 3687.24320421461,
-                "mean": 3687.24320421461,
+                "min": 3.669965927489102,
+                "max": 3.669965927489102,
+                "mean": 3.669965927489102,
                 "stddev": 0,
                 "rounds": 1,
-                "median": 3687.24320421461,
+                "median": 3.669965927489102,
                 "iqr": 0.0,
-                "q1": 3687.24320421461,
-                "q3": 3687.24320421461,
+                "q1": 3.669965927489102,
+                "q3": 3.669965927489102,
                 "iqr_outliers": 0,
                 "stddev_outliers": 0,
                 "outliers": "0;0",
-                "ld15iqr": 3687.24320421461,
-                "hd15iqr": 3687.24320421461,
-                "ops": 0.00027120532729085387,
-                "total": 3687.24320421461,
+                "ld15iqr": 3.669965927489102,
+                "hd15iqr": 3.669965927489102,
+                "ops": 0.27248209377359933,
+                "total": 3.669965927489102,
                 "iterations": 1
             }
         }
     ],
-    "datetime": "2025-12-21T15:18:22.918630+00:00",
+    "datetime": "2025-12-21T22:13:33.338330+00:00",
     "version": "5.2.3"
 }

@@ -1,9 +1,8 @@
 # Illico
 ## Overview
-Illico is a python library performing blazing fast asymptotic wilcoxon rank-sum tests (same as `scanpy.tl.rank_genes_groups(… tie_correct=True)`), useful for single-cell RNASeq data analyses and processing.  
-Illico's features are:
+*illico* is a python library performing blazing fast asymptotic wilcoxon rank-sum tests (same as `scanpy.tl.rank_genes_groups(… tie_correct=True)`), useful for single-cell RNASeq data analyses and processing. `illico`'s features are:
 1. :rocket: Blazing fast: On K562 (essential) dataset (~300k cells, 8k genes, 2k perturbations), `illico` computes DE genes (with `reference="non-targeting"`) in a mere 30 seconds. That's more than 100 times faster than both `pdex` or `scanpy` with the same compute ressources (8 CPUs).
-2. :diamond_shape_with_a_dot_inside: No compromise: On VCC's H1 dataset, `illico`'s p-values matched `scipy.stats.mannwhitneyu` up to a relative difference of 1.e-12, and an absolute tol of 0.
+2. :diamond_shape_with_a_dot_inside: No compromise: on synthetic data, `illico`'s p-values matched `scipy.stats.mannwhitneyu` up to a relative difference of 1.e-12, and an absolute tolerance of 0.
 3. :zap: Thread-first: `illico` eventually parallelizes the processing (if specified by the user) over **threads**, never processes. This saves you from all the fixed cost of multiprocessing, such as spanning processes, duplicating data across processes, and communication costs.
 3. :beetle: Data format agnostic: whether your data is dense, sparse along rows, or sparse along columns, `illico` will deal with it while never converting the whole data to whichever format is more optimized.
 4. 🪶 Lightweight: `illico` will process the input data in batches, making any memory allocation needed along the way much smaller than if it processed the whole data at once.
@@ -95,158 +94,179 @@ The rank-sum tests performed by `illico` are classical, asymptotic, rank-sum tes
 
 ## Benchmarks
 ### Benchmarking against other solutions
-In order for benchmarks to run in a reasonable amount of time, the timings reported below were obtained by running each solution on **a subset of k562-essential** (20% of the genes). All solutions were find to scale linearly with the number of genes (columns in the adata). Extrapolating the value below will approximate runtime of those solutions on the whole dataset (8k genes). Benchmarks below depend on:
-1. The cell line (K562 essential, RPE1, Hep-G2, Jurkat).
-1. The data format (CSR, or dense)
+In order for benchmarks to run in a reasonable amount of time, the timings reported below were obtained by running each solution on **a subset of each cell line** (20% of the genes). All solutions were find to scale linearly with the number of genes (columns in the adata). Extrapolating (x5) the elapsed times below will approximate runtime of those solutions on the whole datasets. Numbers in parenthesis report the multiplicative factor versus the fastest solution of each benchmark. A "benchmark" is defined by:
+1. The cell line (K562 essential, RPE1, Hep-G2, Jurkat) used as input.
+1. The data format (CSR, or dense) used to contain the expression matrix.
 2. The test performed: OVO (`reference="non-targeting"`) or OVR (`reference=None`).
-```
------------------------------------------------ benchmark 'ovo-csr_matrix': 3 tests -----------------------------------------------
-Name (time in s)                                                              Min                Mean                 Max
------------------------------------------------------------------------------------------------------------------------------------
-test_speed_benchmark[csr-small-illico-ovo-nthreads=8] (0010_illico-)       3.4252 (1.0)        3.4252 (1.0)        3.4252 (1.0)
-test_speed_benchmark[csr-small-scanpy-ovo-nthreads=8] (0008_scanpy-)     300.7754 (87.81)    300.7754 (87.81)    300.7754 (87.81)
-test_speed_benchmark[csr-small-pdex-ovo-nthreads=8] (0009_pdex-sm)       951.5820 (277.82)   951.5820 (277.82)   951.5820 (277.82)
------------------------------------------------------------------------------------------------------------------------------------
 
--------------------------------------------------- benchmark 'ovo-ndarray': 3 tests -------------------------------------------------
-Name (time in s)                                                                Min                Mean                 Max
--------------------------------------------------------------------------------------------------------------------------------------
-test_speed_benchmark[dense-small-illico-ovo-nthreads=8] (0010_illico-)       2.6945 (1.0)        2.6945 (1.0)        2.6945 (1.0)
-test_speed_benchmark[dense-small-scanpy-ovo-nthreads=8] (0008_scanpy-)     251.7694 (93.44)    251.7694 (93.44)    251.7694 (93.44)
-test_speed_benchmark[dense-small-pdex-ovo-nthreads=8] (0009_pdex-sm)       730.6372 (271.16)   730.6372 (271.16)   730.6372 (271.16)
--------------------------------------------------------------------------------------------------------------------------------------
+:bulb: Keep in mind that `pdex` does not implement *OVR* test.
+```bash
+------------------------------- benchmark 'hepg2-csr-ovo': 3 tests ------------------------------
+Name (time in s)                                                                   Mean          
+-------------------------------------------------------------------------------------------------
+test_speed_benchmark[hepg2-csr-20%-illico-ovo-nthreads=8] (0003_illico-)         4.1165 (1.0)    
+test_speed_benchmark[hepg2-csr-20%-scanpy-ovo-nthreads=8] (0001_scanpy-)       369.3903 (89.73)  
+test_speed_benchmark[hepg2-csr-20%-pdex-ovo-nthreads=8] (0002_pdex-sp)       1,545.4044 (375.42) 
+-------------------------------------------------------------------------------------------------
 
--------------------------------------------------- benchmark 'ovr-csr_matrix': 2 tests --------------------------------------------------
-Name (time in s)                                                                Min                  Mean                   Max
------------------------------------------------------------------------------------------------------------------------------------------
-test_speed_benchmark[csr-small-illico-ovr-nthreads=8] (0010_illico-)         2.2169 (1.0)          2.2169 (1.0)          2.2169 (1.0)
-test_speed_benchmark[csr-small-scanpy-ovr-nthreads=8] (0008_scanpy-)     1,876.2998 (846.35)   1,876.2998 (846.35)   1,876.2998 (846.35)
------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------- benchmark 'hepg2-csr-ovr': 2 tests ------------------------------
+Name (time in s)                                                                   Mean          
+-------------------------------------------------------------------------------------------------
+test_speed_benchmark[hepg2-csr-20%-illico-ovr-nthreads=8] (0003_illico-)         3.6700 (1.0)    
+test_speed_benchmark[hepg2-csr-20%-scanpy-ovr-nthreads=8] (0001_scanpy-)     3,687.2432 (>1000.0)
+-------------------------------------------------------------------------------------------------
 
------------------------------------------------------ benchmark 'ovr-ndarray': 2 tests ----------------------------------------------------
-Name (time in s)                                                                  Min                  Mean                   Max
--------------------------------------------------------------------------------------------------------------------------------------------
-test_speed_benchmark[dense-small-illico-ovr-nthreads=8] (0010_illico-)         2.8279 (1.0)          2.8279 (1.0)          2.8279 (1.0)
-test_speed_benchmark[dense-small-scanpy-ovr-nthreads=8] (0008_scanpy-)     2,276.9517 (805.16)   2,276.9517 (805.16)   2,276.9517 (805.16)
--------------------------------------------------------------------------------------------------------------------------------------------
-```
-1. Comparing frameworks on full H1 (OVO) with 8 threads: Scanpy (>2.5h), pdex (45mins), illico (<1min) so a total of
-Below are shown benchmarks obtained on the first 904 genes of VCC's H1 dataset. `904` genes is `1/20` (5%) of the `18,080` gene sequenced in H1. All solutions are expected to scale linearly with number of genes. The column that matters is the *median* elapsed time.
-1. For the OVO use case (one-versus-one, test each perturbation against the control cells): `illico` is between 50 to 60 times faster than `scanpy` and `pdex` when ran on sparse data, and around 20 times faster on dense data.
-2. For the OVR use case (one-versus-the-rest, clustering analyses): `illico` is approx `150` times faster than scanpy when ran on sparse data, and 60 times faster when ran on dense data. `pdex` does not implement OVR test.
+------------------------------- benchmark 'hepg2-dense-ovo': 3 tests ------------------------------
+Name (time in s)                                                                     Mean          
+---------------------------------------------------------------------------------------------------
+test_speed_benchmark[hepg2-dense-20%-illico-ovo-nthreads=8] (0003_illico-)         6.4324 (1.0)    
+test_speed_benchmark[hepg2-dense-20%-scanpy-ovo-nthreads=8] (0001_scanpy-)       352.2373 (54.76)  
+test_speed_benchmark[hepg2-dense-20%-pdex-ovo-nthreads=8] (0002_pdex-sp)       1,843.8692 (286.65) 
+---------------------------------------------------------------------------------------------------
 
-Ran on one thread: benchmark n°37
-```
---------------------------- benchmark 'ovo-csc': 3 tests ---------------------------
-Name (time in s)                                Median            Rounds  Iterations
-------------------------------------------------------------------------------------
-         test_benchmark[illico-ovo-csc-1]       5.4017 (1.0)           1           1
-         test_benchmark[scanpy-ovo-csc-1]     300.2536 (55.58)         1           1
-         test_benchmark[pdex-ovo-csc-1]       306.8924 (56.81)         1           1
-------------------------------------------------------------------------------------
+------------------------------- benchmark 'hepg2-dense-ovr': 2 tests ------------------------------
+Name (time in s)                                                                     Mean          
+---------------------------------------------------------------------------------------------------
+test_speed_benchmark[hepg2-dense-20%-illico-ovr-nthreads=8] (0003_illico-)         4.0817 (1.0)    
+test_speed_benchmark[hepg2-dense-20%-scanpy-ovr-nthreads=8] (0001_scanpy-)     4,194.9233 (>1000.0)
+---------------------------------------------------------------------------------------------------
 
---------------------------- benchmark 'ovo-csr': 3 tests ---------------------------
-Name (time in s)                                Median            Rounds  Iterations
-------------------------------------------------------------------------------------
-         test_benchmark[illico-ovo-csr-1]       4.7456 (1.0)           1           1
-         test_benchmark[scanpy-ovo-csr-1]     248.6532 (52.40)         1           1
-         test_benchmark[pdex-ovo-csr-1]       299.7366 (63.16)         1           1
-------------------------------------------------------------------------------------
+------------------------------ benchmark 'jurkat-csr-ovo': 3 tests -------------------------------
+Name (time in s)                                                                    Mean          
+--------------------------------------------------------------------------------------------------
+test_speed_benchmark[jurkat-csr-20%-illico-ovo-nthreads=8] (0003_illico-)         6.3750 (1.0)    
+test_speed_benchmark[jurkat-csr-20%-scanpy-ovo-nthreads=8] (0001_scanpy-)     1,164.5936 (182.68) 
+test_speed_benchmark[jurkat-csr-20%-pdex-ovo-nthreads=8] (0002_pdex-sp)       3,204.1846 (502.62) 
+--------------------------------------------------------------------------------------------------
 
---------------------------- benchmark 'ovo-dense': 3 tests ---------------------------
-Name (time in s)                                  Median            Rounds  Iterations
---------------------------------------------------------------------------------------
-         test_benchmark[illico-ovo-dense-1]      13.3544 (1.0)           1           1
-         test_benchmark[scanpy-ovo-dense-1]     238.2492 (17.84)         1           1
-         test_benchmark[pdex-ovo-dense-1]       306.4146 (22.94)         1           1
---------------------------------------------------------------------------------------
+------------------------------ benchmark 'jurkat-csr-ovr': 2 tests -------------------------------
+Name (time in s)                                                                    Mean          
+--------------------------------------------------------------------------------------------------
+test_speed_benchmark[jurkat-csr-20%-illico-ovr-nthreads=8] (0003_illico-)         4.8208 (1.0)    
+test_speed_benchmark[jurkat-csr-20%-scanpy-ovr-nthreads=8] (0001_scanpy-)     6,489.7840 (>1000.0)
+--------------------------------------------------------------------------------------------------
 
---------------------------- benchmark 'ovr-csc': 2 tests ---------------------------
-Name (time in s)                                Median            Rounds  Iterations
-------------------------------------------------------------------------------------
-         test_benchmark[illico-ovr-csc-1]       4.3178 (1.0)           1           1
-         test_benchmark[scanpy-ovr-csc-1]     693.2938 (160.57)        1           1
-------------------------------------------------------------------------------------
+------------------------------ benchmark 'jurkat-dense-ovo': 3 tests -------------------------------
+Name (time in s)                                                                      Mean          
+----------------------------------------------------------------------------------------------------
+test_speed_benchmark[jurkat-dense-20%-illico-ovo-nthreads=8] (0003_illico-)         8.7321 (1.0)    
+test_speed_benchmark[jurkat-dense-20%-scanpy-ovo-nthreads=8] (0001_scanpy-)       958.6772 (109.79) 
+test_speed_benchmark[jurkat-dense-20%-pdex-ovo-nthreads=8] (0002_pdex-sp)       2,903.1847 (332.47) 
+----------------------------------------------------------------------------------------------------
 
---------------------------- benchmark 'ovr-csr': 2 tests ---------------------------
-Name (time in s)                                Median            Rounds  Iterations
-------------------------------------------------------------------------------------
-         test_benchmark[illico-ovr-csr-1]       4.7285 (1.0)           1           1
-         test_benchmark[scanpy-ovr-csr-1]     673.5518 (142.45)        1           1
-------------------------------------------------------------------------------------
+------------------------------ benchmark 'jurkat-dense-ovr': 2 tests -------------------------------
+Name (time in s)                                                                      Mean          
+----------------------------------------------------------------------------------------------------
+test_speed_benchmark[jurkat-dense-20%-illico-ovr-nthreads=8] (0003_illico-)         6.0360 (1.0)    
+test_speed_benchmark[jurkat-dense-20%-scanpy-ovr-nthreads=8] (0001_scanpy-)     7,892.3868 (>1000.0)
+----------------------------------------------------------------------------------------------------
 
---------------------------- benchmark 'ovr-dense': 2 tests ---------------------------
-Name (time in s)                                  Median            Rounds  Iterations
---------------------------------------------------------------------------------------
-         test_benchmark[illico-ovr-dense-1]      10.5175 (1.0)           1           1
-         test_benchmark[scanpy-ovr-dense-1]     674.8101 (64.16)         1           1
---------------------------------------------------------------------------------------
-Legend:
-  Outliers: 1 Standard Deviation from Mean; 1.5 IQR (InterQuartile Range) from 1st Quartile and 3rd Quartile.
-  OPS: Operations Per Second, computed as 1 / Mean
-=========== 18 passed, 33 deselected, 13113 warnings in 11358.76s (3:09:18) ===========
-```
-Ran on two threads: benchmark n°38
-```
------------------------ benchmark 'ovo-csc': 3 tests ----------------------
-Name (time in s)                       Median            Rounds  Iterations
----------------------------------------------------------------------------
-test_benchmark[illico-ovo-csc-2]       3.4325 (1.0)           1           1
-test_benchmark[pdex-ovo-csc-2]       170.3768 (49.64)         1           1
-test_benchmark[scanpy-ovo-csc-2]     198.0979 (57.71)         1           1
----------------------------------------------------------------------------
+------------------------------ benchmark 'k562-csr-ovo': 3 tests -------------------------------
+Name (time in s)                                                                  Mean          
+------------------------------------------------------------------------------------------------
+test_speed_benchmark[k562-csr-20%-illico-ovo-nthreads=8] (0003_illico-)         5.4187 (1.0)    
+test_speed_benchmark[k562-csr-20%-scanpy-ovo-nthreads=8] (0001_scanpy-)       906.4330 (167.28) 
+test_speed_benchmark[k562-csr-20%-pdex-ovo-nthreads=8] (0002_pdex-sp)       2,628.7324 (485.12) 
+------------------------------------------------------------------------------------------------
 
------------------------ benchmark 'ovo-csr': 3 tests ----------------------
-Name (time in s)                       Median            Rounds  Iterations
----------------------------------------------------------------------------
-test_benchmark[illico-ovo-csr-2]       3.0417 (1.0)           1           1
-test_benchmark[pdex-ovo-csr-2]       171.4978 (56.38)         1           1
-test_benchmark[scanpy-ovo-csr-2]     171.5105 (56.39)         1           1
----------------------------------------------------------------------------
+------------------------------ benchmark 'k562-csr-ovr': 2 tests -------------------------------
+Name (time in s)                                                                  Mean          
+------------------------------------------------------------------------------------------------
+test_speed_benchmark[k562-csr-20%-illico-ovr-nthreads=8] (0003_illico-)         7.0503 (1.0)    
+test_speed_benchmark[k562-csr-20%-scanpy-ovr-nthreads=8] (0001_scanpy-)     8,083.1556 (>1000.0)
+------------------------------------------------------------------------------------------------
 
------------------------ benchmark 'ovo-dense': 3 tests ----------------------
-Name (time in s)                         Median            Rounds  Iterations
------------------------------------------------------------------------------
-test_benchmark[illico-ovo-dense-2]      11.9322 (1.0)           1           1
-test_benchmark[scanpy-ovo-dense-2]     142.3267 (11.93)         1           1
-test_benchmark[pdex-ovo-dense-2]       195.2699 (16.36)         1           1
------------------------------------------------------------------------------
+------------------------------ benchmark 'k562-dense-ovo': 3 tests -------------------------------
+Name (time in s)                                                                    Mean          
+--------------------------------------------------------------------------------------------------
+test_speed_benchmark[k562-dense-20%-illico-ovo-nthreads=8] (0003_illico-)         7.0818 (1.0)    
+test_speed_benchmark[k562-dense-20%-scanpy-ovo-nthreads=8] (0001_scanpy-)       750.8397 (106.02) 
+test_speed_benchmark[k562-dense-20%-pdex-ovo-nthreads=8] (0002_pdex-sp)       2,872.8148 (405.66) 
+--------------------------------------------------------------------------------------------------
 
------------------------ benchmark 'ovr-csc': 2 tests ----------------------
-Name (time in s)                       Median            Rounds  Iterations
----------------------------------------------------------------------------
-test_benchmark[illico-ovr-csc-2]       2.8199 (1.0)           1           1
-test_benchmark[scanpy-ovr-csc-2]     420.0390 (148.96)        1           1
----------------------------------------------------------------------------
+------------------------------ benchmark 'k562-dense-ovr': 2 tests -------------------------------
+Name (time in s)                                                                    Mean          
+--------------------------------------------------------------------------------------------------
+test_speed_benchmark[k562-dense-20%-illico-ovr-nthreads=8] (0003_illico-)         5.3919 (1.0)    
+test_speed_benchmark[k562-dense-20%-scanpy-ovr-nthreads=8] (0001_scanpy-)     8,554.6306 (>1000.0)
+--------------------------------------------------------------------------------------------------
 
------------------------ benchmark 'ovr-csr': 2 tests ----------------------
-Name (time in s)                       Median            Rounds  Iterations
----------------------------------------------------------------------------
-test_benchmark[illico-ovr-csr-2]       3.0468 (1.0)           1           1
-test_benchmark[scanpy-ovr-csr-2]     418.4509 (137.34)        1           1
----------------------------------------------------------------------------
+------------------------------ benchmark 'rpe1-csr-ovo': 3 tests -------------------------------
+Name (time in s)                                                                  Mean          
+------------------------------------------------------------------------------------------------
+test_speed_benchmark[rpe1-csr-20%-illico-ovo-nthreads=8] (0003_illico-)         5.1816 (1.0)    
+test_speed_benchmark[rpe1-csr-20%-scanpy-ovo-nthreads=8] (0001_scanpy-)     1,059.5642 (204.49) 
+test_speed_benchmark[rpe1-csr-20%-pdex-ovo-nthreads=8] (0002_pdex-sp)       2,495.4590 (481.60) 
+------------------------------------------------------------------------------------------------
 
------------------------ benchmark 'ovr-dense': 2 tests ----------------------
-Name (time in s)                         Median            Rounds  Iterations
------------------------------------------------------------------------------
-test_benchmark[illico-ovr-dense-2]       6.9618 (1.0)           1           1
-test_benchmark[scanpy-ovr-dense-2]     409.9389 (58.88)         1           1
------------------------------------------------------------------------------
+------------------------------ benchmark 'rpe1-csr-ovr': 2 tests -------------------------------
+Name (time in s)                                                                  Mean          
+------------------------------------------------------------------------------------------------
+test_speed_benchmark[rpe1-csr-20%-illico-ovr-nthreads=8] (0003_illico-)         3.8255 (1.0)    
+test_speed_benchmark[rpe1-csr-20%-scanpy-ovr-nthreads=8] (0001_scanpy-)     8,133.4382 (>1000.0)
+------------------------------------------------------------------------------------------------
+
+------------------------------ benchmark 'rpe1-dense-ovo': 3 tests -------------------------------
+Name (time in s)                                                                    Mean          
+--------------------------------------------------------------------------------------------------
+test_speed_benchmark[rpe1-dense-20%-illico-ovo-nthreads=8] (0003_illico-)         8.2337 (1.0)    
+test_speed_benchmark[rpe1-dense-20%-scanpy-ovo-nthreads=8] (0001_scanpy-)       989.9742 (120.23) 
+test_speed_benchmark[rpe1-dense-20%-pdex-ovo-nthreads=8] (0002_pdex-sp)       2,435.5715 (295.81) 
+--------------------------------------------------------------------------------------------------
+
+------------------------------ benchmark 'rpe1-dense-ovr': 2 tests -------------------------------
+Name (time in s)                                                                    Mean          
+--------------------------------------------------------------------------------------------------
+test_speed_benchmark[rpe1-dense-20%-illico-ovr-nthreads=8] (0003_illico-)         4.6674 (1.0)    
+test_speed_benchmark[rpe1-dense-20%-scanpy-ovr-nthreads=8] (0001_scanpy-)     7,720.4164 (>1000.0)
+--------------------------------------------------------------------------------------------------
 ```
 
 ### Scalability
-Add scalability graphs for all solutions
-```
------------------------------------------------------------------------------------------- benchmark 'ovo-csr': 3 tests ------------------------------------------------------------------------------------------
-Name (time in s)                                        Min                Max               Mean            StdDev             Median               IQR            Outliers     OPS            Rounds  Iterations
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-test_speed_benchmark[illico-ovo-csr-nthreads=8]     24.0572 (1.0)      25.0281 (1.0)      24.4648 (1.0)      0.3640 (1.0)      24.4720 (1.0)      0.4360 (1.0)           2;0  0.0409 (1.0)           5           1
-test_speed_benchmark[illico-ovo-csr-nthreads=4]     43.1721 (1.79)     44.6799 (1.79)     43.8410 (1.79)     0.5689 (1.56)     43.8020 (1.79)     0.7642 (1.75)          2;0  0.0228 (0.56)          5           1
-test_speed_benchmark[illico-ovo-csr-nthreads=2]     84.0295 (3.49)     85.3700 (3.41)     84.5683 (3.46)     0.5363 (1.47)     84.5695 (3.46)     0.7881 (1.81)          2;0  0.0118 (0.29)          5           1
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TODO: this could clearly be improved with a smarter batching strategy
+`illico` scales reasonably well with your compute budget. Find below the processing time of the K562-essential dataset for both OVO and OVR tests, while increasing the number of threads used. Similarly as before, a benchmark is defined by:
+1. The data format (CSR, or dense) used to contain the expression matrix.
+2. The test performed: OVO (`reference="non-targeting"`) or OVR (`reference=None`).
+
+```bash
+---------------------- benchmark 'k562-csr-ovo': 4 tests -----------------------
+Name (time in s)                                                  Mean          
+--------------------------------------------------------------------------------
+test_speed_benchmark[k562-csr-100%-illico-ovo-nthreads=8]      19.3962 (1.0)    
+test_speed_benchmark[k562-csr-100%-illico-ovo-nthreads=4]      31.2427 (1.61)   
+test_speed_benchmark[k562-csr-100%-illico-ovo-nthreads=2]      62.0832 (3.20)   
+test_speed_benchmark[k562-csr-100%-illico-ovo-nthreads=1]     129.3453 (6.67)   
+--------------------------------------------------------------------------------
+
+---------------------- benchmark 'k562-csr-ovr': 4 tests ----------------------
+Name (time in s)                                                 Mean          
+-------------------------------------------------------------------------------
+test_speed_benchmark[k562-csr-100%-illico-ovr-nthreads=8]     14.9382 (1.0)    
+test_speed_benchmark[k562-csr-100%-illico-ovr-nthreads=4]     25.2831 (1.69)   
+test_speed_benchmark[k562-csr-100%-illico-ovr-nthreads=2]     48.5062 (3.25)   
+test_speed_benchmark[k562-csr-100%-illico-ovr-nthreads=1]     98.2664 (6.58)   
+-------------------------------------------------------------------------------
+
+---------------------- benchmark 'k562-dense-ovo': 4 tests -----------------------
+Name (time in s)                                                    Mean          
+----------------------------------------------------------------------------------
+test_speed_benchmark[k562-dense-100%-illico-ovo-nthreads=8]      29.6962 (1.0)    
+test_speed_benchmark[k562-dense-100%-illico-ovo-nthreads=4]      53.4369 (1.80)   
+test_speed_benchmark[k562-dense-100%-illico-ovo-nthreads=2]     100.3919 (3.38)   
+test_speed_benchmark[k562-dense-100%-illico-ovo-nthreads=1]     208.2443 (7.01)   
+----------------------------------------------------------------------------------
+
+---------------------- benchmark 'k562-dense-ovr': 4 tests -----------------------
+Name (time in s)                                                    Mean          
+----------------------------------------------------------------------------------
+test_speed_benchmark[k562-dense-100%-illico-ovr-nthreads=8]      19.3093 (1.0)    
+test_speed_benchmark[k562-dense-100%-illico-ovr-nthreads=4]      33.6427 (1.74)   
+test_speed_benchmark[k562-dense-100%-illico-ovr-nthreads=2]      63.1888 (3.27)   
+test_speed_benchmark[k562-dense-100%-illico-ovr-nthreads=1]     127.4927 (6.60)   
+----------------------------------------------------------------------------------
 ```
 ### Memory
-Add memit for all solutions, remind that memory footprint grows linearly with number of threads for illico.
+TODO: Add memit for all solutions, remind that memory footprint grows linearly with number of threads for illico.
 ```
 ============================================================================== MEMRAY REPORT ===============================================================================
 Allocation results for tests/test_asymptotic_wilcoxon.py::test_memory_benchmark[pdex-ovo-csc-nthreads=1] at the high watermark
