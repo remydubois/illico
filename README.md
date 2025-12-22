@@ -112,11 +112,7 @@ In order for benchmarks to run in a reasonable amount of time, the timings repor
 </p>
 
 ### Scalability
-TODO: this could clearly be improved with a smarter batching strategy
-`illico` scales reasonably well with your compute budget. Find below the processing time of the K562-essential dataset for both OVO and OVR tests, while increasing the number of threads used. Similarly as before, a benchmark is defined by:
-1. The data format (CSR, or dense) used to contain the expression matrix.
-2. The test performed: OVO (`reference="non-targeting"`) or OVR (`reference=None`).
-The example below shows spanning 8 threads instead of 1 brings a 7-folds speedup for the cell line k562.
+`illico` scales reasonably well with your compute budget. On the K562-essential dataset spanning 8 threads instead of 1 brings a 7-folds speedup.
 ```bash
 ---------------------- benchmark 'k562-dense-ovo': 4 tests -----------------------
 Name (time in s)                                                    Mean
