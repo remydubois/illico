@@ -107,7 +107,7 @@ In order for benchmarks to run in a reasonable amount of time, the timings repor
 :bulb: Keep in mind that `pdex` does not implement *OVR* test.
 
 <p float="center">
-  <center><img src="https://raw.githubusercontent.com/remydubois/illico/main/assets/method-runtimes-comparison.png" width="700" />
+  <center><img src="https://raw.githubusercontent.com/remydubois/illico/blob/main/assets/method-runtimes-comparison.png" width="700" />
   <figcaption>Runtime comparison for scanpy, pdex and illico</figcaption></center>
 </p>
 
