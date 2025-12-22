@@ -1,6 +1,7 @@
+from typing import Literal
+
 import numpy as np
 from numba import njit
-from typing import Literal
 
 from illico.utils.groups import GroupContainer
 from illico.utils.math import chunk_and_fortranize, compute_pval, dense_fold_change
@@ -12,7 +13,10 @@ from illico.utils.ranking import (
 
 @njit(nogil=True, fastmath=True, parallel=False, cache=False)
 def dense_ovo_mwu_kernel(
-    sorted_ref_data: np.ndarray, sorted_tgt_data: np.ndarray, use_continuity: bool = True, alternative: Literal["two-sided", "less", "greater"] = "two-sided",
+    sorted_ref_data: np.ndarray,
+    sorted_tgt_data: np.ndarray,
+    use_continuity: bool = True,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Sequentially perform OVO tests on columns between sorted ref and sorted perturbed data.
 

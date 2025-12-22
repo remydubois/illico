@@ -27,7 +27,7 @@ CELL_LINE_URLS = {
         (cell_line, fmt, fraction)
         for cell_line in ["k562", "rpe1", "jurkat", "hepg2"]
         for fmt in ["dense", "csr", "csc"]
-        for fraction in [0.0, 0.2, 1.]
+        for fraction in [0.0, 0.2, 1.0]
     ],
     scope="function",
     ids=lambda p: f"{p[0]}-{p[1]}-{p[2]:.0%}",

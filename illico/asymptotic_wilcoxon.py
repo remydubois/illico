@@ -127,7 +127,9 @@ def asymptotic_wilcoxon(
             else:  # ovo use case
                 pbar.set_description("Running one-versus-ref MannWhitney-U tests")
                 op = delayed(lambda *args: (ovo_mwu_over_contiguous_col_chunk(*args), args))
-            for (pv, ustat, fc), args in pool(op(X, lb, ub, group_container, is_log1p, use_continuity, alternative) for lb, ub in iterator):
+            for (pv, ustat, fc), args in pool(
+                op(X, lb, ub, group_container, is_log1p, use_continuity, alternative) for lb, ub in iterator
+            ):
                 # progress.update(task, advance=group_container.counts.size * (args[2] - args[1]))  # refresh after processing is done
                 pbar.update(group_container.counts.size * (args[2] - args[1]))
                 col_chunk = slice(*args[1:3])

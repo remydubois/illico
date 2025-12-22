@@ -1,10 +1,11 @@
 import math
 import warnings
+from typing import Literal
 
 import numpy as np
 from numba import njit
 from scipy import sparse as sc_sparse
-from typing import Literal
+
 from illico.utils.groups import GroupContainer
 
 
@@ -94,7 +95,7 @@ def compute_pval(
     tie_corr = 1.0 - tie_sum / (n * (n - 1) * (n + 1))
     if tie_corr > 1.0e-9:  # TODO: do that properly
         sigma = np.sqrt(n_ref * n_tgt * (n_ref + n_tgt + 1) / 12.0 * tie_corr)
-        
+
         if alternative == "two-sided":  # two-sided
             # Compute both-sided statistic
             U = min(U, n_ref * n_tgt - U)
@@ -106,7 +107,7 @@ def compute_pval(
             z = (delta - contin_corr) / sigma
             # P(Z > z) = 0.5 * erfc(z / sqrt(2))
             return 0.5 * math.erfc(z / math.sqrt(2.0))
-        elif alternative == "less" :  # less (left-tailed)
+        elif alternative == "less":  # less (left-tailed)
             delta = U - mu
             z = (delta + contin_corr) / sigma
             # P(Z < z) = 0.5 * erfc(-z / sqrt(2))

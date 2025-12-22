@@ -85,7 +85,9 @@ def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternativ
         else:
             fc = np.mean(grp_counts, axis=0) / np.mean(ref_counts, axis=0)
 
-        stats, pvals = mannwhitneyu(ref_counts, grp_counts, axis=0, method="asymptotic", use_continuity=use_continuity, alternative=alternative)
+        stats, pvals = mannwhitneyu(
+            ref_counts, grp_counts, axis=0, method="asymptotic", use_continuity=use_continuity, alternative=alternative
+        )
         results.append(
             pd.DataFrame(
                 {
@@ -113,13 +115,24 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, alternative):
         reference = None
 
     asy_results = asymptotic_wilcoxon(
-        adata=rand_adata, is_log1p=False, group_keys="pert", reference_group=reference, use_continuity=use_continuity, n_threads=1, batch_size=16,
+        adata=rand_adata,
+        is_log1p=False,
+        group_keys="pert",
+        reference_group=reference,
+        use_continuity=use_continuity,
+        n_threads=1,
+        batch_size=16,
         alternative=alternative,
     )
 
-    scipy_results = scipy_mannwhitneyu(adata=rand_adata, groupby_key="pert", reference=reference, is_log1p=False,
-                                        use_continuity=use_continuity, alternative=alternative
-                                       )
+    scipy_results = scipy_mannwhitneyu(
+        adata=rand_adata,
+        groupby_key="pert",
+        reference=reference,
+        is_log1p=False,
+        use_continuity=use_continuity,
+        alternative=alternative,
+    )
     # sc_results = scanpy_mannwhitneyu(adata=rand_adata, groupby_key="pert", reference=reference)
 
     # Test statistics exactly

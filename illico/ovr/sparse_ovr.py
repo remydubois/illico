@@ -1,3 +1,5 @@
+from typing import Literal
+
 import numpy as np
 from numba import njit
 
@@ -15,7 +17,6 @@ from illico.utils.sparse.csr import (
     _assert_is_csr,
     csr_get_contig_cols_into_csc,
 )
-from typing import Literal
 
 
 @njit(fastmath=True, nogil=True, cache=False)
@@ -85,7 +86,7 @@ def sparse_ovr_mwu_kernel(
                 tie_sum=tie_sum,
                 U=U[k, j],
                 mu=mu[k],
-                contin_corr=0.5 if use_continuity else 0.,
+                contin_corr=0.5 if use_continuity else 0.0,
                 alternative=alternative,
             )
 
@@ -137,7 +138,11 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     #     start, end = csc_chunk.indptr[j], csc_chunk.indptr[j + 1]
     #     idxs[start:end] = np.argsort(csc_chunk.data[start:end])
     pvalues, statistics = sparse_ovr_mwu_kernel(
-        X=csc_chunk, groups=grpc.encoded_groups, group_counts=grpc.counts, use_continuity=use_continuity, alternative=alternative
+        X=csc_chunk,
+        groups=grpc.encoded_groups,
+        group_counts=grpc.counts,
+        use_continuity=use_continuity,
+        alternative=alternative,
     )
 
     fold_change = csc_fold_change(X=csc_chunk, grpc=grpc, is_log1p=is_log1p)
@@ -184,7 +189,13 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
     csc_chunk = csr_get_contig_cols_into_csc(csr_matrix=X, chunk_lb=chunk_lb, chunk_ub=chunk_ub)
 
     # TODO: same remark as csc regarding sorting
-    pvalues, statistics = sparse_ovr_mwu_kernel(X=csc_chunk, groups=grpc.encoded_groups, group_counts=grpc.counts, use_continuity=use_continuity, alternative=alternative)
+    pvalues, statistics = sparse_ovr_mwu_kernel(
+        X=csc_chunk,
+        groups=grpc.encoded_groups,
+        group_counts=grpc.counts,
+        use_continuity=use_continuity,
+        alternative=alternative,
+    )
     fold_change = csc_fold_change(X=csc_chunk, grpc=grpc, is_log1p=is_log1p)
 
     return pvalues, statistics, fold_change

@@ -1,3 +1,5 @@
+from typing import Literal
+
 import numpy as np
 from scipy import sparse as py_sparse
 
@@ -10,7 +12,6 @@ from illico.utils.groups import GroupContainer
 from illico.utils.sparse.csc import CSCMatrix
 from illico.utils.sparse.csr import CSRMatrix
 from illico.utils.type import scipy_to_nb
-from typing import Literal
 
 
 def ovo_mwu_over_contiguous_col_chunk(

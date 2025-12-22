@@ -1,8 +1,9 @@
 """Runs in 3.4 seconds for 100 genes, so roughly a 3.4 x 180 = 9 minutes for the whole H1."""
 
+from typing import Literal
+
 import numpy as np
 from numba import njit
-from typing import Literal
 
 from illico.utils.groups import GroupContainer
 from illico.utils.math import chunk_and_fortranize, compute_pval, dense_fold_change
@@ -67,7 +68,7 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
                 tie_sum=tie_sum[j],
                 U=statistics[k, j],
                 mu=mu[k, 0],
-                contin_corr=0.5 if use_continuity else 0.,
+                contin_corr=0.5 if use_continuity else 0.0,
                 alternative=alternative,
             )
 

@@ -1,6 +1,7 @@
+from typing import Literal
+
 import numpy as np
 from numba import njit
-from typing import Literal
 
 from illico.utils.groups import GroupContainer
 from illico.utils.math import compute_pval, diff
