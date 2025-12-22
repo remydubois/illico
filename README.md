@@ -86,7 +86,7 @@ Please open an issue, but before that: make sure that you are running **asymptot
 
 ### What if my adata does not fit in memory ?
 Optimizing this use case is highly non-trivial as efficiently chunking CSR or CSC matrices is much more complex than running `adata[:, idxs]`. Ran on a CSR matrix, this command will load (temporarily) the entirety of the indices in RAM, resulting in a memory footprint almost equivalent to loading everything at once, on top of being extremely slow.
-1. If your adata holds the expression matrix in a dense array, `illico` will work on it transparently because batch-based by design.
+1. If your adata holds the expression matrix in a dense array, `illico` shall work on it with very little extra work because batch-based by design.
 2. If your adata holds the expression matrix in a sparse (CSC or CSR) array, you have no other choice than manually chunking your array before running `illico` on batches. But, again, in this case I would advice to fallback to other solutions like `rapids-singlecell`.
 
 ## How it works
@@ -107,8 +107,8 @@ In order for benchmarks to run in a reasonable amount of time, the timings repor
 :bulb: Keep in mind that `pdex` does not implement *OVR* test.
 
 <p float="center">
-  <center><img src="https://github.com/remydubois/illico/blob/main/assets/method-runtimes-comparison.png?raw=true" width="700" />
-  <figcaption>Runtime comparison for scanpy, pdex and illico</figcaption></center>
+  <center><img src="https://github.com/remydubois/illico/blob/main/assets/method-runtimes-comparison.png?raw=true" width="100%" />
+  <figcaption>Runtime comparison for scanpy, pdex and illico on four cell lines.</figcaption></center>
 </p>
 
 ### Scalability
@@ -116,8 +116,18 @@ TODO: this could clearly be improved with a smarter batching strategy
 `illico` scales reasonably well with your compute budget. Find below the processing time of the K562-essential dataset for both OVO and OVR tests, while increasing the number of threads used. Similarly as before, a benchmark is defined by:
 1. The data format (CSR, or dense) used to contain the expression matrix.
 2. The test performed: OVO (`reference="non-targeting"`) or OVR (`reference=None`).
-
+The example below shows spanning 8 threads instead of 1 brings a 7-folds speedup for the cell line k562.
 ```bash
+---------------------- benchmark 'k562-dense-ovo': 4 tests -----------------------
+Name (time in s)                                                    Mean
+----------------------------------------------------------------------------------
+test_speed_benchmark[k562-dense-100%-illico-ovo-nthreads=8]      29.6962 (1.0)
+test_speed_benchmark[k562-dense-100%-illico-ovo-nthreads=4]      53.4369 (1.80)
+test_speed_benchmark[k562-dense-100%-illico-ovo-nthreads=2]     100.3919 (3.38)
+test_speed_benchmark[k562-dense-100%-illico-ovo-nthreads=1]     208.2443 (7.01)
+----------------------------------------------------------------------------------
+```
+<!-- ```bash
 ---------------------- benchmark 'k562-csr-ovo': 4 tests -----------------------
 Name (time in s)                                                  Mean
 --------------------------------------------------------------------------------
@@ -153,8 +163,8 @@ test_speed_benchmark[k562-dense-100%-illico-ovr-nthreads=4]      33.6427 (1.74)
 test_speed_benchmark[k562-dense-100%-illico-ovr-nthreads=2]      63.1888 (3.27)
 test_speed_benchmark[k562-dense-100%-illico-ovr-nthreads=1]     127.4927 (6.60)
 ----------------------------------------------------------------------------------
-```
-### Memory
+``` -->
+<!-- ### Memory
 TODO: Add memit for all solutions, remind that memory footprint grows linearly with number of threads for illico.
 ```
 ============================================================================== MEMRAY REPORT ===============================================================================
@@ -194,7 +204,7 @@ Allocation results for tests/test_asymptotic_wilcoxon.py::test_memory_benchmark[
                 - tolist:/Users/remydubois/Documents/perso/repos/illico/.venv/lib/python3.13/site-packages/pandas/core/arrays/base.py:2078 -> 1.7MiB
                 - _wrapit:/Users/remydubois/Documents/perso/repos/illico/.venv/lib/python3.13/site-packages/numpy/_core/fromnumeric.py:46 -> 1.7MiB
                 - encode_and_count_groups:/Users/remydubois/Documents/perso/repos/illico/illico/utils/groups.py:25 -> 1.7MiB
-```
+``` -->
 ## Why illico
 The name *illico* is a wordplay inspired by the R package `presto` (now the Wilcoxon rank-sum test backend in Seurat). Aside from this naming reference, there is no affiliation or intended equivalence between the two. `illico` was developed independently, and although the statistical methodology may be similar, it was not designed to reproduce `presto`’s results.
 
