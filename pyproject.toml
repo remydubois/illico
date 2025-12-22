@@ -8,16 +8,13 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
 dependencies = [
-    "numpy (>=2.3.4,<3.0.0)",
-    "numba (>=0.62.1,<0.63.0)",
-    "anndata (>=0.12.3,<0.13.0)",
+    "anndata (>=0.11)",
+    "numba (>=0.63.1,<0.64.0)",
     "pandas (>=2.3.3,<3.0.0)",
-    "scipy (>=1.16.2,<2.0.0)",
+    "scipy (>=1.16.3,<2.0.0)",
     "tqdm (>=4.67.1,<5.0.0)",
-    "joblib (>=1.5.2,<2.0.0)",
-    "ipywidgets (>=8.1.7,<9.0.0)",
-    "loguru (>=0.7.3,<0.8.0)",
-    "pdex @ file:///home/jovyan/repos/pdex",
+    "joblib (>=1.5.3,<2.0.0)",
+    "loguru (>=0.7.3,<0.8.0)"
 ]
 
 
@@ -31,16 +28,11 @@ dev = [
     "pytest-benchmark (>=5.1.0,<6.0.0)",
     "pytest-benchmark[histogram] (>=5.2.3,<6.0.0)",
     "pre-commit (>=4.3.0,<5.0.0)",
-    "black (>=25.9.0,<26.0.0)",
-    "ruff (>=0.14.1,<0.15.0)",
-    "isort (>=7.0.0,<8.0.0)",
-    "line-profiler (>=5.0.0,<6.0.0)",
-    "ipdb (>=0.13.13,<0.14.0)",
     "scanpy (>=1.11.5,<2.0.0)",
     "pytest-memray (>=1.8.0,<2.0.0)",
     "memory-profiler (>=0.61.0,<0.62.0)",
     "pytest-regex (>=0.2.0,<0.3.0)",
-    "ipykernel (>=7.1.0,<8.0.0)",
+    "pdex (>=0.1.27,<0.2.0)",
 ]
 
 [tool.black]
