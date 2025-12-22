@@ -13,10 +13,10 @@ Approximate speed benchmarks ran on k562-essential can be found below. All the c
 
 |               Test               | Format | Illico | Scanpy | pdex |
 |----------------------------------|--------|--------|--------|------|
-| OVO (reference="non-targeting")  | Dense  | <1min  | ~1h    | ~4h  |
-| OVO (reference="non-targeting")  | Sparse | <1min  | ~1h30  | ~4h  |
-| OVR (reference=None)             | Dense  | <1min  | ~11h   |  X   |
-| OVR (reference=None)             | Sparse | <1min  | ~10h   |  X   |
+| OVO (reference="non-targeting")  | Dense  |  ~30s  | ~1h    | ~4h  |
+| OVO (reference="non-targeting")  | Sparse |  ~30s  | ~1h30  | ~4h  |
+| OVR (reference=None)             | Dense  |  ~30s  | ~11h   |  X   |
+| OVR (reference=None)             | Sparse |  ~30s  | ~10h   |  X   |
 
 :bulb: Note:
 1. This library only performs tie-corrected wilcoxon rank-sum tests, also known as Mann-Whitney test, also performed by `scanpy.tl.rank_genes_groups(…, tie_correct=True)`. It **does not** perform wilcoxon signed-sum tests, those are less often used in for single-cell data analyses as it requires samples to be **paired**.
