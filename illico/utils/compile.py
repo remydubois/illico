@@ -54,7 +54,7 @@ def _precompile(input_data: np.ndarray | py_sparse.csc_matrix | py_sparse.csr_ma
     )
 
     # This input signature corresponds to: lower bound, upper bvound, group container, is_log1p, use_continuity
-    common_sig = (types.int64, types.int64, GroupContainerType, types.boolean, types.boolean)
+    common_sig = (types.int64, types.int64, GroupContainerType, types.boolean, types.boolean, types.string)
     # This is the output: three float64 2D arrays
     out_sig = types.UniTuple(types.float64[:, ::1], 3)
 

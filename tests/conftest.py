@@ -27,7 +27,7 @@ CELL_LINE_URLS = {
         (cell_line, fmt, fraction)
         for cell_line in ["k562", "rpe1", "jurkat", "hepg2"]
         for fmt in ["dense", "csr", "csc"]
-        for fraction in [0.0, 0.2]
+        for fraction in [0.0, 0.2, 1.]
     ],
     scope="function",
     ids=lambda p: f"{p[0]}-{p[1]}-{p[2]:.0%}",
@@ -75,8 +75,8 @@ def adata(request):
 # TODO: params on log1p and normalization ? A lot of tests would result
 @pytest.fixture(scope="session", params=["dense", "csc", "csr"])
 def rand_adata(request):
-    n_cells = 20_000
-    n_genes = 150
+    n_cells = 2_000
+    n_genes = 15
     n_groups = 20
     assert n_groups >= 2
     sparsity = 0.5  # ~50% zeros

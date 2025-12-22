@@ -57,9 +57,9 @@ def asymptotic_wilcoxon(
     batch_size
         Number of genes to process in each batch.
     alternative
-        Type of alternative hypothesis. Currently, only "two-sided" is supported.
+        Type of alternative hypothesis. One of 'two-sided', 'less', or 'greater'.
     use_continuity
-        Whether to apply continuity correction. Currently, only `True` is supported.
+        Whether to apply continuity correction.
     layer
         Layer in `adata.layers` to use for the data. If `None`, uses `adata.X`.
     precompile
@@ -74,11 +74,6 @@ def asymptotic_wilcoxon(
     """
     # TODO: add a sparsity warning inviting user to convert to sparse if possible
     # TODO: rename group_keys
-
-    if alternative != "two-sided":
-        raise NotImplementedError("Currently only two-sided alternative is supported.")
-    if not use_continuity:
-        raise NotImplementedError("Currently only continuity correction is supported.")
 
     if layer is not None:
         logger.info(f"Using layer '{layer}' for differential expression.")
@@ -132,7 +127,7 @@ def asymptotic_wilcoxon(
             else:  # ovo use case
                 pbar.set_description("Running one-versus-ref MannWhitney-U tests")
                 op = delayed(lambda *args: (ovo_mwu_over_contiguous_col_chunk(*args), args))
-            for (pv, ustat, fc), args in pool(op(X, lb, ub, group_container, is_log1p) for lb, ub in iterator):
+            for (pv, ustat, fc), args in pool(op(X, lb, ub, group_container, is_log1p, use_continuity, alternative) for lb, ub in iterator):
                 # progress.update(task, advance=group_container.counts.size * (args[2] - args[1]))  # refresh after processing is done
                 pbar.update(group_container.counts.size * (args[2] - args[1]))
                 col_chunk = slice(*args[1:3])

@@ -17,6 +17,7 @@ dependencies = [
     "joblib (>=1.5.2,<2.0.0)",
     "ipywidgets (>=8.1.7,<9.0.0)",
     "loguru (>=0.7.3,<0.8.0)",
+    "pdex @ file:///home/jovyan/repos/pdex",
 ]
 
 
@@ -34,12 +35,12 @@ dev = [
     "ruff (>=0.14.1,<0.15.0)",
     "isort (>=7.0.0,<8.0.0)",
     "line-profiler (>=5.0.0,<6.0.0)",
-    "pdex (>=0.1.26,<0.2.0)",
     "ipdb (>=0.13.13,<0.14.0)",
     "scanpy (>=1.11.5,<2.0.0)",
     "pytest-memray (>=1.8.0,<2.0.0)",
     "memory-profiler (>=0.61.0,<0.62.0)",
     "pytest-regex (>=0.2.0,<0.3.0)",
+    "ipykernel (>=7.1.0,<8.0.0)",
 ]
 
 [tool.black]

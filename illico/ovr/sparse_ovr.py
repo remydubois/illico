@@ -15,6 +15,7 @@ from illico.utils.sparse.csr import (
     _assert_is_csr,
     csr_get_contig_cols_into_csc,
 )
+from typing import Literal
 
 
 @njit(fastmath=True, nogil=True, cache=False)
@@ -23,7 +24,7 @@ def sparse_ovr_mwu_kernel(
     groups: np.ndarray,
     group_counts: np.ndarray,
     use_continuity: bool = True,
-    idxs: np.ndarray = None,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Perform OVR ranksum test group wise and column wise on a CSC matrix.
 
@@ -38,7 +39,6 @@ def sparse_ovr_mwu_kernel(
 
     Author: Rémy Dubois
     """
-    contin_corr = 0.5 if use_continuity else 0.0
     _, n_cols = X.shape
     # Convert n_zeros to float64 as they will be used for tie sum later
     n_zeros = (X.shape[0] - diff(X.indptr)).astype(np.float64)
@@ -85,7 +85,8 @@ def sparse_ovr_mwu_kernel(
                 tie_sum=tie_sum,
                 U=U[k, j],
                 mu=mu[k],
-                contin_corr=contin_corr,
+                contin_corr=0.5 if use_continuity else 0.,
+                alternative=alternative,
             )
 
     return pvals, U
@@ -99,6 +100,7 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     grpc: GroupContainer,
     is_log1p: bool,
     use_continuity: bool = True,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ):
     """Perform OVR ranksum test over the contiguous column chunk defined by the bounds.
 
@@ -110,6 +112,8 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
         chunk_ub (int): Upper bound of the vertical slice
         grpc (GroupContainer): GroupContainer
         is_log1p (bool): User-indicated flag telling if data was log1p transformed or not.
+        use_continuity (bool): Whether to use continuity correction when computing p-values.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis.
 
     Raises:
         ValueError: If bounds are not intelligible
@@ -128,12 +132,12 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
 
     # TODO: un-jitting this function comes at close to no cost, and allows to do argsorting out of the njit function
     # on linux machines, it is 3 to 4 times faster than numba.np.argsort and sorting seems to be half the compute time of the whole function
-    idxs = np.empty_like(csc_chunk.indices)
-    for j in range(csc_chunk.shape[1]):
-        start, end = csc_chunk.indptr[j], csc_chunk.indptr[j + 1]
-        idxs[start:end] = np.argsort(csc_chunk.data[start:end])
+    # idxs = np.empty_like(csc_chunk.indices)
+    # for j in range(csc_chunk.shape[1]):
+    #     start, end = csc_chunk.indptr[j], csc_chunk.indptr[j + 1]
+    #     idxs[start:end] = np.argsort(csc_chunk.data[start:end])
     pvalues, statistics = sparse_ovr_mwu_kernel(
-        X=csc_chunk, groups=grpc.encoded_groups, group_counts=grpc.counts, idxs=idxs
+        X=csc_chunk, groups=grpc.encoded_groups, group_counts=grpc.counts, use_continuity=use_continuity, alternative=alternative
     )
 
     fold_change = csc_fold_change(X=csc_chunk, grpc=grpc, is_log1p=is_log1p)
@@ -148,6 +152,7 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
     grpc: GroupContainer,
     is_log1p: bool,
     use_continuity: bool = True,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Perform OVR ranksum test over the contiguous column chunk defined by the bounds.
 
@@ -159,6 +164,8 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
         chunk_ub (int): Upper bound of the vertical slice
         grpc (GroupContainer): GroupContainer
         is_log1p (bool): User-indicated flag telling if data was log1p transformed or not.
+        use_continuity (bool): Whether to use continuity correction when computing p-values.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Raises:
         ValueError: If bounds are not intelligible
@@ -177,7 +184,7 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
     csc_chunk = csr_get_contig_cols_into_csc(csr_matrix=X, chunk_lb=chunk_lb, chunk_ub=chunk_ub)
 
     # TODO: same remark as csc regarding sorting
-    pvalues, statistics = sparse_ovr_mwu_kernel(X=csc_chunk, groups=grpc.encoded_groups, group_counts=grpc.counts)
+    pvalues, statistics = sparse_ovr_mwu_kernel(X=csc_chunk, groups=grpc.encoded_groups, group_counts=grpc.counts, use_continuity=use_continuity, alternative=alternative)
     fold_change = csc_fold_change(X=csc_chunk, grpc=grpc, is_log1p=is_log1p)
 
     return pvalues, statistics, fold_change

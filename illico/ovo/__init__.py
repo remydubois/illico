@@ -10,6 +10,7 @@ from illico.utils.groups import GroupContainer
 from illico.utils.sparse.csc import CSCMatrix
 from illico.utils.sparse.csr import CSRMatrix
 from illico.utils.type import scipy_to_nb
+from typing import Literal
 
 
 def ovo_mwu_over_contiguous_col_chunk(
@@ -18,6 +19,8 @@ def ovo_mwu_over_contiguous_col_chunk(
     chunk_ub: int,
     group_container: GroupContainer,
     is_log1p: bool,
+    use_continuity: bool = True,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ):
     """Dispatcher for the OVO ranksum test. Routes toward the optimized
     implementation depending on input data format.
@@ -28,6 +31,8 @@ def ovo_mwu_over_contiguous_col_chunk(
         chunk_ub (int): Vertical slicing (column) upper bound
         group_container (GroupContainer): GroupContainer
         is_log1p (bool): User-indicated flag telling if expression counts underwent log1p transfo.
+        use_continuity (bool, optional): Whether to use continuity correction when computing p-values.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis.
 
     Raises:
         ValueError: If input is neither dense, csc or csr.
@@ -49,7 +54,8 @@ def ovo_mwu_over_contiguous_col_chunk(
             chunk_ub,
             group_container,
             is_log1p=is_log1p,
-            use_continuity=True,
+            use_continuity=use_continuity,
+            alternative=alternative,
         )
     elif isinstance(X_nb, CSCMatrix):
         pvalues, statistics, fold_change = csc_ovo_mwu_kernel_over_contiguous_col_chunk(
@@ -58,7 +64,8 @@ def ovo_mwu_over_contiguous_col_chunk(
             chunk_ub,
             group_container,
             is_log1p=is_log1p,
-            use_continuity=True,
+            use_continuity=use_continuity,
+            alternative=alternative,
         )
     elif isinstance(X_nb, CSRMatrix):
         pvalues, statistics, fold_change = csr_ovo_mwu_kernel_over_contiguous_col_chunk(
@@ -67,7 +74,8 @@ def ovo_mwu_over_contiguous_col_chunk(
             chunk_ub,
             group_container,
             is_log1p=is_log1p,
-            use_continuity=True,
+            use_continuity=use_continuity,
+            alternative=alternative,
         )
     else:
         raise ValueError(X_nb)

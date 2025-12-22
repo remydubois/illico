@@ -2,6 +2,7 @@
 
 import numpy as np
 from numba import njit
+from typing import Literal
 
 from illico.utils.groups import GroupContainer
 from illico.utils.math import chunk_and_fortranize, compute_pval, dense_fold_change
@@ -17,6 +18,7 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
     grpc: GroupContainer,
     is_log1p: bool,
     use_continuity: bool = True,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Compute OVR ranksum test on a dense matrix of expression counts.
 
@@ -26,6 +28,7 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
         use_continuity (bool, optional): Apply continuity factor or not. Defaults to True.
         is_log1p (bool, optional): User-indicated flag telling if data underwent log1p
         transformation or not. Defaults to False.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis.
 
     Returns:
         tuple[np.ndarray]: Two-sided p-values, U-statistic and fold change.
@@ -33,7 +36,6 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
 
     Author: Rémy Dubois
     """
-    contin_corr = 0.5 if use_continuity else 0.0
     if chunk_lb < 0 or chunk_ub > X.shape[1] or chunk_lb > chunk_ub:
         raise ValueError((chunk_lb, chunk_ub))
 
@@ -65,7 +67,8 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
                 tie_sum=tie_sum[j],
                 U=statistics[k, j],
                 mu=mu[k, 0],
-                contin_corr=contin_corr,
+                contin_corr=0.5 if use_continuity else 0.,
+                alternative=alternative,
             )
 
     # Get fold change

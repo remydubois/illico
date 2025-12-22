@@ -23,9 +23,10 @@ Approximate speed benchmarks ran on k562-essential can be found below. All the c
 1. Exact benchmarks ran on a subset of the whole k562 can be found at the end of this readme.
 2. OVO refers to one-versus-one: this test computes u-stats and p-values between control cells and perturbed cells. Equivalent to `scanpy`'s `rank_gene_groups(…, reference="non-targeting")`.
 3. OVR refers to one-versus-rest: this test computes u-stats and p-values between each group cells, and all other cells, for each group. Equivalent to `scanpy`'s `rank_gene_groups(…, reference="rest")`.
+4. This package is not intended at running out-of-core single cell data analyses like `rapids-singlecell`.
 
 ## Installation
-`illico` can be installed via pip, compatible with Python 3.11 and onward:
+`illico` can be installed via pip, compatible with Python 3.12 and onward:
 ```bash
 pip install illico -U
 ```
@@ -34,7 +35,6 @@ pip install illico -U
 This library exposes one single function that returns a `pd.DataFrame` holding p-value, u-statistic and fold-change for each (group, gene). Except the few points below, the function and its arguments should be self-explanatory:
 1. It is **required** to indicate if the data you run the tests on underwent log1p transform. This only impacts the fold-change calculation and not the test results (p-values, u-stats). The choice was made to not try to guess this information, as those often lead to error-prone and potentially harmful rules of thumb.
 2. By default, `illico.asymptotic_wilcoxon` will use what lies in `adata.X` to compute DE genes. If you want a specific layer to be used to perform the tests, you must specify it.
-3. As of December 2025, it only exposes two-sided and continuity-corrected Mann-Whitney tests. Adding non-corrected and/or one-sided tests could be done easily of need arise.
 
 ### DE genes compared to control cells
 If you are working on single cell perturbation data:
@@ -83,6 +83,11 @@ Please open an issue, but before that: make sure that you are running **asymptot
 ### What about normalization and log1p
 1. `illico` does not care about your data being normalized or not, it is up to you to apply the preprocessing of your choice before running the tests. It is expected that `illico` is slower if ran on total-count normalized data by a factor ~2. This is because if applied on non total-count normalized data, sorting relies on radix sort which is faster than the usual quicksort (that is used if testing total-count normalized data).
 2. In order to avoid any unintended conversion, or relie on failure-prone rules of thumb, **`illico` requires the user to indicate if the input data is log1p or not**. This is only used to compute appropriate fold-change, and does not impact test (p-value and statistic) results.
+
+### What if my adata does not fit in memory ?
+Optimizing this use case is highly non-trivial as efficiently chunking CSR or CSC matrices is much more complex than running `adata[:, idxs]`. Ran on a CSR matrix, this command will load (temporarily) the entirety of the indices in RAM, resulting in a memory footprint almost equivalent to loading everything at once, on top of being extremely slow. 
+1. If your adata holds the expression matrix in a dense array, `illico` will work on it transparently because batch-based by design.
+2. If your adata holds the expression matrix in a sparse (CSC or CSR) array, you have no other choice than manually chunking your array before running `illico` on batches. But, again, in this case I would advice to fallback to other solutions like `rapids-singlecell`.
 
 ## How it works
 The rank-sum tests performed by `illico` are classical, asymptotic, rank-sum tests. No approximation nor assumption is done. `Illico` relies on a few optimization tricks that are non-exhaustively listed below:

@@ -1,5 +1,6 @@
 import numpy as np
 from numba import njit
+from typing import Literal
 
 from illico.utils.groups import GroupContainer
 from illico.utils.math import compute_pval, diff
@@ -21,6 +22,7 @@ def single_group_sparse_ovo_mwu_kernel(
     sorted_ref_data: CSCMatrix,
     sorted_tgt_data: CSCMatrix,
     use_continuity: bool = True,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Perform OVO tests gene wise using the two **sorted** CSC matrix given as input.
 
@@ -31,6 +33,7 @@ def single_group_sparse_ovo_mwu_kernel(
         sorted_ref_data (CSCMatrix): Reference data stored in CSC, sorted column-wise
         sorted_tgt_data (CSCMatrix): Perturbed data stored in CSC, sorted column-wise
         use_continuity (bool, optional): Apply continuity factor or not. Defaults to True.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Raises:
         ValueError: If shape mismatche
@@ -40,7 +43,6 @@ def single_group_sparse_ovo_mwu_kernel(
 
     Author: Rémy Dubois
     """
-    contin_corr = 0.5 if use_continuity else 0.0
 
     n_ref, n_cols_ref = sorted_ref_data.shape
     n_tgt, n_cols_tgt = sorted_tgt_data.shape
@@ -84,7 +86,8 @@ def single_group_sparse_ovo_mwu_kernel(
             tie_sum=tie_sum,
             U=U1,
             mu=mu,
-            contin_corr=contin_corr,
+            contin_corr=0.5 if use_continuity else 0.0,
+            alternative=alternative,
         )
 
         # Regardless of the alternative, always return U1 like scipy
@@ -98,6 +101,8 @@ def multi_group_sparse_ovo_mwu_kernel(
     X: CSRMatrix,
     grpc: GroupContainer,
     ref_group_id: int,
+    use_continuity: bool = True,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Sequentially perform group-wise OVO tests along the columns on a CSR matrix.
 
@@ -105,6 +110,8 @@ def multi_group_sparse_ovo_mwu_kernel(
         X (CSRMatrix): Input CSR matrix of shape (n_cells, n_genes)
         grpc (GroupContainer): GroupContainer
         ref_group_id (int): Encoded reference group ID.
+        use_continuity (bool, optional): Whether to use continuity correction when computing p-values. Defaults to True.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Returns:
         tuple[np.ndarray]: two-sided p-values, U-statistics. Each of shape (n_groups, n_genes).
@@ -133,7 +140,7 @@ def multi_group_sparse_ovo_mwu_kernel(
         X_tgt = csr_get_rows_into_csc(X, tgt_idxs)
         _sort_csc_columns_inplace(X_tgt)
         pvalue, statistic = single_group_sparse_ovo_mwu_kernel(
-            sorted_ref_data=csc_X_ref, sorted_tgt_data=X_tgt, use_continuity=True
+            sorted_ref_data=csc_X_ref, sorted_tgt_data=X_tgt, use_continuity=use_continuity, alternative=alternative
         )
         pvalues[group_id, :] = pvalue
         statistics[group_id, :] = statistic
@@ -151,6 +158,7 @@ def csc_ovo_mwu_kernel_over_contiguous_col_chunk(
     grpc: GroupContainer,
     is_log1p: bool,
     use_continuity: bool = True,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ):
     """Perform OVO test over contiguous chunk of column of a CSC matrix.
 
@@ -179,6 +187,8 @@ def csc_ovo_mwu_kernel_over_contiguous_col_chunk(
         X=csr_chunk,
         grpc=grpc,
         ref_group_id=grpc.encoded_ref_group,
+        use_continuity=use_continuity,
+        alternative=alternative,
     )
 
     # Compute fold change
@@ -196,6 +206,7 @@ def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
     grpc: GroupContainer,
     is_log1p: bool,
     use_continuity: bool = True,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ):
     """Perform OVO test over contiguous chunk of column of a CSR matrix.
 
@@ -205,6 +216,8 @@ def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
         chunk_ub (int): Upper bound of the vertical slicing
         grpc (GroupContainer): GroupContainer
         is_log1p (bool): User-indicated flag telling if data underwent log1p transform.
+        use_continuity (bool): Whether to use continuity correction when computing p-values.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Raises:
         ValueError: If chunk bounds are inintelligible.
@@ -224,6 +237,8 @@ def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
         X=csr_chunk,
         grpc=grpc,
         ref_group_id=grpc.encoded_ref_group,
+        use_continuity=use_continuity,
+        alternative=alternative,
     )
     # Compute fold change
     fold_change = csr_fold_change(csr_chunk, grpc, is_log1p=is_log1p)

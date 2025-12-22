@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 from numba import njit
 from scipy import sparse as sc_sparse
-
+from typing import Literal
 from illico.utils.groups import GroupContainer
 
 
@@ -69,6 +69,7 @@ def compute_pval(
     U: float,
     mu: float,
     contin_corr: float = 0.0,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> float:
     """Compute p-value.
 
@@ -83,38 +84,37 @@ def compute_pval(
         U (float): U-statistic
         mu (float): Mean
         contin_corr (float, optional): Continuity correction factor. Defaults to 0.0.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis.
 
     Returns:
-        float: Two-sided p-value
+        float: P-value
 
     Author: Rémy Dubois
     """
     tie_corr = 1.0 - tie_sum / (n * (n - 1) * (n + 1))
     if tie_corr > 1.0e-9:  # TODO: do that properly
         sigma = np.sqrt(n_ref * n_tgt * (n_ref + n_tgt + 1) / 12.0 * tie_corr)
-        # Get p-val
-        # if alternative == "two-sided":
-        # Compute both-sided statistic
-        U = min(U, n_ref * n_tgt - U)
-        delta = U - mu
-        z = (np.abs(delta) + np.sign(delta) * contin_corr) / sigma
-
-        # from scipy.stats import mannwhitneyu
-        # from scipy.special import erf
-        # from illico.utils.sparse.csc import csc_to_dense
-        # x_ref = csc_to_dense(sorted_ref_data)
-        # x_tgt = csc_to_dense(sorted_tgt_data)
-        # X_dense = np.concatenate([x_ref, x_tgt])
-        # import ipdb; ipdb.set_trace()
-        # elif alternative == "greater":
-        #     pvals = norm.sf(z)
-        # elif alternative == "less":
-        #     pvals = norm.cdf(z)
-        # else:
-        #     raise ValueError("alternative must be 'two-sided', 'greater', 'less'")
+        
+        if alternative == "two-sided":  # two-sided
+            # Compute both-sided statistic
+            U = min(U, n_ref * n_tgt - U)
+            delta = U - mu
+            z = (np.abs(delta) + np.sign(delta) * contin_corr) / sigma
+            return math.erfc(z / math.sqrt(2.0))
+        elif alternative == "greater":  # greater (right-tailed)
+            delta = U - mu
+            z = (delta - contin_corr) / sigma
+            # P(Z > z) = 0.5 * erfc(z / sqrt(2))
+            return 0.5 * math.erfc(z / math.sqrt(2.0))
+        elif alternative == "less" :  # less (left-tailed)
+            delta = U - mu
+            z = (delta + contin_corr) / sigma
+            # P(Z < z) = 0.5 * erfc(-z / sqrt(2))
+            return 0.5 * math.erfc(-z / math.sqrt(2.0))
+        else:
+            raise ValueError(f"Unsupported alternative hypothesis: {alternative}")
     else:
-        z = 0
-    return math.erfc(z / math.sqrt(2.0))
+        return 1.0
 
 
 @njit(nogil=True, cache=False)

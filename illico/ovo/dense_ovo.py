@@ -1,5 +1,6 @@
 import numpy as np
 from numba import njit
+from typing import Literal
 
 from illico.utils.groups import GroupContainer
 from illico.utils.math import chunk_and_fortranize, compute_pval, dense_fold_change
@@ -11,7 +12,7 @@ from illico.utils.ranking import (
 
 @njit(nogil=True, fastmath=True, parallel=False, cache=False)
 def dense_ovo_mwu_kernel(
-    sorted_ref_data: np.ndarray, sorted_tgt_data: np.ndarray, use_continuity: bool = True
+    sorted_ref_data: np.ndarray, sorted_tgt_data: np.ndarray, use_continuity: bool = True, alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Sequentially perform OVO tests on columns between sorted ref and sorted perturbed data.
 
@@ -19,13 +20,13 @@ def dense_ovo_mwu_kernel(
         sorted_ref_data (np.ndarray): Vertically sorted reference data.
         sorted_tgt_data (_type_): Vertically sorted perturbed data.
         use_continuity (bool, optional): Apply continuity factor or not . Defaults to True.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Returns:
         tuple[np.ndarray]: two-sided p-values, U-statistics. Each of shape (n_genes,).
 
     Author: Rémy Dubois
     """
-    contin_corr = 0.5 if use_continuity else 0.0
     n_ref, ncols = sorted_ref_data.shape
     n_tgt, _ = sorted_tgt_data.shape
 
@@ -46,7 +47,8 @@ def dense_ovo_mwu_kernel(
             tie_sum=tie_sum,
             U=U1,
             mu=mu,
-            contin_corr=contin_corr,
+            contin_corr=0.5 if use_continuity else 0.0,
+            alternative=alternative,
         )
         U_statistics[j] = U1
 
@@ -61,6 +63,7 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
     grpc: GroupContainer,
     is_log1p: bool,
     use_continuity: bool = True,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Perform OVO tests group-wise and gene(col)-wise.
 
@@ -113,6 +116,7 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
             sorted_ref_data=ref_chunk,
             sorted_tgt_data=tgt_chunk,
             use_continuity=use_continuity,
+            alternative=alternative,
         )
 
     # Compute fold change

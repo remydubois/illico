@@ -55,7 +55,7 @@ def scanpy_mannwhitneyu(adata, groupby_key, reference):
     return df.set_index(["target", "feature"])
 
 
-def scipy_mannwhitneyu(adata, groupby_key, reference, is_log1p=False):
+def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternative, is_log1p=False):
     if reference is not None:
         ref_counts = adata[adata.obs[groupby_key].eq(reference)].X
         if not isinstance(ref_counts, np.ndarray):
@@ -85,7 +85,7 @@ def scipy_mannwhitneyu(adata, groupby_key, reference, is_log1p=False):
         else:
             fc = np.mean(grp_counts, axis=0) / np.mean(ref_counts, axis=0)
 
-        stats, pvals = mannwhitneyu(ref_counts, grp_counts, axis=0, method="asymptotic")
+        stats, pvals = mannwhitneyu(ref_counts, grp_counts, axis=0, method="asymptotic", use_continuity=use_continuity, alternative=alternative)
         results.append(
             pd.DataFrame(
                 {
@@ -101,8 +101,10 @@ def scipy_mannwhitneyu(adata, groupby_key, reference, is_log1p=False):
     return results
 
 
+@pytest.mark.parametrize("alternative", ["two-sided", "less", "greater"])
+@pytest.mark.parametrize("use_continuity", [True, False])
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
-def test_asymptotic_wilcoxon(rand_adata, test):
+def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, alternative):
     cached = rand_adata.copy()
 
     if test == "ovo":
@@ -111,10 +113,13 @@ def test_asymptotic_wilcoxon(rand_adata, test):
         reference = None
 
     asy_results = asymptotic_wilcoxon(
-        adata=rand_adata, is_log1p=False, group_keys="pert", reference_group=reference, n_threads=1, batch_size=16
+        adata=rand_adata, is_log1p=False, group_keys="pert", reference_group=reference, use_continuity=use_continuity, n_threads=1, batch_size=16,
+        alternative=alternative,
     )
 
-    scipy_results = scipy_mannwhitneyu(adata=rand_adata, groupby_key="pert", reference=reference, is_log1p=False)
+    scipy_results = scipy_mannwhitneyu(adata=rand_adata, groupby_key="pert", reference=reference, is_log1p=False,
+                                        use_continuity=use_continuity, alternative=alternative
+                                       )
     # sc_results = scanpy_mannwhitneyu(adata=rand_adata, groupby_key="pert", reference=reference)
 
     # Test statistics exactly
