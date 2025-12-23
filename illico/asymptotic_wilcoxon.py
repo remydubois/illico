@@ -25,7 +25,7 @@ def asymptotic_wilcoxon(
     adata: ad.AnnData,
     is_log1p: bool,
     group_keys: str,
-    reference_group: str | None = None,
+    reference: str | None = None,
     n_threads: int = 1,
     batch_size: int = 256,
     alternative: str = "two-sided",
@@ -50,7 +50,7 @@ def asymptotic_wilcoxon(
         Whether the data is log1p transformed.
     group_keys
         Key in `adata.obs` specifying the group variable.
-    reference_group
+    reference
         Name of the reference group for OVO tests. If `None`, OVR tests are performed.
     n_threads
         Number of threads to use for parallel computation.
@@ -92,13 +92,13 @@ def asymptotic_wilcoxon(
             )
 
     if precompile:
-        _precompile(X, reference_group)
+        _precompile(X, reference)
 
     # Process the groups information
     raw_groups = adata.obs[group_keys].tolist()
-    unique_raw_groups, group_container = encode_and_count_groups(groups=raw_groups, ref_group=reference_group)
+    unique_raw_groups, group_container = encode_and_count_groups(groups=raw_groups, ref_group=reference)
     logger.info(
-        f"Found {group_container.counts.size} unique groups (min size: {group_container.counts.min()} cells; max size: {group_container.counts.max()} cells), with reference group: {reference_group}"
+        f"Found {group_container.counts.size} unique groups (min size: {group_container.counts.min()} cells; max size: {group_container.counts.max()} cells), with reference group: {reference}"
     )
     _, n_genes = X.shape
 
@@ -121,7 +121,7 @@ def asymptotic_wilcoxon(
     logger.trace(f"Performing a total of {n_tests:,d} tests.")
     with Parallel(n_threads, prefer="threads", return_as="generator_unordered") as pool:
         with tqdm(total=n_tests, smoothing=0.0, unit="it", unit_scale=True, unit_divisor=1000) as pbar:
-            if reference_group is None:  # ovr use case
+            if reference is None:  # ovr use case
                 pbar.set_description("Running one-versus-all MannWhitney-U tests")
                 op = delayed(lambda *args: (ovr_mwu_over_col_contiguous_chunk(*args), args))
             else:  # ovo use case

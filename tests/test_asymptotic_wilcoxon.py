@@ -118,7 +118,7 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, alternative):
         adata=rand_adata,
         is_log1p=False,
         group_keys="pert",
-        reference_group=reference,
+        reference=reference,
         use_continuity=use_continuity,
         n_threads=1,
         batch_size=16,
@@ -177,7 +177,7 @@ def test_unsorted_indices_error(rand_adata):
             adata=rand_adata,
             is_log1p=False,
             group_keys="pert",
-            reference_group="non-targeting",
+            reference="non-targeting",
             n_threads=1,
             batch_size=16,
         )
@@ -207,7 +207,7 @@ def call_routine(data, method, test, num_threads):
                     data,
                     is_log1p=False,
                     group_keys="gene",
-                    reference_group=reference,
+                    reference=reference,
                     n_threads=num_threads,
                     batch_size=256,
                 )
@@ -242,7 +242,7 @@ def test_speed_benchmark(adata, method, test, num_threads, benchmark, request):
 
     # Compile
     if method == "illico":
-        _precompile(adata.X, reference_group="non-targeting" if test == "ovo" else None)
+        _precompile(adata.X, reference="non-targeting" if test == "ovo" else None)
 
     params = re.match(".*\[(.*)\]", request.node.name).group(1).split("-")
     group_params = [p for i, p in enumerate(params) if i in [0, 1, 4]]
@@ -263,7 +263,7 @@ def test_memory_benchmark(adata, method, test, num_threads, request):
 
     # Compile outside of the tracker context
     if method == "illico":
-        _precompile(adata.X, reference_group="non-targeting" if test == "ovo" else None)
+        _precompile(adata.X, reference="non-targeting" if test == "ovo" else None)
 
     test_params_string = re.match(".*\[(.*)\]", request.node.name).group(1)
     outdir = Path(os.environ.get("MEMRAY_RESULTS_DIR") or Path(__file__).parents[1])

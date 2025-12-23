@@ -26,7 +26,7 @@ Approximate speed benchmarks ran on k562-essential can be found below. All the c
 4. This package is not intended at running out-of-core single cell data analyses like `rapids-singlecell`.
 
 ## Installation
-`illico` can be installed via pip, compatible with Python 3.12 and onward:
+`illico` can be installed via pip, compatible with Python 3.11 and onward:
 ```bash
 pip install illico -U
 ```
@@ -75,10 +75,18 @@ scanpy_port_asymptotic_wilcoxon(adata, group_keys="perturbation", reference="non
 `illico` relies on a few optimization tricks to be faster than other existing tools. It is very possible that for some reason, the specific layout of your dataset (very small control population, very low sparsity, very small amount of distinct values) result in those tricks being effect-less, or less effective than observed on the datasets used to develop & benchmark `illico`. It is also very possible that because of those, other solutions end up faster than `illico` ! If this is your case, please open a issue describing your situation.
 
 ### `illico`'s results (p-values or fold-change) does not match `pdex` or `scanpy`.
+#### Test results (p-values)
 Please open an issue, but before that: make sure that you are running **asymptotic** wilcoxon rank-sum tests as this is the only test exposed by `illico`.
 - `pdex` relies on `scipy.stats.mannwhitneyu` that runs exact (non asymptotic) only when there are 8 values in both groups combined, and no ties.
 - `scanpy` offers the possibility to run non-tie-corrected wilcoxon rank-sum tests, make sure this is disabled by passing `tie_correct=True`.
-- Also, `illico` uses continuity correction which is the best practice.
+- Also, `illico` uses continuity correction by default which is the best practice.
+
+The test suite implemented in the CI and used to develop `illico` targets a precision of 1.e-12 compared to `scipy`, not `scanpy`. Consequently, there **will be** slight disagreement between `scanpy`'s p-values and `illico`'s p-values.
+
+#### Fold-change
+The fold-change computed by illico is the most naive form of the fold-change:
+$$\text{fold-change} = \frac{E[X_{\text{perturbed}}]}{E[X_{\text{control}}]}$$
+If your data underwent log1p transform, `np.expm1` is applied **before** computing the expectations (means). I know many definitions exist, and adding more control over this should not be complicated. If this is your case, please open an issue.
 
 ### What about normalization and log1p
 1. `illico` does not care about your data being normalized or not, it is up to you to apply the preprocessing of your choice before running the tests. It is expected that `illico` is slower if ran on total-count normalized data by a factor ~2. This is because if applied on non total-count normalized data, sorting relies on radix sort which is faster than the usual quicksort (that is used if testing total-count normalized data).
