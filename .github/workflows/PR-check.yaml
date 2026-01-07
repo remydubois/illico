@@ -15,7 +15,7 @@ jobs:
       - name: Check changelog updated
         uses: tarides/changelog-check-action@v2
         with:
-          changelog: 'CHANGELOG.md'
+          changelog: 'changelog.md'
 
       # Enforce version bump in pyproject.toml
       - name: Verify version bump in pyproject.toml
