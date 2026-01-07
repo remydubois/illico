@@ -86,9 +86,11 @@ The test suite implemented in the CI and used to develop `illico` targets a prec
 
 #### Fold-change
 The fold-change computed by illico is the most naive form of the fold-change:  
-$$\text{fold-change} = \frac{E[X_{\text{perturbed}}]}{E[X_{\text{control}}]}$$
+$$\text{fold-change} = \frac{E[X_{\text{perturbed}}]}{E[X_{\text{control}}]}$$  
+
 If your data underwent log1p transform, `np.expm1` is applied **before** computing the expectations (means), in which case the fold change expression becomes:  
-$$\text{fold-change} = \frac{E[e^{X_{\text{perturbed}}} - 1]}{E[e^{X_{\text{control}}} - 1]}$$
+
+$$\text{fold-change} = \frac{E[e^{X_{\text{perturbed}}} - 1]}{E[e^{X_{\text{control}}} - 1]}$$  
 
 I know several definitions exist, and adding more control over this should not be complicated. If this is your case, please open an issue.
 
