@@ -15,7 +15,7 @@ GroupContainer = namedtuple(
 )
 
 
-def encode_and_count_groups(groups: np.ndarray, ref_group: Any) -> GroupContainer:
+def encode_and_count_groups(groups: np.ndarray, ref_group: Any) -> tuple[np.ndarray, GroupContainer]:
     """Build the GroupContainer holding all group-related information.
 
     GroupContainer holds:
@@ -32,6 +32,7 @@ def encode_and_count_groups(groups: np.ndarray, ref_group: Any) -> GroupContaine
         ref_group (Any): Flag
 
     Returns:
+        unique_groups (np.ndarray): Array of unique group labels
         GroupContainer: GroupContainer holding all group-related information.
 
     Author: Rémy Dubois

@@ -1,3 +1,6 @@
+from collections import namedtuple
+from typing import Any
+
 import numpy as np
 from numba import njit
 
@@ -8,20 +11,25 @@ from illico.utils.math import (
     diff,
     fold_change_from_summed_expr,
 )
-from illico.utils.type import CSCMatrix, CSRMatrix
+
+CSCMatrix = namedtuple("CSCMatrix", ["data", "indices", "indptr", "shape"])
+CSRMatrix = namedtuple("CSRMatrix", ["data", "indices", "indptr", "shape"])
 
 
 @njit(nogil=True, cache=False)
-def _assert_is_csr(matrix: CSCMatrix | CSRMatrix) -> None:
+def _assert_is_csr(matrix: Any) -> None:
     """Assert a matrix is CSR.
 
     Args:
-        matrix (CSCMatrix | CSRMatrix): Input matrix to check.
+        matrix: Input matrix to check.
 
     Author: Rémy Dubois
     """
-    n_parcels = matrix.indptr.size - 1
-    n_rows, _ = matrix.shape
+    try:
+        n_parcels = matrix.indptr.size - 1
+        n_rows, _ = matrix.shape
+    except:  # noqa: E722
+        raise AssertionError("Object is not CSR: missing attributes.")
     assert n_parcels == n_rows, "Object is not CSR: indptr and number of rows don't match."
 
 

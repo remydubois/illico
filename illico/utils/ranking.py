@@ -1,8 +1,7 @@
 import numpy as np
 from numba import njit
 
-from illico.utils.sparse.csc import _assert_is_csc
-from illico.utils.type import CSCMatrix
+from illico.utils.sparse.csc import CSCMatrix, _assert_is_csc
 
 
 @njit(nogil=True, cache=False, fastmath=True)

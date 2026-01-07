@@ -9,6 +9,7 @@ from illico.utils.ranking import (
     _sort_along_axis_inplace,
     rank_sum_and_ties_from_sorted,
 )
+from illico.utils.registry import KernelDataFormat, Test, dispatcher_registry
 
 
 @njit(nogil=True, fastmath=True, parallel=False, cache=False)
@@ -16,6 +17,7 @@ def dense_ovo_mwu_kernel(
     sorted_ref_data: np.ndarray,
     sorted_tgt_data: np.ndarray,
     use_continuity: bool = True,
+    tie_correct: bool = True,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Sequentially perform OVO tests on columns between sorted ref and sorted perturbed data.
@@ -24,6 +26,7 @@ def dense_ovo_mwu_kernel(
         sorted_ref_data (np.ndarray): Vertically sorted reference data.
         sorted_tgt_data (_type_): Vertically sorted perturbed data.
         use_continuity (bool, optional): Apply continuity factor or not . Defaults to True.
+        tie_correct (bool, optional): Whether to apply tie correction when computing p-values. Defaults to True.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Returns:
@@ -48,7 +51,7 @@ def dense_ovo_mwu_kernel(
             n_ref=n_ref,
             n_tgt=n_tgt,
             n=n,
-            tie_sum=tie_sum,
+            tie_sum=tie_sum if tie_correct else 0.0,
             U=U1,
             mu=mu,
             contin_corr=0.5 if use_continuity else 0.0,
@@ -59,6 +62,7 @@ def dense_ovo_mwu_kernel(
     return pvals, U_statistics
 
 
+@dispatcher_registry.register(Test.OVO, KernelDataFormat.DENSE)
 @njit(nogil=True, fastmath=True, cache=False, boundscheck=False)
 def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
     X: np.ndarray,
@@ -67,6 +71,7 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
     grpc: GroupContainer,
     is_log1p: bool,
     use_continuity: bool = True,
+    tie_correct: bool = True,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Perform OVO tests group-wise and gene(col)-wise.
@@ -87,6 +92,8 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
         chunk_ub (int): Upper bound of the vertical slicing
         grpc (GroupContainer): GroupContainer, contains information about which group each row belongs to.
         use_continuity (bool, optional): Apply continuity factor or not. Defaults to True.
+        tie_correct (bool, optional): Whether to apply tie correction when computing p-values. Defaults to True.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
         is_log1p (bool, optional): User-indicated flag telling if data underwent log1p transform or not. Defaults to False.
 
     Raises:
@@ -120,6 +127,7 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
             sorted_ref_data=ref_chunk,
             sorted_tgt_data=tgt_chunk,
             use_continuity=use_continuity,
+            tie_correct=tie_correct,
             alternative=alternative,
         )
 

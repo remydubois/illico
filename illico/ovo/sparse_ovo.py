@@ -9,13 +9,14 @@ from illico.utils.ranking import (
     _sort_csc_columns_inplace,
     rank_sum_and_ties_from_sorted,
 )
-from illico.utils.sparse.csc import csc_get_contig_cols_into_csr
+from illico.utils.registry import KernelDataFormat, Test, dispatcher_registry
+from illico.utils.sparse.csc import CSCMatrix, csc_get_contig_cols_into_csr
 from illico.utils.sparse.csr import (
+    CSRMatrix,
     csr_fold_change,
     csr_get_contig_cols_into_csr,
     csr_get_rows_into_csc,
 )
-from illico.utils.type import CSCMatrix, CSRMatrix
 
 
 @njit(nogil=True, fastmath=True, cache=False)
@@ -23,6 +24,7 @@ def single_group_sparse_ovo_mwu_kernel(
     sorted_ref_data: CSCMatrix,
     sorted_tgt_data: CSCMatrix,
     use_continuity: bool = True,
+    tie_correct: bool = True,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Perform OVO tests gene wise using the two **sorted** CSC matrix given as input.
@@ -34,6 +36,7 @@ def single_group_sparse_ovo_mwu_kernel(
         sorted_ref_data (CSCMatrix): Reference data stored in CSC, sorted column-wise
         sorted_tgt_data (CSCMatrix): Perturbed data stored in CSC, sorted column-wise
         use_continuity (bool, optional): Apply continuity factor or not. Defaults to True.
+        tie_correct (bool, optional): Whether to apply tie correction when computing p-values. Defaults to True.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Raises:
@@ -84,7 +87,7 @@ def single_group_sparse_ovo_mwu_kernel(
             n_ref=n_ref,
             n_tgt=n_tgt,
             n=n,
-            tie_sum=tie_sum,
+            tie_sum=tie_sum if tie_correct else 0.0,
             U=U1,
             mu=mu,
             contin_corr=0.5 if use_continuity else 0.0,
@@ -103,6 +106,7 @@ def multi_group_sparse_ovo_mwu_kernel(
     grpc: GroupContainer,
     ref_group_id: int,
     use_continuity: bool = True,
+    tie_correct: bool = True,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Sequentially perform group-wise OVO tests along the columns on a CSR matrix.
@@ -112,6 +116,7 @@ def multi_group_sparse_ovo_mwu_kernel(
         grpc (GroupContainer): GroupContainer
         ref_group_id (int): Encoded reference group ID.
         use_continuity (bool, optional): Whether to use continuity correction when computing p-values. Defaults to True.
+        tie_correct (bool, optional): Whether to apply tie correction when computing p-values. Defaults to True.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Returns:
@@ -141,7 +146,11 @@ def multi_group_sparse_ovo_mwu_kernel(
         X_tgt = csr_get_rows_into_csc(X, tgt_idxs)
         _sort_csc_columns_inplace(X_tgt)
         pvalue, statistic = single_group_sparse_ovo_mwu_kernel(
-            sorted_ref_data=csc_X_ref, sorted_tgt_data=X_tgt, use_continuity=use_continuity, alternative=alternative
+            sorted_ref_data=csc_X_ref,
+            sorted_tgt_data=X_tgt,
+            use_continuity=use_continuity,
+            tie_correct=tie_correct,
+            alternative=alternative,
         )
         pvalues[group_id, :] = pvalue
         statistics[group_id, :] = statistic
@@ -151,6 +160,7 @@ def multi_group_sparse_ovo_mwu_kernel(
 
 # Not jitting this and sorting all the cells at once is 1.5x slower. Ideally, it would be faster to sort only groups one by one but
 # doubt this would be enough faster (think of mergesort) => It is twice faster, so i dont think it will bridge the gap
+@dispatcher_registry.register(Test.OVO, KernelDataFormat.CSC)
 @njit(nogil=True, fastmath=True, cache=False)  # This requires too many caching, too dangerous
 def csc_ovo_mwu_kernel_over_contiguous_col_chunk(
     X: CSCMatrix,
@@ -159,6 +169,7 @@ def csc_ovo_mwu_kernel_over_contiguous_col_chunk(
     grpc: GroupContainer,
     is_log1p: bool,
     use_continuity: bool = True,
+    tie_correct: bool = True,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ):
     """Perform OVO test over contiguous chunk of column of a CSC matrix.
@@ -169,55 +180,8 @@ def csc_ovo_mwu_kernel_over_contiguous_col_chunk(
         chunk_ub (int): Upper bound of the vertical slicing
         grpc (GroupContainer): GroupContainer
         is_log1p (bool): User-indicated flag telling if data underwent log1p transform.
-
-    Raises:
-        ValueError: If chunk bounds are inintelligible.
-
-    Returns:
-        tuple[np.ndarray]: two-sided p-values, U-statistics, fold change. Each
-        of shape (n_groups, chunk_ub - chunk_lb).
-
-    Author: Rémy Dubois
-    """
-    if chunk_lb < 0 or chunk_ub > X.shape[1] or chunk_lb > chunk_ub:
-        raise ValueError((chunk_lb, chunk_ub))
-
-    # This copies the data, so all that follow can happen in-place
-    csr_chunk = csc_get_contig_cols_into_csr(X, chunk_lb, chunk_ub)
-    pvalues, statistics = multi_group_sparse_ovo_mwu_kernel(
-        X=csr_chunk,
-        grpc=grpc,
-        ref_group_id=grpc.encoded_ref_group,
-        use_continuity=use_continuity,
-        alternative=alternative,
-    )
-
-    # Compute fold change
-    fold_change = csr_fold_change(csr_chunk, grpc, is_log1p=is_log1p)
-
-    return pvalues, statistics, fold_change
-
-
-# Real scale tests on whole H1 showed 24secs on 8 threads and 2min45s on 1, so a speedup of 165 / 24 = 6.875x
-@njit(nogil=True, fastmath=True, cache=False)
-def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
-    X: CSRMatrix,
-    chunk_lb: int,
-    chunk_ub: int,
-    grpc: GroupContainer,
-    is_log1p: bool,
-    use_continuity: bool = True,
-    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
-):
-    """Perform OVO test over contiguous chunk of column of a CSR matrix.
-
-    Args:
-        X (CSRMatrix): Input matrix of shape (n_cells, n_genes)
-        chunk_lb (int): Lower bound of the vertical slicing
-        chunk_ub (int): Upper bound of the vertical slicing
-        grpc (GroupContainer): GroupContainer
-        is_log1p (bool): User-indicated flag telling if data underwent log1p transform.
         use_continuity (bool): Whether to use continuity correction when computing p-values.
+        tie_correct (bool): Whether to apply tie correction when computing p-values.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Raises:
@@ -229,9 +193,57 @@ def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
 
     Author: Rémy Dubois
     """
-    if chunk_lb < 0 or chunk_ub > X.shape[1] or chunk_lb > chunk_ub:
-        raise ValueError((chunk_lb, chunk_ub))
+    # This copies the data, so all that follow can happen in-place
+    csr_chunk = csc_get_contig_cols_into_csr(X, chunk_lb, chunk_ub)
+    pvalues, statistics = multi_group_sparse_ovo_mwu_kernel(
+        X=csr_chunk,
+        grpc=grpc,
+        ref_group_id=grpc.encoded_ref_group,
+        use_continuity=use_continuity,
+        tie_correct=tie_correct,
+        alternative=alternative,
+    )
 
+    # Compute fold change
+    fold_change = csr_fold_change(csr_chunk, grpc, is_log1p=is_log1p)
+
+    return pvalues, statistics, fold_change
+
+
+# Real scale tests on whole H1 showed 24secs on 8 threads and 2min45s on 1, so a speedup of 165 / 24 = 6.875x
+@dispatcher_registry.register(Test.OVO, KernelDataFormat.CSR)
+@njit(nogil=True, fastmath=True, cache=False)
+def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
+    X: CSRMatrix,
+    chunk_lb: int,
+    chunk_ub: int,
+    grpc: GroupContainer,
+    is_log1p: bool,
+    use_continuity: bool = True,
+    tie_correct: bool = True,
+    alternative: Literal["two-sided", "less", "greater"] = "two-sided",
+):
+    """Perform OVO test over contiguous chunk of column of a CSR matrix.
+
+    Args:
+        X (CSRMatrix): Input matrix of shape (n_cells, n_genes)
+        chunk_lb (int): Lower bound of the vertical slicing
+        chunk_ub (int): Upper bound of the vertical slicing
+        grpc (GroupContainer): GroupContainer
+        is_log1p (bool): User-indicated flag telling if data underwent log1p transform.
+        use_continuity (bool): Whether to use continuity correction when computing p-values.
+        tie_correct (bool): Whether to apply tie correction when computing p-values.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
+
+    Raises:
+        ValueError: If chunk bounds are inintelligible.
+
+    Returns:
+        tuple[np.ndarray]: two-sided p-values, U-statistics, fold change. Each
+        of shape (n_groups, chunk_ub - chunk_lb).
+
+    Author: Rémy Dubois
+    """
     # This copies the data, so all that follow can happen in-place
     csr_chunk = csr_get_contig_cols_into_csr(X, chunk_lb, chunk_ub)
     pvalues, statistics = multi_group_sparse_ovo_mwu_kernel(
@@ -239,6 +251,7 @@ def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
         grpc=grpc,
         ref_group_id=grpc.encoded_ref_group,
         use_continuity=use_continuity,
+        tie_correct=tie_correct,
         alternative=alternative,
     )
     # Compute fold change
