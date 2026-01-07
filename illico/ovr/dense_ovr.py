@@ -8,9 +8,11 @@ from numba import njit
 from illico.utils.groups import GroupContainer
 from illico.utils.math import chunk_and_fortranize, compute_pval, dense_fold_change
 from illico.utils.ranking import _accumulate_group_ranksums_from_argsort
+from illico.utils.registry import KernelDataFormat, Test, dispatcher_registry
 
 
 # TODO: check if njit this or not: on my mbp, it is 2 faster when not jitted
+@dispatcher_registry.register(Test.OVR, KernelDataFormat.DENSE)
 @njit(nogil=True, fastmath=True, cache=False)
 def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
     X: np.ndarray,
@@ -19,6 +21,7 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
     grpc: GroupContainer,
     is_log1p: bool,
     use_continuity: bool = True,
+    tie_correct: bool = True,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Compute OVR ranksum test on a dense matrix of expression counts.
@@ -29,7 +32,9 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
         use_continuity (bool, optional): Apply continuity factor or not. Defaults to True.
         is_log1p (bool, optional): User-indicated flag telling if data underwent log1p
         transformation or not. Defaults to False.
-        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis.
+        use_continuity (bool, optional): Whether to use continuity correction when computing p-values. Defaults to True.
+        tie_correct (bool, optional): Whether to apply tie correction when computing p-values. Defaults to True.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis. Defaults to "two-sided".
 
     Returns:
         tuple[np.ndarray]: Two-sided p-values, U-statistic and fold change.
@@ -37,9 +42,6 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
 
     Author: Rémy Dubois
     """
-    if chunk_lb < 0 or chunk_ub > X.shape[1] or chunk_lb > chunk_ub:
-        raise ValueError((chunk_lb, chunk_ub))
-
     # Convert to F-order for faster column access and sorting later
     chunk = chunk_and_fortranize(X, chunk_lb, chunk_ub, None)
 
@@ -65,7 +67,7 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
                 n_ref=n_ref[k, 0],
                 n_tgt=n_tgt[k, 0],
                 n=n,
-                tie_sum=tie_sum[j],
+                tie_sum=tie_sum[j] if tie_correct else 0.0,
                 U=statistics[k, j],
                 mu=mu[k, 0],
                 contin_corr=0.5 if use_continuity else 0.0,

@@ -6,6 +6,7 @@ from numba import njit
 from illico.utils.groups import GroupContainer
 from illico.utils.math import _add_at_scalar, compute_pval, diff
 from illico.utils.ranking import _accumulate_group_ranksums_from_argsort
+from illico.utils.registry import KernelDataFormat, Test, dispatcher_registry
 from illico.utils.sparse.csc import (
     CSCMatrix,
     _assert_is_csc,
@@ -25,6 +26,7 @@ def sparse_ovr_mwu_kernel(
     groups: np.ndarray,
     group_counts: np.ndarray,
     use_continuity: bool = True,
+    tie_correct: bool = True,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Perform OVR ranksum test group wise and column wise on a CSC matrix.
@@ -34,6 +36,8 @@ def sparse_ovr_mwu_kernel(
         groups (np.ndarray): np.ndarray of shape (n_cells, ) holding encoded group labels.
         group_counts (np.ndarray): Count of cells per group.
         use_continuity (bool, optional): Apply continuity factor or not. Defaults to True.
+        tie_correct (bool, optional): Whether to apply tie correction when computing p-values. Defaults to True.
+        alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis. Defaults to "two-sided".
 
     Returns:
         tuple[np.ndarray]: Two-sided p-values and U-statistics, per group and per gene (column).
@@ -83,7 +87,7 @@ def sparse_ovr_mwu_kernel(
                 n_ref=n_ref[k],
                 n_tgt=n_tgt[k],
                 n=n,
-                tie_sum=tie_sum,
+                tie_sum=tie_sum if tie_correct else 0.0,
                 U=U[k, j],
                 mu=mu[k],
                 contin_corr=0.5 if use_continuity else 0.0,
@@ -93,6 +97,7 @@ def sparse_ovr_mwu_kernel(
     return pvals, U
 
 
+@dispatcher_registry.register(Test.OVR, KernelDataFormat.CSC)
 @njit(nogil=True, fastmath=True, cache=False)
 def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     X: CSCMatrix,
@@ -101,6 +106,7 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     grpc: GroupContainer,
     is_log1p: bool,
     use_continuity: bool = True,
+    tie_correct: bool = True,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ):
     """Perform OVR ranksum test over the contiguous column chunk defined by the bounds.
@@ -113,7 +119,8 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
         chunk_ub (int): Upper bound of the vertical slice
         grpc (GroupContainer): GroupContainer
         is_log1p (bool): User-indicated flag telling if data was log1p transformed or not.
-        use_continuity (bool): Whether to use continuity correction when computing p-values.
+        use_continuity (bool): Whether to use continuity correction when computing p-values. Defaults to True.
+        tie_correct (bool): Whether to apply tie correction when computing p-values. Defaults to True.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis.
 
     Raises:
@@ -126,8 +133,6 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     Author: Rémy Dubois
     """
     _assert_is_csc(X)
-    if chunk_lb < 0 or chunk_ub > X.shape[1] or chunk_lb > chunk_ub:
-        raise ValueError((chunk_lb, chunk_ub))
 
     csc_chunk = csc_get_cols(csc_matrix=X, indices=np.arange(chunk_lb, chunk_ub))
 
@@ -142,6 +147,7 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
         groups=grpc.encoded_groups,
         group_counts=grpc.counts,
         use_continuity=use_continuity,
+        tie_correct=tie_correct,
         alternative=alternative,
     )
 
@@ -149,6 +155,7 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     return pvalues, statistics, fold_change
 
 
+@dispatcher_registry.register(Test.OVR, KernelDataFormat.CSR)
 @njit(nogil=True, fastmath=True, cache=False)  # This requires too many caching
 def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
     X: CSRMatrix,
@@ -157,6 +164,7 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
     grpc: GroupContainer,
     is_log1p: bool,
     use_continuity: bool = True,
+    tie_correct: bool = True,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Perform OVR ranksum test over the contiguous column chunk defined by the bounds.
@@ -170,6 +178,7 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
         grpc (GroupContainer): GroupContainer
         is_log1p (bool): User-indicated flag telling if data was log1p transformed or not.
         use_continuity (bool): Whether to use continuity correction when computing p-values.
+        tie_correct (bool): Whether to apply tie correction when computing p-values.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Raises:
@@ -183,9 +192,6 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
     """
     _assert_is_csr(X)
 
-    if chunk_lb < 0 or chunk_ub > X.shape[1] or chunk_lb > chunk_ub:
-        raise ValueError((chunk_lb, chunk_ub))
-
     csc_chunk = csr_get_contig_cols_into_csc(csr_matrix=X, chunk_lb=chunk_lb, chunk_ub=chunk_ub)
 
     # TODO: same remark as csc regarding sorting
@@ -194,6 +200,7 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
         groups=grpc.encoded_groups,
         group_counts=grpc.counts,
         use_continuity=use_continuity,
+        tie_correct=tie_correct,
         alternative=alternative,
     )
     fold_change = csc_fold_change(X=csc_chunk, grpc=grpc, is_log1p=is_log1p)

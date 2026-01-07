@@ -1,8 +1,11 @@
+import contextlib
+import gc
 import os
 import re
 import warnings
 from pathlib import Path
 
+import anndata as ad
 import memray
 import numpy as np
 import pandas as pd
@@ -11,10 +14,12 @@ import scanpy as sc
 from numba import set_num_threads
 from pdex import parallel_differential_expression
 from pdex._single_cell import parallel_differential_expression_vec_wrapper
+from scipy import sparse as py_sparse
 from scipy.stats import mannwhitneyu
 
 from illico.asymptotic_wilcoxon import asymptotic_wilcoxon
 from illico.utils.compile import _precompile
+from illico.utils.registry import data_handler_registry, dispatcher_registry
 
 set_num_threads(1)  # Ensure single-threaded by default for testing consistency
 
@@ -104,26 +109,48 @@ def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternativ
 
 
 @pytest.mark.parametrize("alternative", ["two-sided", "less", "greater"])
+@pytest.mark.parametrize("tie_correct", [True, False], ids=["tie-correct", "no-tie-correct"])
 @pytest.mark.parametrize("use_continuity", [True, False])
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
-def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, alternative):
-    cached = rand_adata.copy()
+def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alternative):
+    if not rand_adata.isbacked:
+        cached = rand_adata.copy()
 
     if test == "ovo":
         reference = rand_adata.obs.pert.iloc[0]
     else:
         reference = None
 
-    asy_results = asymptotic_wilcoxon(
-        adata=rand_adata,
-        is_log1p=False,
-        group_keys="pert",
-        reference=reference,
-        use_continuity=use_continuity,
-        n_threads=1,
-        batch_size=16,
-        alternative=alternative,
-    )
+    # If rand_adata is lazy and CSR, ensure we raise an error because this is not supported
+    if isinstance(rand_adata.X, ad._core.sparse_dataset._CSRDataset):
+        ctx = pytest.raises(
+            KeyError,
+            match="Support for data type <class 'anndata._core.sparse_dataset._CSRDataset'> is not implemented.",
+        )
+        should_raise = True
+    else:
+        ctx = contextlib.nullcontext()
+        should_raise = False
+
+    with ctx:
+        asy_results = asymptotic_wilcoxon(
+            adata=rand_adata,
+            is_log1p=False,
+            group_keys="pert",
+            reference=reference,
+            use_continuity=use_continuity,
+            tie_correct=tie_correct,
+            n_threads=1,
+            batch_size=16,
+            alternative=alternative,
+        )
+
+    if should_raise:
+        return
+
+    if not tie_correct:
+        # We skip at this point, so that we make sure that at least the code runs
+        pytest.skip(f"Skipping comparison with scipy when tie correction is disabled, as scipy does not support it.")
 
     scipy_results = scipy_mannwhitneyu(
         adata=rand_adata,
@@ -142,14 +169,14 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, alternative):
         atol=0.0,
         rtol=0.0,
     )
-    # Test p-values with tolerance
+    # Test p-values with low tolerance
     np.testing.assert_allclose(
         asy_results.loc[scipy_results.index].p_value.values,
         scipy_results.p_value.values,
         atol=0.0,
         rtol=1.0e-12,
     )
-    # Test FC with tolerance
+    # Test FC with mid tolerance
     np.testing.assert_allclose(
         asy_results.loc[scipy_results.index].fold_change.values,
         scipy_results.fold_change.values,
@@ -157,24 +184,87 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, alternative):
         rtol=1.0e-6,
     )
 
-    # Test that the original adata is not modified, some sorting happen in-place so just making sure
-    pd.testing.assert_frame_equal(rand_adata.obs, cached.obs)
-    pd.testing.assert_frame_equal(rand_adata.var, cached.var)
-    if isinstance(rand_adata.X, np.ndarray):
-        np.testing.assert_array_equal(rand_adata.X, cached.X)
+    if not rand_adata.isbacked:
+        # Test that the original adata is not modified, some sorting happen in-place so just making sure
+        pd.testing.assert_frame_equal(rand_adata.obs, cached.obs)
+        pd.testing.assert_frame_equal(rand_adata.var, cached.var)
+        if isinstance(rand_adata.X, np.ndarray):
+            np.testing.assert_array_equal(rand_adata.X, cached.X)
+        else:
+            np.testing.assert_array_equal(rand_adata.X.toarray(), cached.X.toarray())
+
+
+# Do not sweep all the possible test params, alternative and all
+@pytest.mark.parametrize("backed", [True, False], ids=["lazy", "eager"])
+@pytest.mark.parametrize("test", ["ovo", "ovr"])
+def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, tmp_path):
+    # No need to test that exception is raised, as it is done in `test_asymptotic_wilcoxon` already
+    if isinstance(eager_rand_adata.X, py_sparse.csr.csr_matrix) and backed:
+        pytest.skip("CSR lazy data not supported for now.")
+
+    if test == "ovo":
+        reference = eager_rand_adata.obs.pert.iloc[0]
     else:
-        np.testing.assert_array_equal(rand_adata.X.toarray(), cached.X.toarray())
+        reference = None
+
+    # Precompile
+    data_handler = data_handler_registry.get(eager_rand_adata.X)
+    _precompile(data_handler, reference)
+
+    # Run this with one thread and small batch size, this simply makes sure we never load
+    adata_path = tmp_path / f"rand_adata_lazy.h5ad"
+    # Make this anndata bigger, otherwise memory measurements are not significant
+    bigger_eager_rand_adata = ad.concat([eager_rand_adata] * 100, axis=1)
+    # Concatenation converts to CSR, so revert back to CSC
+    if isinstance(eager_rand_adata.X, py_sparse.csc.csc_matrix):
+        bigger_eager_rand_adata.X = py_sparse.csc_matrix(bigger_eager_rand_adata.X)
+    bigger_eager_rand_adata.obs = eager_rand_adata.obs.copy()
+    bigger_eager_rand_adata.var_names_make_unique()
+    bigger_eager_rand_adata.write_h5ad(adata_path)
+
+    # In order to track proper memory usage, we include the read_h5ad call within the memray context
+    # Consequently, memory allocated to adata will show as heap memory, unlike memory tests below which only
+    # tracked algorithm allocations
+    with memray.Tracker(tmp_path / "memray-trace.bin", file_format=memray.FileFormat.AGGREGATED_ALLOCATIONS):
+        adata = ad.read_h5ad(adata_path, backed="r" if backed else None)
+        _ = asymptotic_wilcoxon(
+            adata=adata,
+            is_log1p=False,
+            group_keys="pert",
+            reference=reference,
+            use_continuity=True,
+            n_threads=1,
+            batch_size=16,
+            alternative="two-sided",
+        )
+    max_rss, max_heap = 0, 0
+    with memray.FileReader(tmp_path / "memray-trace.bin") as reader:
+        for snapshot in reader.get_memory_snapshots():
+            max_rss = max(max_rss, snapshot.rss)
+            max_heap = max(max_heap, snapshot.heap)
+
+    # print(f"Max heap memory usage: {max_heap/1_000_000:.1f} bytes")
+    if backed:
+        if max_heap > 10_000_000:  # 10 MB
+            raise AssertionError(
+                f"Expected low (<10MB) heap memory usage when running in backed mode, got {max_heap/1_000_000:.1f} MB."
+            )
+    else:
+        if max_heap < 50_000_000:  # 50 MB
+            raise AssertionError(
+                f"Expected high (>50MB) heap memory usage when running in backed mode, got {max_heap/1_000_000:.1f} MB."
+            )
 
 
-def test_unsorted_indices_error(rand_adata):
+def test_unsorted_indices_error(eager_rand_adata):
     """Test that an error is raised if input data matrix indices are not sorted."""
-    if isinstance(rand_adata.X, np.ndarray):
+    if isinstance(eager_rand_adata.X, np.ndarray):
         pytest.skip("Test only relevant for sparse matrices.")
     # Unsort the indices of the csr matrix
-    rand_adata.X.indices[:] = rand_adata.X.indices[::-1]
+    eager_rand_adata.X.indices[:] = eager_rand_adata.X.indices[::-1]
     with pytest.raises(ValueError):
         _ = asymptotic_wilcoxon(
-            adata=rand_adata,
+            adata=eager_rand_adata,
             is_log1p=False,
             group_keys="pert",
             reference="non-targeting",
@@ -242,7 +332,7 @@ def test_speed_benchmark(adata, method, test, num_threads, benchmark, request):
 
     # Compile
     if method == "illico":
-        _precompile(adata.X, reference="non-targeting" if test == "ovo" else None)
+        _precompile(data_handler_registry.get(adata.X), reference="non-targeting" if test == "ovo" else None)
 
     params = re.match(".*\[(.*)\]", request.node.name).group(1).split("-")
     group_params = [p for i, p in enumerate(params) if i in [0, 1, 4]]

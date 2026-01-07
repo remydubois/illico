@@ -1,22 +1,30 @@
+from collections import namedtuple
+from typing import Any
+
 import numpy as np
 from numba import njit
 
 from illico.utils.groups import GroupContainer
 from illico.utils.math import _add_at_scalar, _add_at_vec, fold_change_from_summed_expr
-from illico.utils.type import CSCMatrix, CSRMatrix
+
+CSCMatrix = namedtuple("CSCMatrix", ["data", "indices", "indptr", "shape"])
+CSRMatrix = namedtuple("CSRMatrix", ["data", "indices", "indptr", "shape"])
 
 
 @njit(nogil=True, cache=False)
-def _assert_is_csc(matrix: CSCMatrix | CSRMatrix) -> None:
+def _assert_is_csc(matrix: Any) -> None:
     """Assert a matrix is CSC.
 
     Args:
-        obj (CSCMatrix|CSRMatrix): The matrix to check.
+        obj Any: The matrix to check.
 
     Author: Rémy Dubois
     """
-    n_parcels = matrix.indptr.size - 1
-    _, n_cols = matrix.shape
+    try:
+        n_parcels = matrix.indptr.size - 1
+        _, n_cols = matrix.shape
+    except:  # noqa: E722
+        raise AssertionError("Matric is not CSC: missing attributes.")
     assert n_parcels == n_cols, "Matric is not CSC: indptr and number of columns don't match."
 
 

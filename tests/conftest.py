@@ -11,7 +11,7 @@ import pytest
 from scipy import sparse
 from tqdm import tqdm
 
-from illico.utils.type import scipy_to_nb
+from illico.utils.registry import data_handler_registry
 
 CACHE_ROOT = Path(os.environ.get("ILLICO_PYTEST_CACHE", "/tmp/pytest_cache"))
 CELL_LINE_URLS = {
@@ -73,11 +73,15 @@ def adata(request):
 
 
 # TODO: params on log1p and normalization ? A lot of tests would result
-@pytest.fixture(scope="session", params=["dense", "csc", "csr"])
-def rand_adata(request):
-    n_cells = 2_000
+@pytest.fixture(
+    scope="function",
+    params=[(fmt, lazy) for fmt in ["dense", "csc", "csr"] for lazy in [False, True]],
+    ids=lambda p: f"{p[0]}-{'lazy' if p[1] else 'eager'}",
+)
+def rand_adata(request, tmp_path):
+    n_cells = 10_000
     n_genes = 15
-    n_groups = 20
+    n_groups = 5
     assert n_groups >= 2
     sparsity = 0.5  # ~50% zeros
     rng = np.random.RandomState(0)
@@ -95,22 +99,33 @@ def rand_adata(request):
     # Create groups associated
     groups = rng.randint(0, n_groups, size=n_cells)  # Add one ref group
 
-    if request.param == "dense":
+    fmt, lazy = request.param
+    if fmt == "dense":
         data_matrix = dense_counts
-    elif request.param == "csc":
+    elif fmt == "csc":
         data_matrix = sparse.csc_matrix(dense_counts)
-    elif request.param == "csr":
+    elif fmt == "csr":
         data_matrix = sparse.csr_matrix(dense_counts)
     else:
-        raise ValueError(f"Unknown data format: {request.param}")
+        raise ValueError(f"Unknown data format: {fmt}")
 
     adata = ad.AnnData(
         data_matrix,
         obs=pd.DataFrame({"pert": [f"pert_{g}" for g in groups]}),
         var=pd.DataFrame(index=[f"gene_{i}" for i in range(n_genes)]),
     )
-
+    if lazy:
+        adata_path = tmp_path / f"rand_adata_{fmt}_lazy.h5ad"
+        adata.write_h5ad(adata_path)
+        adata = ad.read_h5ad(adata_path, backed="r")
     return adata
+
+
+@pytest.fixture(scope="function")
+def eager_rand_adata(rand_adata):
+    if rand_adata.isbacked:
+        pytest.skip("This fixture returns only in-RAM dataset.")
+    return rand_adata
 
 
 def download_if_missing(cell_line: Literal["k562", "rpe1"], dst: Path) -> Path:
@@ -167,7 +182,8 @@ def rand_csr():
     density = 0.1
     rng = np.random.RandomState(0)
     data = sparse.random(n_rows, n_cols, density=density, format="csr", random_state=rng, dtype=np.float64)
-    return scipy_to_nb(data)
+    handler = data_handler_registry.get(data)
+    return handler.to_nb(data)
 
 
 @pytest.fixture(scope="function")
@@ -177,4 +193,19 @@ def rand_csc():
     density = 0.1
     rng = np.random.RandomState(0)
     data = sparse.random(n_rows, n_cols, density=density, format="csc", random_state=rng, dtype=np.float64)
-    return scipy_to_nb(data)
+    handler = data_handler_registry.get(data)
+    return handler.to_nb(data)
+
+
+# def limit_memory_if_lazy(memory_limit: str):
+
+#     def decorator(func):
+#         def wrapper(*args, **kwargs):
+#             data_handler: DataHandler = data_handler_registry.get(args[0])
+#             if data_handler.is_lazy(args[0]):
+#                 data_handler.set_memory_limit(args[0], memory_limit)
+#             return func(*args, **kwargs)
+
+#         return wrapper
+
+#     return decorator
