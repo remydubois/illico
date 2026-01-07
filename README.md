@@ -85,10 +85,11 @@ Please open an issue, but before that: make sure that you are running **asymptot
 The test suite implemented in the CI and used to develop `illico` targets a precision of 1.e-12 compared to `scipy`, not `scanpy`. Consequently, there **will be** slight disagreement between `scanpy`'s p-values and `illico`'s p-values, as `scanpy` itself disagrees with `scipy`.
 
 #### Fold-change
-The fold-change computed by illico is the most naive form of the fold-change:  
+The fold-change computed by illico is the most naive form of the fold-change:
+
 $$\text{fold-change} = \frac{E[X_{\text{perturbed}}]}{E[X_{\text{control}}]}$$  
 
-If your data underwent log1p transform, `np.expm1` is applied **before** computing the expectations (means), in which case the fold change expression becomes:  
+If your data underwent log1p transform, `np.expm1` is applied **before** computing the expectations (means), in which case the fold change expression becomes:
 
 $$\text{fold-change} = \frac{E[e^{X_{\text{perturbed}}} - 1]}{E[e^{X_{\text{control}}} - 1]}$$  
 
