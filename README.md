@@ -62,7 +62,7 @@ adata = ad.read_h5ad('dataset.h5ad') # (n_cells, n_genes)
 adata.obs["cluster"] = ...
 de_genes = asymptotic_wilcoxon(adata, group_keys="cluster", reference=None, is_log1p=[False|True])
 ```
-In this case, the resulting dataframe contains `n_perturbations * n_genes` rows and the same three columns: `(p_value, statistic, fold_change)`. In this case, the wilcoxon rank-sum test is performed between cells belonging to cluster *c_i* and all the other cells (one-versus-the-rest), for all *c_i*.
+In this case, the resulting dataframe contains `n_clusters * n_genes` rows and the same three columns: `(p_value, statistic, fold_change)`. In this case, the wilcoxon rank-sum test is performed between cells belonging to cluster *c_i* and all the other cells (one-versus-the-rest), for all *c_i*.
 
 <!-- ### I am used to `scanpy`, how to make use of `illico` ?
 In this case, you can replace your usual `sc.tl.rank_genes_groups(adata, groupby="...", reference="...", method="wilcoxon", tie_correct=True)` by:
