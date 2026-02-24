@@ -35,6 +35,11 @@ dev = [
     "memray (>=1.19.1,<2.0.0)",
     "pdex (>=0.1.27,<0.2.0)",
 ]
+doc = [
+    "Sphinx>=5.0",
+    "furo",
+    "myst-parser",
+]
 
 [tool.black]
 line-length = 120
