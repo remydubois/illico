@@ -1,0 +1,3 @@
+# Deprecated: docs/requirements.txt is no longer used.
+# Documentation dependencies are managed via Poetry under the "doc" dependency group in pyproject.toml.
+# Kept for backward compatibility; install docs deps with: poetry install --with doc

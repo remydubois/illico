@@ -15,3 +15,7 @@ wheels/
 tests/data/
 .tox
 *.ipynb
+
+docs/_build
+
+.DS_Store
