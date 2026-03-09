@@ -18,3 +18,20 @@ repos:
     rev: "v0.14.1"
     hooks:
     -   id: ruff
+- repo: local
+  hooks:
+    - id: cargo-fmt
+      name: cargo fmt (rust))
+      entry: bash -lc 'rustup component add rustfmt >/dev/null 2>&1 || true; cargo fmt --all --'
+      language: system
+      files: '\.rs$'
+    - id: cargo-fix
+      name: cargo fix (rust)
+      entry: bash -lc 'cargo fix --all --allow-dirty --allow-staged'
+      language: system
+      files: '\.rs$'
+    # - id: cargo-clippy
+    #   name: cargo clippy (rust) (optional)
+    #   entry: bash -lc 'rustup component add clippy >/dev/null 2>&1 || true; cargo clippy --all -- -D warnings'
+    #   language: system
+    #   files: '\.rs$'

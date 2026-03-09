@@ -1,13 +1,51 @@
-# Illico
-## Overview
-*illico* is a python library performing blazing fast asymptotic wilcoxon rank-sum tests (same as `scanpy.tl.rank_genes_groups(… tie_correct=True)`), useful for single-cell RNASeq data analyses and processing. `illico`'s features are:
-1. :rocket: Blazing fast: On K562 (essential) dataset (~300k cells, 8k genes, 2k perturbations), `illico` computes DE genes (with `reference="non-targeting"`) in a mere 30 seconds. That's more than 100 times faster than both `pdex` or `scanpy` with the same compute ressources (8 CPUs).
-2. :diamond_shape_with_a_dot_inside: No compromise: on synthetic data, `illico`'s p-values matched `scipy.stats.mannwhitneyu` up to a relative difference of 1.e-12, and an absolute tolerance of 0.
-3. :zap: Thread-first: `illico` eventually parallelizes the processing (if specified by the user) over **threads**, never processes. This saves you from all the fixed cost of multiprocessing, such as spanning processes, duplicating data across processes, and communication costs.
-3. :beetle: Data format agnostic: whether your data is dense, sparse along rows, or sparse along columns, `illico` will deal with it while never converting the whole data to whichever format is more optimized.
+# illico
+`illico` is a python library performing fast and lightweight wilcoxon rank-sum tests (same as `scanpy.tl.rank_genes_groups(…, method="wilcoxon")`), useful for single-cell RNASeq data analyses and processing.
+Approximate speed benchmarks ran on k562-essential can be found below.
+
+|               Test               | Format | illico | scanpy | pdex |
+|----------------------------------|--------|--------|--------|------|
+| OVO (reference="non-targeting")  | Dense  |  ~30s  | ~1h    | ~4h  |
+| OVO (reference="non-targeting")  | Sparse |  ~30s  | ~1h30  | ~4h  |
+| OVR (reference=None)             | Dense  |  ~30s  | ~11h   |  X   |
+| OVR (reference=None)             | Sparse |  ~30s  | ~10h   |  X   |
+
+## Installation
+illico is compatible with python 3.11 and onward:
+
+```bash
+pip install illico -U
+```
+
+## Getting started
+The full documentation is available [here](https://remydubois.github.io/illico/). A simple starter could be:
+
+```python
+import anndata as ad
+from illico import asymptotic_wilcoxon
+
+adata = ad.read_h5ad('dataset.h5ad') # (n_cells, n_genes)
+de_genes = asymptotic_wilcoxon(
+       adata,
+       # layer="Y", # <-- If you want tests to run not on .X, but a specific layer
+       group_keys="perturbation",
+       reference=["non-targeting"|None], # <- `None` computes cluster-wise DE genes. Any other `str` will be interpreted as label of the control cells.
+       is_log1p=[False|True], # <-- Specify if your data underwent log1p or not
+       )
+```
+
+## Release notes
+See the [changelog](https://github.com/remydubois/illico/blob/main/changelog.md).
+
+<!-- ## Overview
+*illico* is a python library performing blazing fast asymptotic wilcoxon rank-sum tests (same as `scanpy.tl.rank_genes_groups(…, method="wilcoxon")`), useful for single-cell RNASeq data analyses and processing. `illico`'s features are:
+1. 🚀 Blazing fast: On K562 (essential) dataset (~300k cells, 8k genes, 2k perturbations), `illico` computes DE genes (with `reference="non-targeting"`) in a mere 30 seconds. That's more than 100 times faster than both `pdex` or `scanpy` with the same compute ressources (8 CPUs).
+2. 💠 No compromise: on synthetic data, `illico`'s p-values matched `scipy.stats.mannwhitneyu` up to a relative difference of 1.e-12, and an absolute tolerance of 0.
+3. ⚡ Thread-first: `illico` eventually parallelizes the processing (if specified by the user) over **threads**, never processes. This saves you from all the fixed cost of multiprocessing, such as spanning processes, duplicating data across processes, and communication costs.
+3. 🐞 Data format agnostic: whether your data is dense, sparse along rows, or sparse along columns, `illico` will deal with it while never converting the whole data to whichever format is more optimized.
 4. 🪶 Lightweight: `illico` will process the input data in batches, making any memory allocation needed along the way much smaller than if it processed the whole data at once.
 5. 📈 Scalable: Because thread-first and batchable, `illico` scales reasonably with your compute budget. Tests showed that spanning 8 threads brings a 7-fold speedup over spanning 1 single thread.
-6. :fireworks: All-purpose: `illico` performs both one-versus-reference (useful for perturbation analyses) and one-versus-rest (useful for clustering analyses) wilcoxon rank-sum tests, both equally optimized and fast.
+6. 💾 Out-of-core: `illico` supports h5-based, on-disk-backed, dense and CSC datasets natively.
+7. 🎆 All-purpose: `illico` performs both one-versus-reference (useful for perturbation analyses) and one-versus-rest (useful for clustering analyses) wilcoxon rank-sum tests, both equally optimized and fast.
 
 Approximate speed benchmarks ran on k562-essential can be found below. All the code used to generate those numbers can be found in `tests/test_asymptotic_wilcoxon.py::test_speed_benchmark`.
 
@@ -18,15 +56,14 @@ Approximate speed benchmarks ran on k562-essential can be found below. All the c
 | OVR (reference=None)             | Dense  |  ~30s  | ~11h   |  X   |
 | OVR (reference=None)             | Sparse |  ~30s  | ~10h   |  X   |
 
-:bulb: Note:
-1. This library only performs tie-corrected wilcoxon rank-sum tests, also known as Mann-Whitney test, also performed by `scanpy.tl.rank_genes_groups(…, tie_correct=True)`. It **does not** perform wilcoxon signed-sum tests, those are less often used in for single-cell data analyses as it requires samples to be **paired**.
+💡 Note:
+1. This library only performs wilcoxon rank-sum tests, also known as Mann-Whitney test, also performed by `scanpy.tl.rank_genes_groups(…, method="wilcoxon")`. It **does not** perform wilcoxon signed-sum tests, those are less often used in for single-cell data analyses as it requires samples to be **paired**.
 1. Exact benchmarks ran on a subset of the whole k562 can be found at the end of this readme.
 2. OVO refers to one-versus-one: this test computes u-stats and p-values between control cells and perturbed cells. Equivalent to `scanpy`'s `rank_gene_groups(…, reference="non-targeting")`.
 3. OVR refers to one-versus-rest: this test computes u-stats and p-values between each group cells, and all other cells, for each group. Equivalent to `scanpy`'s `rank_gene_groups(…, reference="rest")`.
-4. This package is not intended at running out-of-core single cell data analyses like `rapids-singlecell`.
 
 ## Installation
-`illico` can be installed via pip, compatible with Python 3.12 and onward:
+`illico` can be installed via pip, compatible with Python 3.11 and onward:
 ```bash
 pip install illico -U
 ```
@@ -35,6 +72,7 @@ pip install illico -U
 This library exposes one single function that returns a `pd.DataFrame` holding p-value, u-statistic and fold-change for each (group, gene). Except the few points below, the function and its arguments should be self-explanatory:
 1. It is **required** to indicate if the data you run the tests on underwent log1p transform. This only impacts the fold-change calculation and not the test results (p-values, u-stats). The choice was made to not try to guess this information, as those often lead to error-prone and potentially harmful rules of thumb.
 2. By default, `illico.asymptotic_wilcoxon` will use what lies in `adata.X` to compute DE genes. If you want a specific layer to be used to perform the tests, you must specify it.
+3. By default again, `illico.asymptotic_wilcoxon` will apply continuity correction and tie correction factors. This is controllable with the `use_continuity` and `tie_correct` arguments.
 
 ### DE genes compared to control cells
 If you are working on single cell perturbation data:
@@ -61,33 +99,54 @@ adata = ad.read_h5ad('dataset.h5ad') # (n_cells, n_genes)
 adata.obs["cluster"] = ...
 de_genes = asymptotic_wilcoxon(adata, group_keys="cluster", reference=None, is_log1p=[False|True])
 ```
-In this case, the resulting dataframe contains `n_perturbations * n_genes` rows and the same three columns: `(p_value, statistic, fold_change)`. In this case, the wilcoxon rank-sum test is performed between cells belonging to cluster *c_i* and all the other cells (one-versus-the-rest), for all *c_i*.
+In this case, the resulting dataframe contains `n_clusters * n_genes` rows and the same three columns: `(p_value, statistic, fold_change)`. In this case, the wilcoxon rank-sum test is performed between cells belonging to cluster *c_i* and all the other cells (one-versus-the-rest), for all *c_i*.
 
-<!-- ### I am used to `scanpy`, how to make use of `illico` ?
+### I am used to `scanpy`, how to make use of `illico` ?
 In this case, you can replace your usual `sc.tl.rank_genes_groups(adata, groupby="...", reference="...", method="wilcoxon", tie_correct=True)` by:
 ```python
 from illico.utils.sc import scanpy_port_asymptotic_wilcoxon
 scanpy_port_asymptotic_wilcoxon(adata, group_keys="perturbation", reference="non-targeting", is_log1p=[False|True])
 ```
-:warning: As of version XXX, `scanpy` lets the user decide to tie correct or not. `illico` only implements tie-corrected wilcoxon rank-sum tests. -->
+:warning: As of version XXX, `scanpy` lets the user decide to tie correct or not. `illico` only implements tie-corrected wilcoxon rank-sum tests.
 
 ### `illico` is not faster than `scanpy` or `pdex`, is there a bug ?
 `illico` relies on a few optimization tricks to be faster than other existing tools. It is very possible that for some reason, the specific layout of your dataset (very small control population, very low sparsity, very small amount of distinct values) result in those tricks being effect-less, or less effective than observed on the datasets used to develop & benchmark `illico`. It is also very possible that because of those, other solutions end up faster than `illico` ! If this is your case, please open a issue describing your situation.
 
-### `illico`'s results (p-values or fold-change) does not match `pdex` or `scanpy`.
+### `illico`'s results (p-values or fold-change) do not match `pdex` or `scanpy`.
+#### Test results (p-values)
 Please open an issue, but before that: make sure that you are running **asymptotic** wilcoxon rank-sum tests as this is the only test exposed by `illico`.
-- `pdex` relies on `scipy.stats.mannwhitneyu` that runs exact (non asymptotic) only when there are 8 values in both groups combined, and no ties.
-- `scanpy` offers the possibility to run non-tie-corrected wilcoxon rank-sum tests, make sure this is disabled by passing `tie_correct=True`.
-- Also, `illico` uses continuity correction which is the best practice.
+- `pdex` relies on `scipy.stats.mannwhitneyu` that runs exact (non asymptotic) when there are 8 values (or less) in both groups combined, and no ties.
+- `scanpy` offers the possibility to run non-tie-corrected wilcoxon rank-sum tests (default behavior). If you come from scanpy, make sure arguments match.
+- Also, `illico` uses continuity correction by default which is the best practice (can be disabled).
+
+The test suite implemented in the CI and used to develop `illico` targets a precision of 1.e-12 compared to `scipy`, not `scanpy`. Consequently, there **will be** slight disagreement between `scanpy`'s p-values and `illico`'s p-values, as `scanpy` itself disagrees with `scipy`.
+
+#### Fold-change
+The fold-change computed by illico is the most naive form of the fold-change:
+
+$$\text{fold-change} = \frac{E[X_{\text{perturbed}}]}{E[X_{\text{control}}]}$$
+
+If your data underwent log1p transform, `np.expm1` is applied **before** computing the expectations (means), in which case the fold change expression becomes:
+
+$$\text{fold-change} = \frac{E[e^{X_{\text{perturbed}}} - 1]}{E[e^{X_{\text{control}}} - 1]}$$
+
+I know several definitions exist, and adding more control over this should not be complicated. If this is your case, please open an issue.
 
 ### What about normalization and log1p
 1. `illico` does not care about your data being normalized or not, it is up to you to apply the preprocessing of your choice before running the tests. It is expected that `illico` is slower if ran on total-count normalized data by a factor ~2. This is because if applied on non total-count normalized data, sorting relies on radix sort which is faster than the usual quicksort (that is used if testing total-count normalized data).
 2. In order to avoid any unintended conversion, or relie on failure-prone rules of thumb, **`illico` requires the user to indicate if the input data is log1p or not**. This is only used to compute appropriate fold-change, and does not impact test (p-value and statistic) results.
 
 ### What if my adata does not fit in memory ?
-Optimizing this use case is highly non-trivial as efficiently chunking CSR or CSC matrices is much more complex than running `adata[:, idxs]`. Ran on a CSR matrix, this command will load (temporarily) the entirety of the indices in RAM, resulting in a memory footprint almost equivalent to loading everything at once, on top of being extremely slow.
-1. If your adata holds the expression matrix in a dense array, `illico` will work on it transparently because batch-based by design.
-2. If your adata holds the expression matrix in a sparse (CSC or CSR) array, you have no other choice than manually chunking your array before running `illico` on batches. But, again, in this case I would advice to fallback to other solutions like `rapids-singlecell`.
+Although not initially designed to run out-of-core rank-sum tests, `illico` supports **some** disk-backed expression matrices natively. The slowdown occurred by backing the dataset on disk is hard to estimate as it directly depends on your system's IO. Notably:
+- h5-dense (np.ndarray) disk-backed dataset are natively supported
+- h5-CSC (sparse along the columns) disk-backed datasets are natively supported
+- :warning: **h5-CSR (sparse along the rows) disk-backed datasets are not supported**
+
+If your data is backed through Dask or another backend, please open an issue as dense and CSC use cases should require very little rework to be supported.
+
+Notes:
+1. Supporting the CSR use case is highly non trivial, and running `adata[:, idxs]` on a backed CSR matrix will load (temporarily) the entirety of the indices in RAM, resulting in a memory footprint almost equivalent to loading everything at once, on top of being extremely slow.
+2. Users struggling with out-of-core single cell RNASeq analyses should visit `rapids-singlecell`, which explicitely targets this use-case.
 
 ## How it works
 The rank-sum tests performed by `illico` are classical, asymptotic, rank-sum tests. No approximation nor assumption is done. `Illico` relies on a few optimization tricks that are non-exhaustively listed below:
@@ -104,20 +163,26 @@ In order for benchmarks to run in a reasonable amount of time, the timings repor
 1. The data format (CSR, or dense) used to contain the expression matrix.
 2. The test performed: OVO (`reference="non-targeting"`) or OVR (`reference=None`).
 
-:bulb: Keep in mind that `pdex` does not implement *OVR* test.
+💡 Keep in mind that `pdex` does not implement *OVR* test.
 
 <p float="center">
-  <center><img src="https://raw.githubusercontent.com/remydubois/illico/main/assets/method-runtimes-comparison.png" width="700" />
-  <figcaption>Runtime comparison for scanpy, pdex and illico</figcaption></center>
+  <center><img src="https://github.com/remydubois/illico/blob/main/assets/method-runtimes-comparison.png?raw=true" width="100%" />
+  <figcaption>Runtime comparison for scanpy, pdex and illico on four cell lines.</figcaption></center>
 </p>
 
 ### Scalability
-TODO: this could clearly be improved with a smarter batching strategy
-`illico` scales reasonably well with your compute budget. Find below the processing time of the K562-essential dataset for both OVO and OVR tests, while increasing the number of threads used. Similarly as before, a benchmark is defined by:
-1. The data format (CSR, or dense) used to contain the expression matrix.
-2. The test performed: OVO (`reference="non-targeting"`) or OVR (`reference=None`).
-
+`illico` scales reasonably well with your compute budget. On the K562-essential dataset spanning 8 threads instead of 1 brings a 7-folds speedup.
 ```bash
+---------------------- benchmark 'k562-dense-ovo': 4 tests -----------------------
+Name (time in s)                                                    Mean
+----------------------------------------------------------------------------------
+test_speed_benchmark[k562-dense-100%-illico-ovo-nthreads=8]      29.6962 (1.0)
+test_speed_benchmark[k562-dense-100%-illico-ovo-nthreads=4]      53.4369 (1.80)
+test_speed_benchmark[k562-dense-100%-illico-ovo-nthreads=2]     100.3919 (3.38)
+test_speed_benchmark[k562-dense-100%-illico-ovo-nthreads=1]     208.2443 (7.01)
+----------------------------------------------------------------------------------
+```
+<!-- ```bash
 ---------------------- benchmark 'k562-csr-ovo': 4 tests -----------------------
 Name (time in s)                                                  Mean
 --------------------------------------------------------------------------------
@@ -153,8 +218,8 @@ test_speed_benchmark[k562-dense-100%-illico-ovr-nthreads=4]      33.6427 (1.74)
 test_speed_benchmark[k562-dense-100%-illico-ovr-nthreads=2]      63.1888 (3.27)
 test_speed_benchmark[k562-dense-100%-illico-ovr-nthreads=1]     127.4927 (6.60)
 ----------------------------------------------------------------------------------
-```
-### Memory
+``` -->
+<!-- ### Memory
 TODO: Add memit for all solutions, remind that memory footprint grows linearly with number of threads for illico.
 ```
 ============================================================================== MEMRAY REPORT ===============================================================================
@@ -205,7 +270,7 @@ The reason to be of this package is its speed, hence the need for extensive spee
 ```bash
 pip install tox # this can be system-wide, no need to install it within an environment
 ```
-:bulb: The test suite below can be very long, especially the benchmarks (up to 48 hours). All "bench-" tox commands can be appended with the `-quick` suffix ensuring they are ran on 1 gene (column) of the benchmark data, just to make sure everything runs correctly. Example:
+💡 The test suite below can be very long, especially the benchmarks (up to 48 hours). All "bench-" tox commands can be appended with the `-quick` suffix ensuring they are ran on 1 gene (column) of the benchmark data, just to make sure everything runs correctly. Example:
 ```bash
 tox -e bench-all-quick # This will run speed and memory benchmarks for illico, scanpy and pdex
 # OR:  tox -e bench-illico-quick # This will run speed and memory benchmarks for illico only
@@ -228,7 +293,7 @@ Before issuing a new PR, in order to see if the updated code does not decrease s
 ```bash
 tox -e speed-bench-illico #-quick
 ```
-:bulb: Because benchmark performance depends on the testing environment (type of machine or OS), it is recommended to run this benchmark from `main` on your machine as well. This will give you a clear comparison point apple-to-apple.
+💡 Because benchmark performance depends on the testing environment (type of machine or OS), it is recommended to run this benchmark from `main` on your machine as well. This will give you a clear comparison point apple-to-apple.
 Once the benchmarks have ran, you can cat the benchmark results in terminal with:
 ```bash
 tox -e speed-bench-compare
@@ -240,7 +305,10 @@ Similar remarks as for the speed benchmarks:
 tox -e memory-bench-ref # Should not be re-ran, ideally
 tox -e memory-bench-illico # Should be re-ran before every new PR
 tox -e memray-stats
-```
+``` -->
+
+## Why illico
+The name *illico* is a wordplay inspired by the R package `presto` (now the Wilcoxon rank-sum test backend in Seurat). Aside from this naming reference, there is no affiliation or intended equivalence between the two. `illico` was developed independently, and although the statistical methodology may be similar, it was not designed to reproduce `presto`’s results.
 
 # Other tools available
 1. `scanpy` also implements OVO and OVR asymptotic wilcoxon rank-sum tests.

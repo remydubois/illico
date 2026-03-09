@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 import warnings
 from typing import Literal
@@ -98,8 +100,8 @@ def compute_pval(
 
         if alternative == "two-sided":  # two-sided
             # Compute both-sided statistic
-            U = min(U, n_ref * n_tgt - U)
-            delta = U - mu
+            min_u = min(U, n_ref * n_tgt - U)
+            delta = min_u - mu
             z = (np.abs(delta) + np.sign(delta) * contin_corr) / sigma
             return math.erfc(z / math.sqrt(2.0))
         elif alternative == "greater":  # greater (right-tailed)

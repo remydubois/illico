@@ -15,3 +15,10 @@ wheels/
 tests/data/
 .tox
 *.ipynb
+
+
+# Added by cargo
+docs/_build
+/target
+.DS_Store
+*.so

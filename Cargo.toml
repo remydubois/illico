@@ -1,0 +1,15 @@
+[package]
+name = "illico"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+libm = "0.2.16"
+ndarray = "0.17.2"
+num-traits = "0.2.19"
+numpy = "0.28.0"
+pyo3 = "0.28.1"
+
+[lib]
+name = "rust_backend"
+crate-type = ["cdylib"]
