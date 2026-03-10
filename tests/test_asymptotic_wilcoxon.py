@@ -221,7 +221,7 @@ def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, use_rust, tm
     # Run this with one thread and small batch size, this simply makes sure we never load
     adata_path = tmp_path / f"rand_adata_lazy.h5ad"
     # Make this anndata bigger, otherwise memory measurements are not significant
-    bigger_eager_rand_adata = ad.concat([eager_rand_adata] * 100, axis=1)
+    bigger_eager_rand_adata = ad.concat([eager_rand_adata] * 300, axis=1)
     # Concatenation converts to CSR, so revert back to CSC
     if isinstance(eager_rand_adata.X, py_sparse.csc.csc_matrix):
         bigger_eager_rand_adata.X = py_sparse.csc_matrix(bigger_eager_rand_adata.X)
@@ -250,16 +250,16 @@ def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, use_rust, tm
         for snapshot in reader.get_memory_snapshots():
             max_rss = max(max_rss, snapshot.rss)
             max_heap = max(max_heap, snapshot.heap)
-
+    print(f"Max RSS: {max_rss/1_000_000:.1f} MB, Max heap: {max_heap/1_000_000:.1f} MB")
     if backed:
-        if max_heap > 10_000_000:  # 10 MB
+        if max_heap > 30_000_000:  # 30 MB
             raise AssertionError(
-                f"Expected low (<10MB) heap memory usage when running in backed mode, got {max_heap/1_000_000:.1f} MB."
+                f"Expected low (<30MB) heap memory usage when running in backed mode, got {max_heap/1_000_000:.1f} MB."
             )
     else:
-        if max_heap < 50_000_000:  # 50 MB
+        if max_heap < 200_000_000:  # 200 MB
             raise AssertionError(
-                f"Expected high (>50MB) heap memory usage when running in backed mode, got {max_heap/1_000_000:.1f} MB."
+                f"Expected high (>200MB) heap memory usage when running in eager mode, got {max_heap/1_000_000:.1f} MB."
             )
 
 
