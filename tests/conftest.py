@@ -90,7 +90,9 @@ def rand_adata(request, tmp_path):
     gene_means = rng.uniform(0.1, 15, size=n_genes)
 
     # Sample Poisson counts
-    dense_counts = rng.poisson(gene_means, size=(n_cells, n_genes)).astype(np.float32)
+    dense_counts = rng.poisson(gene_means, size=(n_cells, n_genes)).astype(
+        np.float64
+    )  # scipy 1.17+ returns the same dtype as input
 
     # Impose ~50% sparsity by random masking
     mask = rng.rand(n_cells, n_genes) < sparsity

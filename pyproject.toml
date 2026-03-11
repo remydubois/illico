@@ -1,6 +1,6 @@
 [project]
 name = "illico"
-version = "0.2.0"
+version = "0.3.0"
 description = "Fast asymptotic mannwhitney-u test"
 authors = [
     {name = "remydubois",email = "remydubois14@gmail.com"}
@@ -18,9 +18,16 @@ dependencies = [
 ]
 
 
+# [build-system]
+# requires = ["poetry-core>=2.0.0,<3.0.0"]
+# build-backend = "poetry.core.masonry.api"
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "illico.rust_backend"
 
 [dependency-groups]
 dev = [
@@ -34,6 +41,7 @@ dev = [
     "pytest-regex (>=0.2.0,<0.3.0)",
     "memray (>=1.19.1,<2.0.0)",
     "pdex (>=0.1.27,<0.2.0)",
+    "ipdb (>=0.13.13,<0.14.0)",
 ]
 doc = [
     "Sphinx>=5.0",

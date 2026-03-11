@@ -8,11 +8,11 @@ from numba import njit
 from illico.utils.groups import GroupContainer
 from illico.utils.math import chunk_and_fortranize, compute_pval, dense_fold_change
 from illico.utils.ranking import _accumulate_group_ranksums_from_argsort
-from illico.utils.registry import KernelDataFormat, Test, dispatcher_registry
+from illico.utils.registry import KernelDataFormat, Test, nb_dispatcher_registry
 
 
 # TODO: check if njit this or not: on my mbp, it is 2 faster when not jitted
-@dispatcher_registry.register(Test.OVR, KernelDataFormat.DENSE)
+@nb_dispatcher_registry.register(Test.OVR, KernelDataFormat.DENSE)
 @njit(nogil=True, fastmath=True, cache=False)
 def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
     X: np.ndarray,

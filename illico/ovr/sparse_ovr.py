@@ -6,7 +6,7 @@ from numba import njit
 from illico.utils.groups import GroupContainer
 from illico.utils.math import _add_at_scalar, compute_pval, diff
 from illico.utils.ranking import _accumulate_group_ranksums_from_argsort
-from illico.utils.registry import KernelDataFormat, Test, dispatcher_registry
+from illico.utils.registry import KernelDataFormat, Test, nb_dispatcher_registry
 from illico.utils.sparse.csc import (
     CSCMatrix,
     _assert_is_csc,
@@ -97,7 +97,7 @@ def sparse_ovr_mwu_kernel(
     return pvals, U
 
 
-@dispatcher_registry.register(Test.OVR, KernelDataFormat.CSC)
+@nb_dispatcher_registry.register(Test.OVR, KernelDataFormat.CSC)
 @njit(nogil=True, fastmath=True, cache=False)
 def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     X: CSCMatrix,
@@ -155,7 +155,7 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     return pvalues, statistics, fold_change
 
 
-@dispatcher_registry.register(Test.OVR, KernelDataFormat.CSR)
+@nb_dispatcher_registry.register(Test.OVR, KernelDataFormat.CSR)
 @njit(nogil=True, fastmath=True, cache=False)  # This requires too many caching
 def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
     X: CSRMatrix,

@@ -9,7 +9,7 @@ from illico.utils.ranking import (
     _sort_csc_columns_inplace,
     rank_sum_and_ties_from_sorted,
 )
-from illico.utils.registry import KernelDataFormat, Test, dispatcher_registry
+from illico.utils.registry import KernelDataFormat, Test, nb_dispatcher_registry
 from illico.utils.sparse.csc import CSCMatrix, csc_get_contig_cols_into_csr
 from illico.utils.sparse.csr import (
     CSRMatrix,
@@ -160,7 +160,7 @@ def multi_group_sparse_ovo_mwu_kernel(
 
 # Not jitting this and sorting all the cells at once is 1.5x slower. Ideally, it would be faster to sort only groups one by one but
 # doubt this would be enough faster (think of mergesort) => It is twice faster, so i dont think it will bridge the gap
-@dispatcher_registry.register(Test.OVO, KernelDataFormat.CSC)
+@nb_dispatcher_registry.register(Test.OVO, KernelDataFormat.CSC)
 @njit(nogil=True, fastmath=True, cache=False)  # This requires too many caching, too dangerous
 def csc_ovo_mwu_kernel_over_contiguous_col_chunk(
     X: CSCMatrix,
@@ -211,7 +211,7 @@ def csc_ovo_mwu_kernel_over_contiguous_col_chunk(
 
 
 # Real scale tests on whole H1 showed 24secs on 8 threads and 2min45s on 1, so a speedup of 165 / 24 = 6.875x
-@dispatcher_registry.register(Test.OVO, KernelDataFormat.CSR)
+@nb_dispatcher_registry.register(Test.OVO, KernelDataFormat.CSR)
 @njit(nogil=True, fastmath=True, cache=False)
 def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
     X: CSRMatrix,

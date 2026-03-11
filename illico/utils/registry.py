@@ -61,7 +61,9 @@ class DataHandlerRegistry(dict):
 # How to fetch data from disk, if data is backed or lazy-loaded
 data_handler_registry = DataHandlerRegistry()
 # Which dispatcher to use depending on data format and test type
-dispatcher_registry = DispatcherRegistry()
+nb_dispatcher_registry = DispatcherRegistry()
+# Register the same dispatchers for the Rust kernels
+rs_dispatcher_registry = DispatcherRegistry()
 
 
 class DataHandler(ABC):
@@ -200,3 +202,20 @@ from illico.ovr import (  # noqa: E402, F401
     csr_ovr_mwu_kernel_over_contiguous_col_chunk,
     dense_ovr_mwu_kernel_over_contiguous_col_chunk,
 )
+
+# Now register the Rust kernels
+from illico.rust_backend import (  # noqa: E402, F401
+    csc_ovo_mwu_kernel_over_contiguous_col_chunk_rust,
+    csc_ovr_mwu_kernel_over_contiguous_col_chunk_rust,
+    csr_ovo_mwu_kernel_over_contiguous_col_chunk_rust,
+    csr_ovr_mwu_kernel_over_contiguous_col_chunk_rust,
+    dense_ovo_over_contiguous_col_chunk_rust,
+    dense_ovr_over_contiguous_col_chunk_rust,
+)
+
+rs_dispatcher_registry.register(Test.OVO, KernelDataFormat.DENSE)(dense_ovo_over_contiguous_col_chunk_rust)
+rs_dispatcher_registry.register(Test.OVR, KernelDataFormat.DENSE)(dense_ovr_over_contiguous_col_chunk_rust)
+rs_dispatcher_registry.register(Test.OVO, KernelDataFormat.CSC)(csc_ovo_mwu_kernel_over_contiguous_col_chunk_rust)
+rs_dispatcher_registry.register(Test.OVO, KernelDataFormat.CSR)(csr_ovo_mwu_kernel_over_contiguous_col_chunk_rust)
+rs_dispatcher_registry.register(Test.OVR, KernelDataFormat.CSC)(csc_ovr_mwu_kernel_over_contiguous_col_chunk_rust)
+rs_dispatcher_registry.register(Test.OVR, KernelDataFormat.CSR)(csr_ovr_mwu_kernel_over_contiguous_col_chunk_rust)

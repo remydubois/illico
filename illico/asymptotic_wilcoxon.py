@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-import gc
 import math
 from typing import Literal
 
@@ -20,7 +17,8 @@ from illico.utils.registry import (
     DataHandler,
     Test,
     data_handler_registry,
-    dispatcher_registry,
+    nb_dispatcher_registry,
+    rs_dispatcher_registry,
 )
 
 # from illico.utils.math import _warn_log1p
@@ -38,6 +36,8 @@ def operator(
     use_continuity: bool,
     alternative: str,
     tie_correct: bool,
+    use_rust: bool,
+    results: np.ndarray,
 ):
     """Delayed operator. Not user-facing."""
     if group_container.encoded_ref_group == -1:
@@ -45,7 +45,10 @@ def operator(
     else:
         test = Test.OVO
     # Grab the adapted kernel
-    dispatcher = dispatcher_registry.get(test, data_handler.kernel_data_format())
+    if not use_rust:
+        dispatcher = nb_dispatcher_registry.get(test, data_handler.kernel_data_format())
+    else:
+        dispatcher = rs_dispatcher_registry.get(test, data_handler.kernel_data_format())
 
     # Quick safety check
     if lb < 0 or ub > data_handler.data.shape[1] or lb > ub:
@@ -67,7 +70,14 @@ def operator(
         tie_correct,
         alternative,
     )
-    return (pvalues, statistics, fold_change), (lb, ub)
+    # Copy results into the shared array, do it thread-wise for cleaner garbage collection and speed
+    # Note: there might be a little speedup in passing results to the dispatchers and writing in it directly, it would
+    # allow to not allocate chunks of results. However, this is would be very non-Rusty as the same Python-managed memory block would be shared across several threads.
+    # The copy should be GIL-free
+    results[:, lb:ub, 0] = pvalues
+    results[:, lb:ub, 1] = statistics
+    results[:, lb:ub, 2] = fold_change  # Technically Rust returns f32, but numpy handles casting here
+    return (lb, ub)
 
 
 def asymptotic_wilcoxon(
@@ -82,6 +92,7 @@ def asymptotic_wilcoxon(
     tie_correct: bool = True,
     layer: str | None = None,
     precompile: bool = True,
+    use_rust: bool = True,
 ):
     """Perform asymptotic Mann-Whitney tests for differential gene expression.
 
@@ -118,6 +129,8 @@ def asymptotic_wilcoxon(
         Layer in `adata.layers` to use for the data. If `None`, uses `adata.X`.
     precompile : bool, default=True
         Whether to precompile necessary functions for performance. It is recommended to set this to `True`.
+    use_rust : bool, default=True
+        Whether to use the Rust implementation of the test. If `False`, uses the Numba implementation.
 
     Returns
     -------
@@ -176,6 +189,7 @@ def asymptotic_wilcoxon(
 
     Author: Rémy Dubois
     """
+
     # Get expression matrix
     if layer is not None:
         logger.info(f"Using layer '{layer}' for differential expression.")
@@ -196,11 +210,15 @@ def asymptotic_wilcoxon(
 
     # Precompile if requested
     if precompile:
-        _precompile(data_handler, reference)
+        if use_rust:
+            logger.info("No precompilation needed for Rust kernels.")
+        else:
+            _precompile(data_handler, reference)
 
     # Process the groups information
-    raw_groups = adata.obs[group_keys].tolist()
-    unique_raw_groups, group_container = encode_and_count_groups(groups=raw_groups, ref_group=reference)
+    unique_raw_groups, group_container = encode_and_count_groups(
+        groups=adata.obs[group_keys].values, ref_group=reference
+    )
     logger.info(
         f"Found {group_container.counts.size} unique groups (min size: {group_container.counts.min()} cells; max size: {group_container.counts.max()} cells), with reference group: {reference}"
     )
@@ -237,18 +255,22 @@ def asymptotic_wilcoxon(
     logger.trace(f"Performing a total of {n_tests:,d} tests.")
     with Parallel(n_threads, prefer="threads", return_as="generator_unordered") as pool:
         with tqdm(total=n_tests, smoothing=0.0, unit="it", unit_scale=True, unit_divisor=1000) as pbar:
-            for (pv, ustat, fc), (lb, ub) in pool(
-                operator(data_handler, lb, ub, group_container, is_log1p, use_continuity, alternative, tie_correct)
+            for lb, ub in pool(
+                operator(
+                    data_handler,
+                    lb,
+                    ub,
+                    group_container,
+                    is_log1p,
+                    use_continuity,
+                    alternative,
+                    tie_correct,
+                    use_rust,
+                    results,
+                )
                 for lb, ub in iterator
             ):
-                results[:, lb:ub, 0] = pv
-                results[:, lb:ub, 1] = ustat
-                results[:, lb:ub, 2] = fc
                 pbar.update(group_container.counts.size * (ub - lb))
-
-                # Cleanup memory
-                del pv, ustat, fc
-                gc.collect()
 
         # Return a pd.DataFrame to index results
         results = pd.DataFrame(

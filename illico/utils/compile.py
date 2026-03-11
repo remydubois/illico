@@ -8,7 +8,7 @@ from loguru import logger
 from numba import types
 
 from illico.utils.groups import GroupContainer
-from illico.utils.registry import DataHandler, Test, dispatcher_registry
+from illico.utils.registry import DataHandler, Test, nb_dispatcher_registry
 
 
 def _precompile(data_handler: DataHandler, reference: Any | None):
@@ -31,7 +31,7 @@ def _precompile(data_handler: DataHandler, reference: Any | None):
         logger.warning("Numba JIT is disabled, skipping precompilation.")
         return
     GroupContainerType = types.NamedTuple(
-        [types.int64[::1], types.int64[::1], types.int64[::1], types.int64[::1], types.int64], GroupContainer
+        [types.uint64[::1], types.uint64[::1], types.uint64[::1], types.uint64[::1], types.int64], GroupContainer
     )
 
     # This input signature corresponds to: lower bound, upper bvound, group container, is_log1p, use_continuity
@@ -52,7 +52,7 @@ def _precompile(data_handler: DataHandler, reference: Any | None):
         test_type = Test.OVR
     else:
         test_type = Test.OVO
-    dispatcher = dispatcher_registry.get(test_type, data_handler.kernel_data_format())
+    dispatcher = nb_dispatcher_registry.get(test_type, data_handler.kernel_data_format())
     sig = out_sig(input_type, *common_sig)
 
     s = time.time()

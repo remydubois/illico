@@ -9,7 +9,7 @@ from illico.utils.ranking import (
     _sort_along_axis_inplace,
     rank_sum_and_ties_from_sorted,
 )
-from illico.utils.registry import KernelDataFormat, Test, dispatcher_registry
+from illico.utils.registry import KernelDataFormat, Test, nb_dispatcher_registry
 
 
 @njit(nogil=True, fastmath=True, parallel=False, cache=False)
@@ -62,7 +62,7 @@ def dense_ovo_mwu_kernel(
     return pvals, U_statistics
 
 
-@dispatcher_registry.register(Test.OVO, KernelDataFormat.DENSE)
+@nb_dispatcher_registry.register(Test.OVO, KernelDataFormat.DENSE)
 @njit(nogil=True, fastmath=True, cache=False, boundscheck=False)
 def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
     X: np.ndarray,

@@ -19,7 +19,7 @@ from scipy.stats import mannwhitneyu
 
 from illico.asymptotic_wilcoxon import asymptotic_wilcoxon
 from illico.utils.compile import _precompile
-from illico.utils.registry import data_handler_registry, dispatcher_registry
+from illico.utils.registry import data_handler_registry, nb_dispatcher_registry
 
 set_num_threads(1)  # Ensure single-threaded by default for testing consistency
 
@@ -108,11 +108,12 @@ def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternativ
     return results
 
 
+@pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
 @pytest.mark.parametrize("alternative", ["two-sided", "less", "greater"])
 @pytest.mark.parametrize("tie_correct", [True, False], ids=["tie-correct", "no-tie-correct"])
-@pytest.mark.parametrize("use_continuity", [True, False])
+@pytest.mark.parametrize("use_continuity", [True, False], ids=["contin-corr", "no-contin-corr"])
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
-def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alternative):
+def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alternative, use_rust):
     if not rand_adata.isbacked:
         cached = rand_adata.copy()
 
@@ -143,6 +144,7 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alte
             n_threads=1,
             batch_size=16,
             alternative=alternative,
+            use_rust=use_rust,
         )
 
     if should_raise:
@@ -162,13 +164,17 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alte
     )
     # sc_results = scanpy_mannwhitneyu(adata=rand_adata, groupby_key="pert", reference=reference)
 
-    # Test statistics exactly
     np.testing.assert_allclose(
         asy_results.loc[scipy_results.index].statistic.values,
         scipy_results.statistic.values,
         atol=0.0,
         rtol=0.0,
     )
+    # idxs = np.where(np.isclose(asy_results.loc[scipy_results.index].statistic.values, scipy_results.statistic.values, rtol=0., atol=1.0e-12))[0]
+    # x = asy_results.loc[scipy_results.index].p_value.values[idxs]
+    # y = scipy_results.p_value.values[idxs]
+    # import ipdb; ipdb.set_trace()
+    # Test statistics exactly
     # Test p-values with low tolerance
     np.testing.assert_allclose(
         asy_results.loc[scipy_results.index].p_value.values,
@@ -195,9 +201,10 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alte
 
 
 # Do not sweep all the possible test params, alternative and all
+@pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
 @pytest.mark.parametrize("backed", [True, False], ids=["lazy", "eager"])
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
-def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, tmp_path):
+def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, use_rust, tmp_path):
     # No need to test that exception is raised, as it is done in `test_asymptotic_wilcoxon` already
     if isinstance(eager_rand_adata.X, py_sparse.csr.csr_matrix) and backed:
         pytest.skip("CSR lazy data not supported for now.")
@@ -214,7 +221,7 @@ def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, tmp_path):
     # Run this with one thread and small batch size, this simply makes sure we never load
     adata_path = tmp_path / f"rand_adata_lazy.h5ad"
     # Make this anndata bigger, otherwise memory measurements are not significant
-    bigger_eager_rand_adata = ad.concat([eager_rand_adata] * 100, axis=1)
+    bigger_eager_rand_adata = ad.concat([eager_rand_adata] * 300, axis=1)
     # Concatenation converts to CSR, so revert back to CSC
     if isinstance(eager_rand_adata.X, py_sparse.csc.csc_matrix):
         bigger_eager_rand_adata.X = py_sparse.csc_matrix(bigger_eager_rand_adata.X)
@@ -236,23 +243,23 @@ def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, tmp_path):
             n_threads=1,
             batch_size=16,
             alternative="two-sided",
+            use_rust=use_rust,
         )
     max_rss, max_heap = 0, 0
     with memray.FileReader(tmp_path / "memray-trace.bin") as reader:
         for snapshot in reader.get_memory_snapshots():
             max_rss = max(max_rss, snapshot.rss)
             max_heap = max(max_heap, snapshot.heap)
-
-    # print(f"Max heap memory usage: {max_heap/1_000_000:.1f} bytes")
+    print(f"Max RSS: {max_rss/1_000_000:.1f} MB, Max heap: {max_heap/1_000_000:.1f} MB")
     if backed:
-        if max_heap > 10_000_000:  # 10 MB
+        if max_heap > 30_000_000:  # 30 MB
             raise AssertionError(
-                f"Expected low (<10MB) heap memory usage when running in backed mode, got {max_heap/1_000_000:.1f} MB."
+                f"Expected low (<30MB) heap memory usage when running in backed mode, got {max_heap/1_000_000:.1f} MB."
             )
     else:
-        if max_heap < 50_000_000:  # 50 MB
+        if max_heap < 200_000_000:  # 200 MB
             raise AssertionError(
-                f"Expected high (>50MB) heap memory usage when running in backed mode, got {max_heap/1_000_000:.1f} MB."
+                f"Expected high (>200MB) heap memory usage when running in eager mode, got {max_heap/1_000_000:.1f} MB."
             )
 
 
@@ -273,7 +280,7 @@ def test_unsorted_indices_error(eager_rand_adata):
         )
 
 
-def call_routine(data, method, test, num_threads):
+def call_routine(data, method, test, num_threads, use_rust):
     def run():
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -299,7 +306,8 @@ def call_routine(data, method, test, num_threads):
                     group_keys="gene",
                     reference=reference,
                     n_threads=num_threads,
-                    batch_size=256,
+                    batch_size="auto",
+                    use_rust=use_rust,
                 )
             elif method == "scanpy":
                 reference = "non-targeting" if test == "ovo" else "rest"
@@ -321,10 +329,11 @@ def call_routine(data, method, test, num_threads):
 
 
 @pytest.mark.speed_bench
-@pytest.mark.parametrize("num_threads", [1, 2, 4, 8], ids=lambda v: f"nthreads={v}")
+@pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
+@pytest.mark.parametrize("num_threads", [1, 2, 4, 8, 16], ids=lambda v: f"nthreads={v}")
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
 @pytest.mark.parametrize("method", ["illico", "scanpy", "pdex", "pdexp"])
-def test_speed_benchmark(adata, method, test, num_threads, benchmark, request):
+def test_speed_benchmark(adata, method, test, num_threads, use_rust, benchmark, request):
     """Not a test, just a speed benchmark."""
     if test != "ovo" and method in ["pdex", "pdexp"]:
         # This exits the test, not running the benchmark, and not raising an error
@@ -337,11 +346,13 @@ def test_speed_benchmark(adata, method, test, num_threads, benchmark, request):
     params = re.match(".*\[(.*)\]", request.node.name).group(1).split("-")
     group_params = [p for i, p in enumerate(params) if i in [0, 1, 4]]
     benchmark.group = "-".join(group_params)
-    _ = benchmark.pedantic(call_routine(adata, method, test, num_threads), iterations=1, warmup_rounds=0, rounds=1)
+    _ = benchmark.pedantic(
+        call_routine(adata, method, test, num_threads, use_rust), iterations=1, warmup_rounds=0, rounds=1
+    )
 
 
 @pytest.mark.memory_bench
-@pytest.mark.parametrize("num_threads", [8], ids=lambda v: f"nthreads={v}")
+@pytest.mark.parametrize("num_threads", [1, 8], ids=lambda v: f"nthreads={v}")
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
 @pytest.mark.parametrize("method", ["illico", "scanpy", "pdex", "pdexp"])
 def test_memory_benchmark(adata, method, test, num_threads, request):
@@ -352,8 +363,8 @@ def test_memory_benchmark(adata, method, test, num_threads, request):
         pytest.skip("pdex only implements OVO test.")
 
     # Compile outside of the tracker context
-    if method == "illico":
-        _precompile(adata.X, reference="non-targeting" if test == "ovo" else None)
+    # if method == "illico":
+    #     _precompile(adata.X, reference="non-targeting" if test == "ovo" else None)
 
     test_params_string = re.match(".*\[(.*)\]", request.node.name).group(1)
     outdir = Path(os.environ.get("MEMRAY_RESULTS_DIR") or Path(__file__).parents[1])

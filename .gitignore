@@ -16,6 +16,9 @@ tests/data/
 .tox
 *.ipynb
 
-docs/_build
 
+# Added by cargo
+docs/_build
+/target
 .DS_Store
+*.so
