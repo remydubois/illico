@@ -280,7 +280,7 @@ def test_unsorted_indices_error(eager_rand_adata):
         )
 
 
-def call_routine(data, method, test, num_threads):
+def call_routine(data, method, test, num_threads, use_rust):
     def run():
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -307,7 +307,7 @@ def call_routine(data, method, test, num_threads):
                     reference=reference,
                     n_threads=num_threads,
                     batch_size="auto",
-                    use_rust=True,
+                    use_rust=use_rust,
                 )
             elif method == "scanpy":
                 reference = "non-targeting" if test == "ovo" else "rest"
@@ -329,10 +329,11 @@ def call_routine(data, method, test, num_threads):
 
 
 @pytest.mark.speed_bench
-@pytest.mark.parametrize("num_threads", [1, 2, 4, 8], ids=lambda v: f"nthreads={v}")
+@pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
+@pytest.mark.parametrize("num_threads", [1, 2, 4, 8, 16], ids=lambda v: f"nthreads={v}")
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
 @pytest.mark.parametrize("method", ["illico", "scanpy", "pdex", "pdexp"])
-def test_speed_benchmark(adata, method, test, num_threads, benchmark, request):
+def test_speed_benchmark(adata, method, test, num_threads, use_rust, benchmark, request):
     """Not a test, just a speed benchmark."""
     if test != "ovo" and method in ["pdex", "pdexp"]:
         # This exits the test, not running the benchmark, and not raising an error
@@ -345,7 +346,9 @@ def test_speed_benchmark(adata, method, test, num_threads, benchmark, request):
     params = re.match(".*\[(.*)\]", request.node.name).group(1).split("-")
     group_params = [p for i, p in enumerate(params) if i in [0, 1, 4]]
     benchmark.group = "-".join(group_params)
-    _ = benchmark.pedantic(call_routine(adata, method, test, num_threads), iterations=1, warmup_rounds=0, rounds=1)
+    _ = benchmark.pedantic(
+        call_routine(adata, method, test, num_threads, use_rust), iterations=1, warmup_rounds=0, rounds=1
+    )
 
 
 @pytest.mark.memory_bench

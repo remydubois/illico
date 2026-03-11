@@ -92,7 +92,7 @@ def asymptotic_wilcoxon(
     tie_correct: bool = True,
     layer: str | None = None,
     precompile: bool = True,
-    use_rust: bool = False,
+    use_rust: bool = True,
 ):
     """Perform asymptotic Mann-Whitney tests for differential gene expression.
 
@@ -129,6 +129,8 @@ def asymptotic_wilcoxon(
         Layer in `adata.layers` to use for the data. If `None`, uses `adata.X`.
     precompile : bool, default=True
         Whether to precompile necessary functions for performance. It is recommended to set this to `True`.
+    use_rust : bool, default=True
+        Whether to use the Rust implementation of the test. If `False`, uses the Numba implementation.
 
     Returns
     -------
