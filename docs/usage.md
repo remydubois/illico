@@ -38,3 +38,24 @@ de_genes = asymptotic_wilcoxon(adata, group_keys="cluster", reference=None, is_l
 ```
 
 In this case, the resulting dataframe contains `n_clusters * n_genes` rows and the same three columns: `(p_value, statistic, fold_change)`. In this case, the wilcoxon rank-sum test is performed between cells belonging to cluster *c_i* and all the other cells (one-versus-the-rest), for all *c_i*.
+
+## Integrating with Scanpy
+Users coming from the `scanpy` ecosystem looking for a drop-in replacement of `sc.tl.rank_genes_groups(…, method="wilcoxon")` can set `return_as_scanpy=True` when calling `illico.asymptotic_wilcoxon`. This will return a dictionary formatted for Scanpy's `rank_genes_groups` results. Example:
+
+```python
+from illico import asymptotic_wilcoxon
+adata = ad.read_h5ad('dataset.h5ad') # (n_cells, n_genes)
+
+# ... Your preprocessing steps here ...
+
+de_genes = asymptotic_wilcoxon(
+       adata,
+       group_keys="perturbation",
+       reference="non-targeting",
+       is_log1p=[False|True], # <-- Specify if your data underwent log1p or not
+       return_as_scanpy=True, # <-- /!\
+       )
+adata.uns["rank_genes_groups"] = de_genes # Attach results to adata.uns
+# Then the rest of your scanpy workflow can remain unchanged, for example:
+sc.pl.rank_genes_groups(adata, sharey=False)
+```

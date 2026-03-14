@@ -155,6 +155,7 @@ pub fn csc_fold_change<D: SparseFloat, I: SparseIndex>(
     x: &OwnedCSCMatrix<D, I>,
     grpc: &GroupContainer,
     is_log1p: bool,
+    exp_post_agg: bool,
 ) -> Result<Array2<f32>, String> {
     let mut summed_expr = Array2::zeros((grpc.counts.len(), x.shape.1));
 
@@ -165,12 +166,16 @@ pub fn csc_fold_change<D: SparseFloat, I: SparseIndex>(
             let row_idx = x.indices[i].to_usize();
             let group_idx = grpc.encoded_groups[row_idx];
             let val = x.data[i].to_f32();
-            summed_expr[[group_idx, j]] += if is_log1p { val.exp_m1() } else { val };
+            summed_expr[[group_idx, j]] += if is_log1p && !exp_post_agg {
+                val.exp_m1()
+            } else {
+                val
+            };
         }
     }
     // println!("Summed expr: {:?}", summed_expr);
 
-    let fc = fold_change_from_summed_expr(summed_expr, &grpc, false)?;
+    let fc = fold_change_from_summed_expr(summed_expr, &grpc, exp_post_agg && is_log1p)?;
 
     Ok(fc)
 }

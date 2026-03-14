@@ -42,10 +42,11 @@ def _precompile(data_handler: DataHandler, reference: Any | None):
         types.boolean,
         types.boolean,
         types.boolean,
+        types.boolean,
         types.string,
     )
-    # This is the output: three float64 2D arrays
-    out_sig = types.UniTuple(types.float64[:, ::1], 3)
+    # This is the output: four float64 2D arrays
+    out_sig = types.UniTuple(types.float64[:, ::1], 4)
 
     input_type = data_handler.input_signature()
     if reference is None:

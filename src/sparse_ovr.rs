@@ -16,13 +16,14 @@ pub fn sparse_ovr_mwu_kernel<D: SparseFloat, I: SparseIndex>(
     use_continuity: bool,
     tie_correct: bool,
     alternative: String,
-) -> Result<(Array2<f64>, Array2<f64>), String> {
+) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>), String> {
     let n_cols = x.shape.1;
     let n_zeros = x.shape.0 - x.indptr.diff(1, Axis(0)).mapv(|x| x.to_usize());
 
     // Allocate placeholders for results
-    let mut u_stats = Array2::zeros((grpc.counts.len(), x.shape.1));
     let mut p_values = Array2::zeros((grpc.counts.len(), x.shape.1));
+    let mut u_stats = Array2::zeros((grpc.counts.len(), x.shape.1));
+    let mut zscores = Array2::zeros((grpc.counts.len(), x.shape.1));
 
     let n_total = x.shape.0 as f64;
     let n_ref = grpc.counts.mapv(|x| n_total - x as f64);
@@ -34,7 +35,7 @@ pub fn sparse_ovr_mwu_kernel<D: SparseFloat, I: SparseIndex>(
     let mut ranksum = Array2::zeros((grpc.counts.len(), x.shape.1));
     let mut tiesum = Array1::<f64>::zeros(x.shape.1);
     let mut nnz_per_group = Array2::<usize>::zeros((grpc.counts.len(), x.shape.1));
-    let u_base = &n_ref * &n_tgt + &n_tgt * (&n_tgt + 1.) / 2.;
+    let remainder = &n_tgt * (&n_tgt + 1.) / 2.;
     // Note: ideally I would benchmark between the two scenarios: keep all of n, nz, nnz as usize and convert the end result to f64,
     // or convert them right away to f64. Summation on f64 is slower than on integers but casting and memory alloc of vectors takes time.
     for j in 0..n_cols {
@@ -73,12 +74,12 @@ pub fn sparse_ovr_mwu_kernel<D: SparseFloat, I: SparseIndex>(
         ts += (n_zeros[j].pow(3) - n_zeros[j]) as f64;
 
         // Now compute u-stat: one value per group
-        let u_stat = &u_base - &rs;
+        let u_stat = &rs - &remainder;
         u_stats.column_mut(j).assign(&u_stat); // Assign
 
         // Now compute p-values
         for k in 0..grpc.counts.len() {
-            let p = compute_pvalue(
+            let (p, z) = compute_pvalue(
                 n_ref[k],
                 n_tgt[k],
                 n_total,
@@ -89,9 +90,10 @@ pub fn sparse_ovr_mwu_kernel<D: SparseFloat, I: SparseIndex>(
                 &alternative,
             )?;
             p_values[[k, j]] = p;
+            zscores[[k, j]] = z;
         }
     }
-    Ok((p_values, u_stats))
+    Ok((p_values, u_stats, zscores))
 }
 
 pub fn csr_ovr_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: SparseIndex>(
@@ -102,15 +104,16 @@ pub fn csr_ovr_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: Spar
     is_log1p: bool,
     use_continuity: bool,
     tie_correct: bool,
+    exp_post_agg: bool,
     alternative: String,
-) -> Result<(Array2<f64>, Array2<f64>, Array2<f32>), String> {
+) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f32>), String> {
     let csc_chunk = x.contig_col_chunk_into_csc(chunk_lb, chunk_ub)?;
 
-    let (p_values, u_stats) =
+    let (p_values, u_stats, zscores) =
         sparse_ovr_mwu_kernel(&csc_chunk, &grpc, use_continuity, tie_correct, alternative)?;
 
-    let fc = csc_fold_change(&csc_chunk, &grpc, is_log1p)?;
-    Ok((p_values, u_stats, fc))
+    let fc = csc_fold_change(&csc_chunk, &grpc, is_log1p, exp_post_agg)?;
+    Ok((p_values, u_stats, zscores, fc))
 }
 
 pub fn csc_ovr_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: SparseIndex>(
@@ -121,19 +124,21 @@ pub fn csc_ovr_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: Spar
     is_log1p: bool,
     use_continuity: bool,
     tie_correct: bool,
+    exp_post_agg: bool,
     alternative: String,
-) -> Result<(Array2<f64>, Array2<f64>, Array2<f32>), String> {
+) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f32>), String> {
     let csc_chunk = x.contig_col_chunk_into_csc(chunk_lb, chunk_ub)?;
 
-    let (p_values, u_stats) =
+    let (p_values, u_stats, zscores) =
         sparse_ovr_mwu_kernel(&csc_chunk, &grpc, use_continuity, tie_correct, alternative)?;
 
-    let fc = csc_fold_change(&csc_chunk, &grpc, is_log1p)?;
-    Ok((p_values, u_stats, fc))
+    let fc = csc_fold_change(&csc_chunk, &grpc, is_log1p, exp_post_agg)?;
+    Ok((p_values, u_stats, zscores, fc))
 }
 
+#[rustfmt::skip]
 macro_rules! run_branch {
-    ($format:expr, $x:expr, $py:expr, $grpc:expr, $chunk_lb:expr, $chunk_ub:expr, $is_log1p:expr, $use_continuity:expr, $tie_correct:expr, $alternative:expr, $dt:ty, $it:ty) => {{
+    ($format:expr, $x:expr, $py:expr, $grpc:expr, $chunk_lb:expr, $chunk_ub:expr, $is_log1p:expr, $use_continuity:expr, $tie_correct:expr, $exp_post_agg:expr, $alternative:expr, $dt:ty, $it:ty) => {{
         let data = $x.data.extract::<PyReadonlyArray1<'py, $dt>>()?;
         let indices = $x.indices.extract::<PyReadonlyArray1<'py, $it>>()?;
         let indptr = $x.indptr.extract::<PyReadonlyArray1<'py, $it>>()?;
@@ -152,14 +157,7 @@ macro_rules! run_branch {
                 $py.detach(|| {
                     // ovo_mwu_kernel_over_contiguous_col_chunk!(
                     csr_ovr_mwu_kernel_over_contiguous_col_chunk(
-                        &csr,
-                        $chunk_lb,
-                        $chunk_ub,
-                        $grpc,
-                        $is_log1p,
-                        $use_continuity,
-                        $tie_correct,
-                        $alternative,
+                        &csr, $chunk_lb, $chunk_ub, $grpc, $is_log1p, $use_continuity, $tie_correct, $exp_post_agg, $alternative,
                     )
                 })
                 .map_err(PyValueError::new_err)
@@ -174,14 +172,7 @@ macro_rules! run_branch {
 
                 $py.detach(|| {
                     csc_ovr_mwu_kernel_over_contiguous_col_chunk(
-                        &csc,
-                        $chunk_lb,
-                        $chunk_ub,
-                        $grpc,
-                        $is_log1p,
-                        $use_continuity,
-                        $tie_correct,
-                        $alternative,
+                        &csc, $chunk_lb, $chunk_ub, $grpc, $is_log1p, $use_continuity, $tie_correct, $exp_post_agg, $alternative,
                     )
                 })
                 .map_err(PyValueError::new_err)
@@ -193,6 +184,8 @@ macro_rules! run_branch {
 
 type PyArr2f32<'py> = Bound<'py, PyArray2<f32>>;
 type PyArr2f64<'py> = Bound<'py, PyArray2<f64>>;
+
+#[rustfmt::skip]
 #[pyfunction]
 pub fn csr_ovr_mwu_kernel_over_contiguous_col_chunk_rust<'py>(
     py: Python<'py>,
@@ -203,70 +196,31 @@ pub fn csr_ovr_mwu_kernel_over_contiguous_col_chunk_rust<'py>(
     is_log1p: bool,
     use_continuity: bool,
     tie_correct: bool,
+    exp_post_agg: bool,
     alternative: String,
-) -> PyResult<(PyArr2f64<'py>, PyArr2f64<'py>, PyArr2f32<'py>)> {
-    // let x = x.as_csr_matrix();
+) -> PyResult<(
+    PyArr2f64<'py>,
+    PyArr2f64<'py>,
+    PyArr2f64<'py>,
+    PyArr2f32<'py>,
+)> {
     let grpc = grpc.as_group_container();
 
     let data_dtype: String = x.data.getattr("dtype")?.getattr("str")?.extract()?;
     let indices_dtype: String = x.indices.getattr("dtype")?.getattr("str")?.extract()?;
 
-    let (pvalues, u_stats, fc) = match (data_dtype.as_str(), indices_dtype.as_str()) {
+    let (pvalues, u_stats, zscores, fc) = match (data_dtype.as_str(), indices_dtype.as_str()) {
         ("f32" | "<f4", "i32" | "<i4") => run_branch!(
-            "CSR",
-            x,
-            py,
-            grpc,
-            chunk_lb,
-            chunk_ub,
-            is_log1p,
-            use_continuity,
-            tie_correct,
-            alternative,
-            f32,
-            i32
+            "CSR", x, py, grpc, chunk_lb, chunk_ub, is_log1p, use_continuity, tie_correct, exp_post_agg, alternative, f32, i32
         ),
         ("f64" | "<f8", "i32" | "<i4") => run_branch!(
-            "CSR",
-            x,
-            py,
-            grpc,
-            chunk_lb,
-            chunk_ub,
-            is_log1p,
-            use_continuity,
-            tie_correct,
-            alternative,
-            f64,
-            i32
+            "CSR", x, py, grpc, chunk_lb, chunk_ub, is_log1p, use_continuity, tie_correct, exp_post_agg, alternative, f64, i32
         ),
         ("f32" | "<f4", "i64" | "<i8") => run_branch!(
-            "CSR",
-            x,
-            py,
-            grpc,
-            chunk_lb,
-            chunk_ub,
-            is_log1p,
-            use_continuity,
-            tie_correct,
-            alternative,
-            f32,
-            i64
+            "CSR", x, py, grpc, chunk_lb, chunk_ub, is_log1p, use_continuity, tie_correct, exp_post_agg, alternative, f32, i64
         ),
         ("f64" | "<f8", "i64" | "<i8") => run_branch!(
-            "CSR",
-            x,
-            py,
-            grpc,
-            chunk_lb,
-            chunk_ub,
-            is_log1p,
-            use_continuity,
-            tie_correct,
-            alternative,
-            f64,
-            i64
+            "CSR", x, py, grpc, chunk_lb, chunk_ub, is_log1p, use_continuity, tie_correct, exp_post_agg, alternative, f64, i64
         ),
         _ => Err(PyValueError::new_err(format!(
             "Error casting data (only f32 and f64 supported, received {}) and indices (only int32 and int64 supported, received {}).",
@@ -277,10 +231,12 @@ pub fn csr_ovr_mwu_kernel_over_contiguous_col_chunk_rust<'py>(
     Ok((
         PyArray2::from_array(py, &pvalues),
         PyArray2::from_array(py, &u_stats),
+        PyArray2::from_array(py, &zscores),
         PyArray2::from_array(py, &fc),
     ))
 }
 
+#[rustfmt::skip]
 #[pyfunction]
 pub fn csc_ovr_mwu_kernel_over_contiguous_col_chunk_rust<'py>(
     py: Python<'py>,
@@ -291,70 +247,31 @@ pub fn csc_ovr_mwu_kernel_over_contiguous_col_chunk_rust<'py>(
     is_log1p: bool,
     use_continuity: bool,
     tie_correct: bool,
+    exp_post_agg: bool,
     alternative: String,
-) -> PyResult<(PyArr2f64<'py>, PyArr2f64<'py>, PyArr2f32<'py>)> {
-    // let x = x.as_CSC_matrix();
+) -> PyResult<(
+    PyArr2f64<'py>,
+    PyArr2f64<'py>,
+    PyArr2f64<'py>,
+    PyArr2f32<'py>,
+)> {
     let grpc = grpc.as_group_container();
 
     let data_dtype: String = x.data.getattr("dtype")?.getattr("str")?.extract()?;
     let indices_dtype: String = x.indices.getattr("dtype")?.getattr("str")?.extract()?;
 
-    let (pvalues, u_stats, fc) = match (data_dtype.as_str(), indices_dtype.as_str()) {
+    let (pvalues, u_stats, zscores, fc) = match (data_dtype.as_str(), indices_dtype.as_str()) {
         ("f32" | "<f4", "i32" | "<i4") => run_branch!(
-            "CSC",
-            x,
-            py,
-            grpc,
-            chunk_lb,
-            chunk_ub,
-            is_log1p,
-            use_continuity,
-            tie_correct,
-            alternative,
-            f32,
-            i32
+            "CSC", x, py, grpc, chunk_lb, chunk_ub, is_log1p, use_continuity, tie_correct, exp_post_agg, alternative, f32, i32
         ),
         ("f64" | "<f8", "i32" | "<i4") => run_branch!(
-            "CSC",
-            x,
-            py,
-            grpc,
-            chunk_lb,
-            chunk_ub,
-            is_log1p,
-            use_continuity,
-            tie_correct,
-            alternative,
-            f64,
-            i32
+            "CSC", x, py, grpc, chunk_lb, chunk_ub, is_log1p, use_continuity, tie_correct, exp_post_agg, alternative, f64, i32
         ),
         ("f32" | "<f4", "i64" | "<i8") => run_branch!(
-            "CSC",
-            x,
-            py,
-            grpc,
-            chunk_lb,
-            chunk_ub,
-            is_log1p,
-            use_continuity,
-            tie_correct,
-            alternative,
-            f32,
-            i64
+            "CSC", x, py, grpc, chunk_lb, chunk_ub, is_log1p, use_continuity, tie_correct, exp_post_agg, alternative, f32, i64
         ),
         ("f64" | "<f8", "i64" | "<i8") => run_branch!(
-            "CSC",
-            x,
-            py,
-            grpc,
-            chunk_lb,
-            chunk_ub,
-            is_log1p,
-            use_continuity,
-            tie_correct,
-            alternative,
-            f64,
-            i64
+            "CSC", x, py, grpc, chunk_lb, chunk_ub, is_log1p, use_continuity, tie_correct, exp_post_agg, alternative, f64, i64
         ),
         _ => Err(PyValueError::new_err(format!(
             "Error casting data (only f32 and f64 supported, received {}) and indices (only int32 and int64 supported, received {}).",
@@ -365,41 +282,7 @@ pub fn csc_ovr_mwu_kernel_over_contiguous_col_chunk_rust<'py>(
     Ok((
         PyArray2::from_array(py, &pvalues),
         PyArray2::from_array(py, &u_stats),
+        PyArray2::from_array(py, &zscores),
         PyArray2::from_array(py, &fc),
     ))
 }
-// #[pyfunction]
-// pub fn csc_ovr_mwu_kernel_over_contiguous_col_chunk_rust<'py>(
-//     py: Python<'py>,
-//     x: PyCSCMatrix,
-//     chunk_lb: usize,
-//     chunk_ub: usize,
-//     grpc: GroupContainerNamedTuple,
-//     is_log1p: bool,
-//     use_continuity: bool,
-//     tie_correct: bool,
-//     alternative: String,
-// ) -> PyResult<(PyArr2f64<'py>, PyArr2f64<'py>, PyArr2f32<'py>)> {
-//     let x = x.as_csc_matrix();
-//     let grpc = grpc.as_group_container();
-
-//     let (pvalues, u_stats, fc) = py
-//         .detach(|| {
-//             csc_ovr_mwu_kernel_over_contiguous_col_chunk(
-//                 &x,
-//                 chunk_lb,
-//                 chunk_ub,
-//                 grpc,
-//                 is_log1p,
-//                 use_continuity,
-//                 tie_correct,
-//                 alternative,
-//             )
-//         })
-//         .map_err(PyValueError::new_err)?;
-//     Ok((
-//         PyArray2::from_array(py, &pvalues),
-//         PyArray2::from_array(py, &u_stats),
-//         PyArray2::from_array(py, &fc),
-//     ))
-// }

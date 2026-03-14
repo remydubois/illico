@@ -80,6 +80,7 @@ pub fn csr_fold_change<D: SparseFloat, I: SparseIndex>(
     x: &OwnedCSRMatrix<D, I>,
     grpc: &GroupContainer,
     is_log1p: bool,
+    exp_post_agg: bool,
 ) -> Result<Array2<f32>, String> {
     // Compute summed expression
     let mut summed_expr = Array2::<f32>::zeros((grpc.counts.len(), x.shape.1));
@@ -91,10 +92,14 @@ pub fn csr_fold_change<D: SparseFloat, I: SparseIndex>(
             let col_idx = x.indices[pointer].to_usize();
             let group_idx = grpc.encoded_groups[i];
             let val = x.data[pointer].to_f32();
-            summed_expr[[group_idx, col_idx]] += if is_log1p { val.exp_m1() } else { val };
+            summed_expr[[group_idx, col_idx]] += if is_log1p && !exp_post_agg {
+                val.exp_m1()
+            } else {
+                val
+            };
         }
     }
-    let fc = fold_change_from_summed_expr(summed_expr, &grpc, false)?;
+    let fc = fold_change_from_summed_expr(summed_expr, &grpc, exp_post_agg && is_log1p)?;
     Ok(fc)
 }
 
@@ -133,13 +138,9 @@ impl<'py, D: SparseFloat, I: SparseIndex> CSRMatrix<'py, D, I> {
     ) -> Result<OwnedCSRMatrix<D, I>, String> {
         let mut bounds = Array2::zeros((self.shape.0, 2));
         let mut n_nzeros = Array1::zeros(self.shape.0 + 1);
+        let indices = self.indices.as_slice().ok_or_else(|| format!("Error"))?;
         for i in 0..self.shape.0 {
-            let col_indices = self
-                .indices
-                .slice(s![self.indptr[i].to_usize()..self.indptr[i + 1].to_usize()]);
-            let col_indices = col_indices
-                .as_slice()
-                .ok_or_else(|| format!("CSR indices should a C-contiguous array."))?;
+            let col_indices = &indices[self.indptr[i].to_usize()..self.indptr[i + 1].to_usize()];
 
             let cb = searchsorted_left(col_indices, chunk_lb);
             let rb = searchsorted_left(col_indices, chunk_ub);
@@ -156,8 +157,10 @@ impl<'py, D: SparseFloat, I: SparseIndex> CSRMatrix<'py, D, I> {
         }
 
         // Now retrieve data and indices for the chunk, across all rows
-        let mut new_data = Array1::zeros(n_nzeros.sum());
-        let mut new_indices = Array1::zeros(n_nzeros.sum());
+        let nnz_total = indptr[indptr.len() - 1] as usize;
+        let mut new_data = vec![D::zero(); nnz_total];
+        let mut new_indices = vec![I::zero(); nnz_total];
+        let chunk_lb_gen = I::from(chunk_lb).unwrap();
         for i in 0..self.shape.0 {
             let org_start = self.indptr[i].to_usize();
             let (chunk_start, chunk_end) =
@@ -165,24 +168,19 @@ impl<'py, D: SparseFloat, I: SparseIndex> CSRMatrix<'py, D, I> {
             if chunk_start == chunk_end {
                 continue;
             }
-            // Grab data and indices corresponding to the chunk, for this row
-            let data_chunk = self.data.slice(s![chunk_start..chunk_end]).to_owned();
-            // let mut indices_chunk = self.indices.slice(s![chunk_start..chunk_end]).to_owned();
-            // indices_chunk -= chunk_lb as i32; // offset the col indices
-            let indices_chunk = self
-                .indices
-                .slice(s![chunk_start..chunk_end])
-                .mapv(|x| I::from(x.to_usize() - chunk_lb).unwrap());
 
-            // Now assign chunks into placeholders
-            let mut data_placeholder = new_data.slice_mut(s![indptr[i]..indptr[i + 1]]);
-            let mut indices_placeholder = new_indices.slice_mut(s![indptr[i]..indptr[i + 1]]);
-            data_placeholder.assign(&data_chunk);
-            indices_placeholder.assign(&indices_chunk);
+            let data_chunk = self.data.slice(s![chunk_start..chunk_end]).to_vec();
+            new_data[indptr[i] as usize..indptr[i + 1] as usize].copy_from_slice(&data_chunk);
+            let indices_chunk = self.indices.slice(s![chunk_start..chunk_end]).to_vec();
+            // new_indices[indptr[i] as usize ..indptr[i + 1] as usize].copy_from_slice(&indices_chunk);
+            for (k, i) in (indptr[i] as usize..indptr[i + 1] as usize).enumerate() {
+                new_indices[i] = indices_chunk[k] - chunk_lb_gen
+            }
         }
+
         Ok(OwnedCSRMatrix {
-            data: new_data,
-            indices: new_indices,
+            data: Array1::from_vec(new_data),
+            indices: Array1::from_vec(new_indices),
             indptr: indptr.mapv(|x| I::from(x).unwrap()),
             shape: (self.shape.0, chunk_ub - chunk_lb),
         })

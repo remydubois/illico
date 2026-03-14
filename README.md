@@ -4,10 +4,10 @@ Approximate speed benchmarks ran on k562-essential can be found below.
 
 |               Test               | Format | illico | scanpy | pdex |
 |----------------------------------|--------|--------|--------|------|
-| OVO (reference="non-targeting")  | Dense  |  ~30s  | ~1h    | ~4h  |
-| OVO (reference="non-targeting")  | Sparse |  ~30s  | ~1h30  | ~4h  |
-| OVR (reference=None)             | Dense  |  ~30s  | ~11h   |  X   |
-| OVR (reference=None)             | Sparse |  ~30s  | ~10h   |  X   |
+| OVO (reference="non-targeting")  | Dense  |  ~20s  | ~1h    | ~4h  |
+| OVO (reference="non-targeting")  | Sparse |  ~20s  | ~1h30  | ~4h  |
+| OVR (reference=None)             | Dense  |  ~10s  | ~11h   |  X   |
+| OVR (reference=None)             | Sparse |  ~10s  | ~10h   |  X   |
 
 ## Installation
 illico is compatible with python 3.11 and onward:
@@ -30,7 +30,10 @@ de_genes = asymptotic_wilcoxon(
        group_keys="perturbation",
        reference=["non-targeting"|None], # <- `None` computes cluster-wise DE genes. Any other `str` will be interpreted as label of the control cells.
        is_log1p=[False|True], # <-- Specify if your data underwent log1p or not
+       return_as_scanpy=[False|True], # <-- Whether to return a dict compatible with Scanpy's `rank_genes_groups` function.
        )
+# Eventually, if return_as_scanpy=True:
+adata.uns["rank_genes_groups"] = de_genes
 ```
 
 ## Release notes

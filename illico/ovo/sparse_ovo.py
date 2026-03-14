@@ -43,7 +43,7 @@ def single_group_sparse_ovo_mwu_kernel(
         ValueError: If shape mismatche
 
     Returns:
-        tuple[np.ndarray]: two-sided p-values, U-statistics. Each of shape (n_genes,).
+        tuple[np.ndarray]: two-sided p-values, U-statistics, zscores. Each of shape (n_genes,).
 
     Author: Rémy Dubois
     """
@@ -59,6 +59,7 @@ def single_group_sparse_ovo_mwu_kernel(
     n_zeros_ref = (n_ref - diff(sorted_ref_data.indptr)).astype(np.int64)
     U_statistics = np.empty(n_cols_ref, dtype=np.float64)
     pvals = np.empty(n_cols_ref, dtype=np.float64)
+    zscores = np.empty(n_cols_ref, dtype=np.float64)
     n = n_ref + n_tgt
     mu = n_ref * n_tgt / 2.0
     for j in range(n_cols_ref):
@@ -79,11 +80,11 @@ def single_group_sparse_ovo_mwu_kernel(
         R1 = R1_nz + n0 * (n_zeros_ref[j] + n0 + 1) / 2.0  # Add sumranks of zeros
 
         # Compute U-stat
-        U1 = n_ref * n_tgt + n_tgt * (n_tgt + 1) / 2 - R1
+        U1 = R1 - n_tgt * (n_tgt + 1) / 2
 
         # Compute sigma
         tie_sum += n_zeros_combined**3 - n_zeros_combined
-        pvals[j] = compute_pval(
+        pvals[j], zscores[j] = compute_pval(
             n_ref=n_ref,
             n_tgt=n_tgt,
             n=n,
@@ -97,7 +98,7 @@ def single_group_sparse_ovo_mwu_kernel(
         # Regardless of the alternative, always return U1 like scipy
         U_statistics[j] = U1
 
-    return pvals, U_statistics
+    return pvals, U_statistics, zscores
 
 
 @njit(nogil=True, fastmath=True, cache=False)
@@ -120,7 +121,7 @@ def multi_group_sparse_ovo_mwu_kernel(
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Returns:
-        tuple[np.ndarray]: two-sided p-values, U-statistics. Each of shape (n_groups, n_genes).
+        tuple[np.ndarray]: two-sided p-values, U-statistics, zscores. Each of shape (n_groups, n_genes).
 
     Author: Rémy Dubois
     """
@@ -135,17 +136,19 @@ def multi_group_sparse_ovo_mwu_kernel(
 
     # Now go through all the groups one by one
     pvalues = np.empty((n_groups, X.shape[1]), dtype=np.float64)
+    zscores = np.empty((n_groups, X.shape[1]), dtype=np.float64)
     statistics = np.empty((n_groups, X.shape[1]), dtype=np.float64)
     for group_id in range(group_indptr.size - 1):
         if group_id == ref_group_id:
             pvalues[group_id, :] = 1.0
+            zscores[group_id, :] = 0.0
             statistics[group_id, :] = -1.0
             continue
 
         tgt_idxs = group_indices[group_indptr[group_id] : group_indptr[group_id + 1]]
         X_tgt = csr_get_rows_into_csc(X, tgt_idxs)
         _sort_csc_columns_inplace(X_tgt)
-        pvalue, statistic = single_group_sparse_ovo_mwu_kernel(
+        pvalue, statistic, zscore = single_group_sparse_ovo_mwu_kernel(
             sorted_ref_data=csc_X_ref,
             sorted_tgt_data=X_tgt,
             use_continuity=use_continuity,
@@ -154,8 +157,9 @@ def multi_group_sparse_ovo_mwu_kernel(
         )
         pvalues[group_id, :] = pvalue
         statistics[group_id, :] = statistic
+        zscores[group_id, :] = zscore
 
-    return pvalues, statistics
+    return pvalues, statistics, zscores
 
 
 # Not jitting this and sorting all the cells at once is 1.5x slower. Ideally, it would be faster to sort only groups one by one but
@@ -170,6 +174,7 @@ def csc_ovo_mwu_kernel_over_contiguous_col_chunk(
     is_log1p: bool,
     use_continuity: bool = True,
     tie_correct: bool = True,
+    exp_post_agg: bool = False,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ):
     """Perform OVO test over contiguous chunk of column of a CSC matrix.
@@ -182,20 +187,21 @@ def csc_ovo_mwu_kernel_over_contiguous_col_chunk(
         is_log1p (bool): User-indicated flag telling if data underwent log1p transform.
         use_continuity (bool): Whether to use continuity correction when computing p-values.
         tie_correct (bool): Whether to apply tie correction when computing p-values.
+        exp_post_agg (bool, optional): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that `scanpy.rank_genes_groups` assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Raises:
         ValueError: If chunk bounds are inintelligible.
 
     Returns:
-        tuple[np.ndarray]: two-sided p-values, U-statistics, fold change. Each
+        tuple[np.ndarray]: two-sided p-values, U-statistics, z-scores, fold change. Each
         of shape (n_groups, chunk_ub - chunk_lb).
 
     Author: Rémy Dubois
     """
     # This copies the data, so all that follow can happen in-place
     csr_chunk = csc_get_contig_cols_into_csr(X, chunk_lb, chunk_ub)
-    pvalues, statistics = multi_group_sparse_ovo_mwu_kernel(
+    pvalues, statistics, zscores = multi_group_sparse_ovo_mwu_kernel(
         X=csr_chunk,
         grpc=grpc,
         ref_group_id=grpc.encoded_ref_group,
@@ -205,9 +211,9 @@ def csc_ovo_mwu_kernel_over_contiguous_col_chunk(
     )
 
     # Compute fold change
-    fold_change = csr_fold_change(csr_chunk, grpc, is_log1p=is_log1p)
+    fold_change = csr_fold_change(csr_chunk, grpc, is_log1p=is_log1p, exp_post_agg=exp_post_agg)
 
-    return pvalues, statistics, fold_change
+    return pvalues, statistics, zscores, fold_change
 
 
 # Real scale tests on whole H1 showed 24secs on 8 threads and 2min45s on 1, so a speedup of 165 / 24 = 6.875x
@@ -221,6 +227,7 @@ def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
     is_log1p: bool,
     use_continuity: bool = True,
     tie_correct: bool = True,
+    exp_post_agg: bool = False,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ):
     """Perform OVO test over contiguous chunk of column of a CSR matrix.
@@ -233,20 +240,21 @@ def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
         is_log1p (bool): User-indicated flag telling if data underwent log1p transform.
         use_continuity (bool): Whether to use continuity correction when computing p-values.
         tie_correct (bool): Whether to apply tie correction when computing p-values.
+        exp_post_agg (bool, optional): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that `scanpy.rank_genes_groups` assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Raises:
         ValueError: If chunk bounds are inintelligible.
 
     Returns:
-        tuple[np.ndarray]: two-sided p-values, U-statistics, fold change. Each
+        tuple[np.ndarray]: two-sided p-values, U-statistics, z-scores, fold change. Each
         of shape (n_groups, chunk_ub - chunk_lb).
 
     Author: Rémy Dubois
     """
     # This copies the data, so all that follow can happen in-place
     csr_chunk = csr_get_contig_cols_into_csr(X, chunk_lb, chunk_ub)
-    pvalues, statistics = multi_group_sparse_ovo_mwu_kernel(
+    pvalues, statistics, zscores = multi_group_sparse_ovo_mwu_kernel(
         X=csr_chunk,
         grpc=grpc,
         ref_group_id=grpc.encoded_ref_group,
@@ -255,6 +263,6 @@ def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
         alternative=alternative,
     )
     # Compute fold change
-    fold_change = csr_fold_change(csr_chunk, grpc, is_log1p=is_log1p)
+    fold_change = csr_fold_change(csr_chunk, grpc, is_log1p=is_log1p, exp_post_agg=exp_post_agg)
 
-    return pvalues, statistics, fold_change
+    return pvalues, statistics, zscores, fold_change

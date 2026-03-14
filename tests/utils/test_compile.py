@@ -21,7 +21,7 @@ def test_precompile(rand_adata, test):
     _, grpc = encode_and_count_groups(rand_adata.obs.pert.values, reference)
     X, bounds = data_handler.fetch(0, rand_adata.X.shape[1])
     X_nb = data_handler.to_nb(X)
-    dispatcher(X_nb, *bounds, grpc, False, True, True, "two-sided")
+    dispatcher(X_nb, *bounds, grpc, False, True, True, False, "two-sided")
     # Assert no other signature was added
     assert len(dispatcher.nopython_signatures) == len(
         leg_sig

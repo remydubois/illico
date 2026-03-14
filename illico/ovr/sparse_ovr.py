@@ -40,7 +40,7 @@ def sparse_ovr_mwu_kernel(
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis. Defaults to "two-sided".
 
     Returns:
-        tuple[np.ndarray]: Two-sided p-values and U-statistics, per group and per gene (column).
+        tuple[np.ndarray]: Two-sided p-values, U-statistics and z-scores, per group and per gene (column).
 
     Author: Rémy Dubois
     """
@@ -50,6 +50,7 @@ def sparse_ovr_mwu_kernel(
     # Allocate placeholders for U stats and pvals
     U = np.empty((group_counts.size, n_cols), dtype=np.float64)
     pvals = np.empty((group_counts.size, n_cols), dtype=np.float64)
+    zscores = np.empty((group_counts.size, n_cols), dtype=np.float64)
 
     # Note that because this function does not involve inner parallelism, this could be allocated per-col, but I find it cleaner this way
     nnz_per_group = np.zeros((group_counts.size, n_cols), dtype=np.float64)
@@ -79,11 +80,11 @@ def sparse_ovr_mwu_kernel(
         """ Step 3: Add ranksums of zero elements, per group"""
         # add zero contribution: number of zeros * avg rank
         R1 = R1_nz[:, j] + nz_per_group * (n0 + 1) / 2.0
-        U[:, j] = n_ref * n_tgt + n_tgt * (n_tgt + 1) / 2 - R1
+        U[:, j] = R1 - n_tgt * (n_tgt + 1) / 2
         tie_sum += n0**3 - n0
 
         for k in range(group_counts.size):
-            pvals[k, j] = compute_pval(
+            pvals[k, j], zscores[k, j] = compute_pval(
                 n_ref=n_ref[k],
                 n_tgt=n_tgt[k],
                 n=n,
@@ -94,7 +95,7 @@ def sparse_ovr_mwu_kernel(
                 alternative=alternative,
             )
 
-    return pvals, U
+    return pvals, U, zscores
 
 
 @nb_dispatcher_registry.register(Test.OVR, KernelDataFormat.CSC)
@@ -107,6 +108,7 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     is_log1p: bool,
     use_continuity: bool = True,
     tie_correct: bool = True,
+    exp_post_agg: bool = False,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ):
     """Perform OVR ranksum test over the contiguous column chunk defined by the bounds.
@@ -121,13 +123,14 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
         is_log1p (bool): User-indicated flag telling if data was log1p transformed or not.
         use_continuity (bool): Whether to use continuity correction when computing p-values. Defaults to True.
         tie_correct (bool): Whether to apply tie correction when computing p-values. Defaults to True.
+        exp_post_agg (bool, optional): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that `scanpy.rank_genes_groups` assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis.
 
     Raises:
         ValueError: If bounds are not intelligible
 
     Returns:
-        tuple[np.ndarray]: two-sided p-values, u-statistics and fold changes,
+        tuple[np.ndarray]: two-sided p-values, u-statistics, z-scores and fold changes,
         each of shape (n_groups, chunk_lb - chunk_ub).
 
     Author: Rémy Dubois
@@ -142,7 +145,7 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     # for j in range(csc_chunk.shape[1]):
     #     start, end = csc_chunk.indptr[j], csc_chunk.indptr[j + 1]
     #     idxs[start:end] = np.argsort(csc_chunk.data[start:end])
-    pvalues, statistics = sparse_ovr_mwu_kernel(
+    pvalues, statistics, zscores = sparse_ovr_mwu_kernel(
         X=csc_chunk,
         groups=grpc.encoded_groups,
         group_counts=grpc.counts,
@@ -151,8 +154,8 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
         alternative=alternative,
     )
 
-    fold_change = csc_fold_change(X=csc_chunk, grpc=grpc, is_log1p=is_log1p)
-    return pvalues, statistics, fold_change
+    fold_change = csc_fold_change(X=csc_chunk, grpc=grpc, is_log1p=is_log1p, exp_post_agg=exp_post_agg)
+    return pvalues, statistics, zscores, fold_change
 
 
 @nb_dispatcher_registry.register(Test.OVR, KernelDataFormat.CSR)
@@ -165,6 +168,7 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
     is_log1p: bool,
     use_continuity: bool = True,
     tie_correct: bool = True,
+    exp_post_agg: bool = False,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Perform OVR ranksum test over the contiguous column chunk defined by the bounds.
@@ -179,13 +183,14 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
         is_log1p (bool): User-indicated flag telling if data was log1p transformed or not.
         use_continuity (bool): Whether to use continuity correction when computing p-values.
         tie_correct (bool): Whether to apply tie correction when computing p-values.
+        exp_post_agg (bool, optional): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that `scanpy.rank_genes_groups` assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Raises:
         ValueError: If bounds are not intelligible
 
     Returns:
-        tuple[np.ndarray]: two-sided p-values, u-statistics and fold changes,
+        tuple[np.ndarray]: two-sided p-values, u-statistics, z-scores and fold changes,
         each of shape (n_groups, chunk_lb - chunk_ub).
 
     Author: Rémy Dubois
@@ -195,7 +200,7 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
     csc_chunk = csr_get_contig_cols_into_csc(csr_matrix=X, chunk_lb=chunk_lb, chunk_ub=chunk_ub)
 
     # TODO: same remark as csc regarding sorting
-    pvalues, statistics = sparse_ovr_mwu_kernel(
+    pvalues, statistics, zscores = sparse_ovr_mwu_kernel(
         X=csc_chunk,
         groups=grpc.encoded_groups,
         group_counts=grpc.counts,
@@ -203,6 +208,6 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
         tie_correct=tie_correct,
         alternative=alternative,
     )
-    fold_change = csc_fold_change(X=csc_chunk, grpc=grpc, is_log1p=is_log1p)
+    fold_change = csc_fold_change(X=csc_chunk, grpc=grpc, is_log1p=is_log1p, exp_post_agg=exp_post_agg)
 
-    return pvalues, statistics, fold_change
+    return pvalues, statistics, zscores, fold_change

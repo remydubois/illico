@@ -186,13 +186,14 @@ def csc_get_contig_cols_into_csr(csc_matrix: CSCMatrix, chunk_lb: int, chunk_ub:
 
 
 @njit(nogil=True, fastmath=True, cache=False)
-def csc_fold_change(X: CSCMatrix, grpc: GroupContainer, is_log1p: bool) -> np.ndarray:
+def csc_fold_change(X: CSCMatrix, grpc: GroupContainer, is_log1p: bool, exp_post_agg: bool) -> np.ndarray:
     """Compute fold change from a CSC matrix of expression counts.
 
     Args:
         X (CSCMatrix): Input expression counts CSC matrix
         grpc (GroupContainer): GroupContainer
         is_log1p (bool): User-indicated flag telling if data was log1p or not.
+        exp_post_agg (bool): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that `scanpy.rank_genes_groups` assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.
 
     Returns:
         np.ndarray: Fold change of change (n_groups, n_genes)
@@ -206,8 +207,11 @@ def csc_fold_change(X: CSCMatrix, grpc: GroupContainer, is_log1p: bool) -> np.nd
         start = X.indptr[j]
         end = X.indptr[j + 1]
         row_indices = X.indices[start:end]
-        row_data = np.expm1(X.data[start:end]) if is_log1p else X.data[start:end]
+        if is_log1p and not exp_post_agg:
+            row_data = np.expm1(X.data[start:end])
+        else:
+            row_data = X.data[start:end]
         group_id = grpc.encoded_groups[row_indices]
         _add_at_vec(group_agg_counts[:, j], group_id, row_data)
-    fold_change = fold_change_from_summed_expr(group_agg_counts, grpc)
+    fold_change = fold_change_from_summed_expr(group_agg_counts, grpc, exp_post_agg=exp_post_agg & is_log1p)
     return fold_change

@@ -30,7 +30,7 @@ def dense_ovo_mwu_kernel(
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
 
     Returns:
-        tuple[np.ndarray]: two-sided p-values, U-statistics. Each of shape (n_genes,).
+        tuple[np.ndarray]: two-sided p-values, U-statistics, z-scores. Each of shape (n_genes,).
 
     Author: Rémy Dubois
     """
@@ -39,15 +39,16 @@ def dense_ovo_mwu_kernel(
 
     U_statistics = np.empty(ncols, dtype=np.float64)
     pvals = np.empty(ncols, dtype=np.float64)
+    zscores = np.empty(ncols, dtype=np.float64)
     n = n_ref + n_tgt
     mu = n_ref * n_tgt / 2.0
     for j in range(ncols):
-        R1, tie_sum = rank_sum_and_ties_from_sorted(sorted_ref_data[:, j], sorted_tgt_data[:, j])
+        ranksum, tie_sum = rank_sum_and_ties_from_sorted(sorted_ref_data[:, j], sorted_tgt_data[:, j])
 
         # Compute U-stat
-        U1 = n_ref * n_tgt + n_tgt * (n_tgt + 1) / 2 - R1
+        U1 = ranksum - n_tgt * (n_tgt + 1) / 2.0
 
-        pvals[j] = compute_pval(
+        pvals[j], zscores[j] = compute_pval(
             n_ref=n_ref,
             n_tgt=n_tgt,
             n=n,
@@ -59,7 +60,7 @@ def dense_ovo_mwu_kernel(
         )
         U_statistics[j] = U1
 
-    return pvals, U_statistics
+    return pvals, U_statistics, zscores
 
 
 @nb_dispatcher_registry.register(Test.OVO, KernelDataFormat.DENSE)
@@ -72,6 +73,7 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
     is_log1p: bool,
     use_continuity: bool = True,
     tie_correct: bool = True,
+    exp_post_agg: bool = False,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Perform OVO tests group-wise and gene(col)-wise.
@@ -93,6 +95,7 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
         grpc (GroupContainer): GroupContainer, contains information about which group each row belongs to.
         use_continuity (bool, optional): Apply continuity factor or not. Defaults to True.
         tie_correct (bool, optional): Whether to apply tie correction when computing p-values. Defaults to True.
+        exp_post_agg (bool, optional): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that `scanpy.rank_genes_groups` assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis
         is_log1p (bool, optional): User-indicated flag telling if data underwent log1p transform or not. Defaults to False.
 
@@ -100,7 +103,7 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
         ValueError: If bounds are not intelligible.
 
     Returns:
-        tuple[np.ndarray]: two-sided p-values, U-statistics, fold change. Each
+        tuple[np.ndarray]: two-sided p-values, U-statistics, z-scores, fold change. Each
         of shape (n_groups, chunk_ub - chunk_lb).
 
     Author: Rémy Dubois
@@ -114,6 +117,7 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
     _sort_along_axis_inplace(ref_chunk, axis=0)
 
     pvalues = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
+    zscores = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
     statistics = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
     for group_id in range(n_groups):
         if group_id == grpc.encoded_ref_group:
@@ -123,7 +127,7 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
         tgt_chunk = chunk_and_fortranize(X, chunk_lb, chunk_ub, tgt_indices)
         _sort_along_axis_inplace(tgt_chunk, axis=0)
 
-        pvalues[group_id], statistics[group_id] = dense_ovo_mwu_kernel(
+        pvalues[group_id], statistics[group_id], zscores[group_id] = dense_ovo_mwu_kernel(
             sorted_ref_data=ref_chunk,
             sorted_tgt_data=tgt_chunk,
             use_continuity=use_continuity,
@@ -132,6 +136,6 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
         )
 
     # Compute fold change
-    fc = dense_fold_change(chunk, grpc, is_log1p=is_log1p)
+    fc = dense_fold_change(chunk, grpc, is_log1p=is_log1p, exp_post_agg=exp_post_agg)
 
-    return pvalues, statistics, fc
+    return pvalues, statistics, zscores, fc

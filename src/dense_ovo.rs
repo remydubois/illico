@@ -20,26 +20,23 @@ pub fn dense_ovo_kernel<D: SparseFloat>(
     alternative: &String,
     mut p_values: ArrayViewMut1<f64>,
     mut u_stats: ArrayViewMut1<f64>,
+    mut zscores: ArrayViewMut1<f64>,
 ) -> Result<(), String> {
     let n_ctrl = sorted_controls.dim().0 as f64;
     let n_cols = sorted_controls.dim().1 as f64;
     let n_tgt = sorted_tgt.dim().0 as f64;
 
-    // declare placeholder for results
-    // let mut u_stats = Array1::zeros(n_cols as usize);
-    // let mut p_values = Array1::zeros(n_cols as usize);
-
     let n = n_ctrl + n_tgt;
     let mu = n_ctrl * n_tgt / 2.;
 
-    let u_base = n_ctrl as f64 * n_tgt + n_tgt * (n_tgt + 1.) / 2.;
+    let remainder = &n_tgt * (&n_tgt + 1.) / 2.;
     for j in 0..n_cols as usize {
         let (rs, ts) = rank_sum_and_ties(sorted_controls.column(j), sorted_tgt.column(j));
 
-        let u = u_base - rs;
+        let u = rs - remainder;
 
         let contin_corr = if use_continuity { 0.5 } else { 0. };
-        let pv = compute_pvalue(
+        let (pv, zscore) = compute_pvalue(
             n_ctrl,
             n_tgt,
             n,
@@ -51,6 +48,7 @@ pub fn dense_ovo_kernel<D: SparseFloat>(
         )?;
         p_values[j] = pv;
         u_stats[j] = u;
+        zscores[j] = zscore;
     }
 
     return Ok(());
@@ -68,6 +66,7 @@ pub fn dense_ovo_kernel_rust<'py>(
     let sorted_controls = sorted_controls.as_array();
     let mut p_values = Array1::zeros(sorted_controls.dim().1);
     let mut u_stats = Array1::zeros(sorted_controls.dim().1);
+    let mut zscores = Array1::zeros(sorted_controls.dim().1);
     _ = dense_ovo_kernel(
         sorted_controls,
         sorted_tgt.as_array(),
@@ -76,6 +75,7 @@ pub fn dense_ovo_kernel_rust<'py>(
         &alternative,
         p_values.view_mut(),
         u_stats.view_mut(),
+        zscores.view_mut(),
     )
     .map_err(PyValueError::new_err)?;
     return Ok((
@@ -92,8 +92,9 @@ pub fn dense_ovo_over_contiguous_col_chunk<D: SparseFloat>(
     is_log1p: bool,
     use_continuity: bool,
     tie_correct: bool,
+    exp_post_agg: bool,
     alternative: &String,
-) -> Result<(Array2<f64>, Array2<f64>, Array2<f32>), String> {
+) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f32>), String> {
     if chunk_lb >= chunk_ub {
         return Err(format!(
             "Chunking error: lower bound ({}) is not smaller than upper bound ({}).",
@@ -122,11 +123,13 @@ pub fn dense_ovo_over_contiguous_col_chunk<D: SparseFloat>(
     let n_cols = chunk_ub - chunk_lb;
     let mut p_values = Array2::<f64>::zeros((n_groups, n_cols));
     let mut u_stats = Array2::<f64>::zeros((n_groups, n_cols));
+    let mut zscores = Array2::<f64>::zeros((n_groups, n_cols));
 
     for i in 0..n_groups {
         if i as isize == grpc.encoded_ref_group {
             p_values.row_mut(i).fill(1.);
             u_stats.row_mut(i).fill(-1.);
+            zscores.row_mut(i).fill(0.);
         } else {
             // Grab indices of the target group's cells
             let tgt_indices = grpc.indices.slice(s![grpc.indptr[i]..grpc.indptr[i + 1]]);
@@ -144,6 +147,7 @@ pub fn dense_ovo_over_contiguous_col_chunk<D: SparseFloat>(
                 alternative,
                 p_values.row_mut(i),
                 u_stats.row_mut(i),
+                zscores.row_mut(i),
             )?;
 
             // Fill in placeholders
@@ -151,12 +155,17 @@ pub fn dense_ovo_over_contiguous_col_chunk<D: SparseFloat>(
             // u_stats.row_mut(i).assign(&u);
         }
     }
-    let fc = dense_fold_change(x.slice(s![.., chunk_lb..chunk_ub]), &grpc, is_log1p, false)?;
-    return Ok((p_values, u_stats, fc));
+    let fc = dense_fold_change(
+        x.slice(s![.., chunk_lb..chunk_ub]),
+        &grpc,
+        is_log1p,
+        exp_post_agg,
+    )?;
+    return Ok((p_values, u_stats, zscores, fc));
 }
 
 macro_rules! run_ovo_branch {
-    ($py:expr, $x:expr, $chunk_lb:expr, $chunk_ub:expr, $grpc:expr, $is_log1p:expr, $use_continuity:expr, $tie_correct:expr, $alternative:expr, $dt:ty) => {{
+    ($py:expr, $x:expr, $chunk_lb:expr, $chunk_ub:expr, $grpc:expr, $is_log1p:expr, $use_continuity:expr, $tie_correct:expr, $exp_post_agg:expr, $alternative:expr, $dt:ty) => {{
         let x_pyarray = $x.extract::<PyReadonlyArray2<'py, $dt>>()?;
         let x = x_pyarray.as_array();
         $py.detach(|| {
@@ -168,6 +177,7 @@ macro_rules! run_ovo_branch {
                 $is_log1p,
                 $use_continuity,
                 $tie_correct,
+                $exp_post_agg,
                 &$alternative,
             )
         })
@@ -177,6 +187,7 @@ macro_rules! run_ovo_branch {
 
 type PyArr2<'py> = Bound<'py, PyArray2<f64>>;
 
+#[rustfmt::skip]
 #[pyfunction]
 pub fn dense_ovo_over_contiguous_col_chunk_rust<'py>(
     py: Python<'py>,
@@ -188,35 +199,23 @@ pub fn dense_ovo_over_contiguous_col_chunk_rust<'py>(
     is_log1p: bool,
     use_continuity: bool,
     tie_correct: bool,
+    exp_post_agg: bool,
     alternative: String,
-) -> PyResult<(PyArr2<'py>, PyArr2<'py>, Bound<'py, PyArray2<f32>>)> {
+) -> PyResult<(
+    PyArr2<'py>,
+    PyArr2<'py>,
+    PyArr2<'py>,
+    Bound<'py, PyArray2<f32>>,
+)> {
     let grpc = grpc.as_group_container();
     // let x = x.as_array();
     let data_dtype: String = x.getattr("dtype")?.getattr("str")?.extract()?;
-    let (p_values, u_stats, fc) = match data_dtype.as_str() {
+    let (p_values, u_stats, zscores, fc) = match data_dtype.as_str() {
         "f32" | "<f4" => run_ovo_branch!(
-            py,
-            x,
-            chunk_lb,
-            chunk_ub,
-            grpc,
-            is_log1p,
-            use_continuity,
-            tie_correct,
-            alternative,
-            f32
+            py, x, chunk_lb, chunk_ub, grpc, is_log1p, use_continuity, tie_correct, exp_post_agg, alternative, f32
         ),
         "f64" | "<f8" => run_ovo_branch!(
-            py,
-            x,
-            chunk_lb,
-            chunk_ub,
-            grpc,
-            is_log1p,
-            use_continuity,
-            tie_correct,
-            alternative,
-            f64
+            py, x, chunk_lb, chunk_ub, grpc, is_log1p, use_continuity, tie_correct, exp_post_agg, alternative, f64
         ),
         _ => Err(PyValueError::new_err(format!(
             "Input data should be f32 or f64, received {}",
@@ -226,6 +225,7 @@ pub fn dense_ovo_over_contiguous_col_chunk_rust<'py>(
     return Ok((
         PyArray2::from_array(py, &p_values),
         PyArray2::from_array(py, &u_stats),
+        PyArray2::from_array(py, &zscores),
         PyArray2::from_array(py, &fc),
     ));
 }

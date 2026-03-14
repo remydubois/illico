@@ -73,7 +73,7 @@ def compute_pval(
     mu: float,
     contin_corr: float = 0.0,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
-) -> float:
+) -> tuple[float, float]:
     """Compute p-value.
 
     This small piece of code was isolated here because it was duplicated in the
@@ -90,7 +90,7 @@ def compute_pval(
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis.
 
     Returns:
-        float: P-value
+        tuple[float]: P-value and z-score
 
     Author: Rémy Dubois
     """
@@ -100,24 +100,23 @@ def compute_pval(
 
         if alternative == "two-sided":  # two-sided
             # Compute both-sided statistic
-            min_u = min(U, n_ref * n_tgt - U)
-            delta = min_u - mu
-            z = (np.abs(delta) + np.sign(delta) * contin_corr) / sigma
-            return math.erfc(z / math.sqrt(2.0))
+            delta = U - mu
+            z = (delta - np.sign(delta) * contin_corr) / sigma
+            return math.erfc(abs(z) / math.sqrt(2.0)), z
         elif alternative == "greater":  # greater (right-tailed)
             delta = U - mu
             z = (delta - contin_corr) / sigma
             # P(Z > z) = 0.5 * erfc(z / sqrt(2))
-            return 0.5 * math.erfc(z / math.sqrt(2.0))
+            return 0.5 * math.erfc(z / math.sqrt(2.0)), z
         elif alternative == "less":  # less (left-tailed)
             delta = U - mu
             z = (delta + contin_corr) / sigma
             # P(Z < z) = 0.5 * erfc(-z / sqrt(2))
-            return 0.5 * math.erfc(-z / math.sqrt(2.0))
+            return 0.5 * math.erfc(-z / math.sqrt(2.0)), z
         else:
             raise ValueError(f"Unsupported alternative hypothesis: {alternative}")
     else:
-        return 1.0
+        return 1.0, 0.0
 
 
 @njit(nogil=True, cache=False)
@@ -168,12 +167,13 @@ def _warn_log1p(X: np.ndarray | sc_sparse.spmatrix, is_log1p: bool, sample_size:
 
 
 @njit(nogil=True, fastmath=True, cache=False)
-def fold_change_from_summed_expr(group_agg_counts: np.ndarray, grpc: GroupContainer) -> np.ndarray:
+def fold_change_from_summed_expr(group_agg_counts: np.ndarray, grpc: GroupContainer, exp_post_agg: bool) -> np.ndarray:
     """Compute fold change from summed expression values, per group.
 
     Args:
         group_agg_counts (np.ndarray): Sum of expression values of shape (n_groups, n_genes)
         grpc (GroupContainer): GroupContainer holding group information
+        exp_post_agg (bool): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details.
 
     Returns:
         np.ndarray: Fold change values of shape (n_groups, n_genes)
@@ -191,18 +191,24 @@ def fold_change_from_summed_expr(group_agg_counts: np.ndarray, grpc: GroupContai
     else:
         # Else, the reference is the reference group
         mu_ref = np.expand_dims(mu_tgt[grpc.encoded_ref_group], 0)  # (1, n_genes)
-    fold_change = np.where(mu_ref == 0, np.inf, mu_tgt / mu_ref)
+
+    if exp_post_agg:
+        fold_change = np.where(mu_ref == 0, np.inf, np.expm1(mu_tgt) / np.expm1(mu_ref))
+    else:
+        fold_change = np.where(mu_ref == 0, np.inf, mu_tgt / mu_ref)
+
     return fold_change
 
 
 @njit(nogil=True, fastmath=True, cache=False)
-def dense_fold_change(X: np.ndarray, grpc: GroupContainer, is_log1p: bool) -> np.ndarray:
+def dense_fold_change(X: np.ndarray, grpc: GroupContainer, is_log1p: bool, exp_post_agg: bool) -> np.ndarray:
     """Compute fold change from a dense array of expression counts.
 
     Args:
         X (np.ndarray): Expression counts
         grpc (GroupContainer): GroupContainer holding group information
         is_log1p (bool): User-indicated flag if data is log1p or not.
+        exp_post_agg (bool): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details.
 
     Returns:
         np.ndarray: Fold change values of shape (n_groups, n_genes)
@@ -211,15 +217,12 @@ def dense_fold_change(X: np.ndarray, grpc: GroupContainer, is_log1p: bool) -> np
     """
     group_agg_counts = np.zeros(shape=(grpc.counts.size, X.shape[1]), dtype=np.float64)
     # Sum expressions per group
-    _add_at_vec(group_agg_counts, grpc.encoded_groups, np.expm1(X) if is_log1p else X)
-    # for group_id in range(grpc.counts.size):
-    #     idx_start = grpc.indptr[group_id]
-    #     idx_end = grpc.indptr[group_id + 1]
-    #     if is_log1p:
-    #         group_agg_counts[group_id, :] = np.expm1(X[idx_start:idx_end]).sum(axis=0)
-    #     else:
-    #         group_agg_counts[group_id, :] = X[idx_start:idx_end].sum(axis=0)
-    fold_change = fold_change_from_summed_expr(group_agg_counts, grpc)
+    if is_log1p and not exp_post_agg:
+        _add_at_vec(group_agg_counts, grpc.encoded_groups, np.expm1(X))
+    else:
+        _add_at_vec(group_agg_counts, grpc.encoded_groups, X)
+
+    fold_change = fold_change_from_summed_expr(group_agg_counts, grpc, exp_post_agg=exp_post_agg & is_log1p)
     return fold_change
 
 

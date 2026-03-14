@@ -20,8 +20,7 @@ from illico.utils.registry import (
     nb_dispatcher_registry,
     rs_dispatcher_registry,
 )
-
-# from illico.utils.math import _warn_log1p
+from illico.utils.scanpy import format_illico_results_for_scanpy
 
 __all__ = ["asymptotic_wilcoxon"]
 
@@ -36,6 +35,7 @@ def operator(
     use_continuity: bool,
     alternative: str,
     tie_correct: bool,
+    exp_post_agg: bool,
     use_rust: bool,
     results: np.ndarray,
 ):
@@ -61,13 +61,14 @@ def operator(
     # Convert to numba-compatible format
     X = data_handler.to_nb(fetched_data)
     # Call the dispatcher
-    pvalues, statistics, fold_change = dispatcher(
+    pvalues, statistics, zscores, fold_change = dispatcher(
         X,
         *bounds,
         group_container,
         is_log1p,
         use_continuity,
         tie_correct,
+        exp_post_agg,
         alternative,
     )
     # Copy results into the shared array, do it thread-wise for cleaner garbage collection and speed
@@ -76,7 +77,8 @@ def operator(
     # The copy should be GIL-free
     results[:, lb:ub, 0] = pvalues
     results[:, lb:ub, 1] = statistics
-    results[:, lb:ub, 2] = fold_change  # Technically Rust returns f32, but numpy handles casting here
+    results[:, lb:ub, 2] = zscores
+    results[:, lb:ub, 3] = fold_change  # Technically Rust returns f32, but numpy handles casting here
     return (lb, ub)
 
 
@@ -90,10 +92,13 @@ def asymptotic_wilcoxon(
     alternative: str = "two-sided",
     use_continuity: bool = True,
     tie_correct: bool = True,
+    exp_post_agg: bool = False,
     layer: str | None = None,
     precompile: bool = True,
     use_rust: bool = True,
-):
+    return_as_scanpy: bool = False,
+    corr_method: Literal["benjamini-hochberg", "bonferroni"] = "benjamini-hochberg",
+) -> pd.DataFrame | dict:
     """Perform asymptotic Mann-Whitney tests for differential gene expression.
 
     Mann-Whitney test is the same as Wilcoxon rank-sum test.
@@ -125,20 +130,38 @@ def asymptotic_wilcoxon(
         Whether to apply continuity correction.
     tie_correct : bool, default=True
         Whether to apply tie correction in the test statistic.
+    exp_post_agg : bool, default=False
+        Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details.
+        Note that `scanpy.rank_genes_groups` assumes the data to be log1p, and exponentiates post aggregation by default.
     layer : str or None, default=None
         Layer in `adata.layers` to use for the data. If `None`, uses `adata.X`.
     precompile : bool, default=True
         Whether to precompile necessary functions for performance. It is recommended to set this to `True`.
     use_rust : bool, default=True
         Whether to use the Rust implementation of the test. If `False`, uses the Numba implementation.
+    return_as_scanpy : bool, default=False
+        Whether to return results in a format compatible with Scanpy's `rank_genes_groups` function.
+        If yes, the output is a dictionary that can be attached to the `adata` object like this:
+        `adata.uns['rank_genes_groups'] = asymptotic_wilcoxon(..., return_as_scanpy=True)`
+    corr_method: str, default="benjamini-hochberg"
+        Method to use for multiple testing correction. One of 'benjamini-hochberg' or 'bonferroni'.
+
 
     Returns
     -------
-    pd.DataFrame
+    Either one of pd.DataFrame or Dict, depending on the value of `return_as_scanpy`:
         A DataFrame with MultiIndex (pert, feature) containing columns:
         - 'p_value': P-value from the Mann-Whitney test
         - 'statistic': Test statistic (U-statistic)
+        - 'z-scores': Test z-score
         - 'fold_change': Fold change between groups
+        Or a dictionary formatted for Scanpy's `rank_genes_groups` results, containing:
+        - 'params': Dictionary of parameters used for the test
+        - 'names': Record array of gene names sorted by significance for each group
+        - 'scores': Record array of test statistics sorted by significance for each group
+        - 'pvals': Record array of p-values sorted by significance for each group
+        - 'pvals_adj': Record array of adjusted p-values sorted by significance for each group
+        - 'logfoldchanges': Record array of log2 fold changes sorted by significance for each group
 
     Raises
     ------
@@ -227,7 +250,7 @@ def asymptotic_wilcoxon(
     # Allocate the results dataframes
     cols = pd.Series(adata.var_names, name="feature", dtype=str)
     rows = pd.Series(unique_raw_groups, name="pert", dtype=str)
-    results = np.empty((len(rows), len(cols), 3), dtype=np.float64)
+    results = np.empty((len(rows), len(cols), 4), dtype=np.float64)
 
     # Adapt batch size to leverage multithreading regarding the number of genes, if requested
     if n_genes < 256:
@@ -265,6 +288,7 @@ def asymptotic_wilcoxon(
                     use_continuity,
                     alternative,
                     tie_correct,
+                    exp_post_agg,
                     use_rust,
                     results,
                 )
@@ -272,11 +296,22 @@ def asymptotic_wilcoxon(
             ):
                 pbar.update(group_container.counts.size * (ub - lb))
 
+    if not return_as_scanpy:
         # Return a pd.DataFrame to index results
         results = pd.DataFrame(
-            data=results.reshape(-1, 3),
+            data=results.reshape(-1, 4),
             index=pd.MultiIndex.from_product([rows, cols], names=["pert", "feature"]),
-            columns=["p_value", "statistic", "fold_change"],
+            columns=["p_value", "statistic", "z_score", "fold_change"],
+        )
+    else:
+        # Return a dict formatted for Scanpy's rank_genes_groups results
+        results = format_illico_results_for_scanpy(
+            adata=adata,
+            reference=reference,
+            group_keys=group_keys,
+            layer=layer,
+            values=results,
+            corr_method=corr_method,
         )
 
     return results
