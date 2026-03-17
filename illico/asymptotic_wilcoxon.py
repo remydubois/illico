@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from loguru import logger
+from numba import set_num_threads
 from scipy import sparse
 from tqdm.auto import tqdm
 
@@ -223,6 +224,7 @@ def asymptotic_wilcoxon(
 
     # Check that the input CSR is sorted.
     if isinstance(X, sparse.csr_matrix):
+        set_num_threads(n_threads)  # Set the number of threads for Numba to use in the check function
         if not check_indices_sorted_per_parcel(X.indices, X.indptr):
             raise ValueError(
                 "Input data matrix indices are not sorted. This is very unusual and may lead to incorrect results. "
@@ -264,7 +266,8 @@ def asymptotic_wilcoxon(
     elif batch_size == "auto":
         n_dispatches = max(int(n_genes / 256 / n_threads), 1)  # Aim for approximately 256 genes per chunk
         splits = np.array_split(np.arange(n_genes + 1), indices_or_sections=n_threads * n_dispatches)
-        iterator = [split[[0, -1]] for split in splits]
+        iterator = [[split[0], split[-1] + 1] for split in splits]
+        iterator[-1][-1] = n_genes  # Ensure the last upper bound is exactly n_genes
         batch_size = int(np.ceil(n_genes / (n_dispatches * n_threads)))
     else:
         raise ValueError(f"Invalid batch_size value: {batch_size}. Must be 'auto' or an integer.")

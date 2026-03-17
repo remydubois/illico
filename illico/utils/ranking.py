@@ -1,5 +1,5 @@
 import numpy as np
-from numba import njit
+from numba import njit, prange
 
 from illico.utils.sparse.csc import CSCMatrix, _assert_is_csc
 
@@ -242,7 +242,7 @@ def check_if_sorted(arr: np.ndarray) -> bool:
     return True
 
 
-@njit(nogil=True, cache=False)
+@njit(nogil=True, cache=True, parallel=True)
 def check_indices_sorted_per_parcel(
     indices: np.ndarray,
     indptr: np.ndarray,
@@ -264,10 +264,10 @@ def check_indices_sorted_per_parcel(
     bool
         True if all indices subarrays are sorted. False otherwise.
     """
-    for k in range(indptr.size - 1):
+    is_sorted = np.empty(indptr.size - 1, dtype=np.bool_)
+    for k in prange(indptr.size - 1):
         start = indptr[k]
         end = indptr[k + 1]
         indices_slice = indices[start:end]
-        if not check_if_sorted(indices_slice):
-            return False
-    return True
+        is_sorted[k] = check_if_sorted(indices_slice)
+    return np.all(is_sorted)

@@ -121,6 +121,9 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
     statistics = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
     for group_id in range(n_groups):
         if group_id == grpc.encoded_ref_group:
+            pvalues[group_id, :] = 1.0
+            zscores[group_id, :] = 0.0
+            statistics[group_id, :] = -1.0
             continue
         tgt_indices = grpc.indices[grpc.indptr[group_id] : grpc.indptr[group_id + 1]]
         # tgt_chunk = np.asfortranarray(chunk[tgt_indices, :])
