@@ -1,13 +1,13 @@
 # illico
 `illico` is a python library performing fast and lightweight wilcoxon rank-sum tests (same as `scanpy.tl.rank_genes_groups(…, method="wilcoxon")`), useful for single-cell RNASeq data analyses and processing.
-Approximate speed benchmarks (done on a 8-CPUs machine) ran on k562-essential can be found below.
+Approximate speed benchmarks (done on a 8-CPUs, 1 GPU machine) ran on k562-essential (~300k cells, 8k genes, 2k perturbations) can be found below.
 
-|               Test               | Format | illico | scanpy | pdex |
-|----------------------------------|--------|--------|--------|------|
-| OVO (reference="non-targeting")  | Dense  |  ~20s  | ~1h    | ~20min  |
-| OVO (reference="non-targeting")  | Sparse |  ~15s  | ~1h30  | ~8min  |
-| OVR (reference=None)             | Dense  |  ~10s  | >10h   |  >10h   |
-| OVR (reference=None)             | Sparse |  ~10s  | >10h   |  >10h   |
+|               Test               | Format | illico | scanpy | pdex | rapids-singlecell (GPU) |
+|----------------------------------|--------|--------|--------|------|------------------ |
+| OVO (reference="non-targeting")  | Dense  |  ~20s  | ~1h    | ~20min  | ~25min |
+| OVO (reference="non-targeting")  | Sparse |  ~15s  | ~1h30min  | ~8min  | ~1h10min |
+| OVR (reference=None)             | Dense  |  ~10s  | >10h   |  >10h   | ~1min |
+| OVR (reference=None)             | Sparse |  ~10s  | >10h   |  >10h   | ~1min |
 
 ## Installation
 illico is compatible with python 3.11 and onward:
@@ -30,7 +30,7 @@ de_genes = asymptotic_wilcoxon(
        group_keys="perturbation",
        reference=["non-targeting"|None], # <- `None` computes cluster-wise DE genes. Any other `str` will be interpreted as label of the control cells.
        is_log1p=[False|True], # <-- Specify if your data underwent log1p or not
-       return_as_scanpy=[False|True], # <-- Whether to return a dict compatible with Scanpy's `rank_genes_groups` function, or a pd.DataFrame
+       return_as_scanpy=[False|True], # <-- Whether to return a dict compatible with Scanpy's `rank_genes_groups` function, or a pd.DataFrame holding all p-values, statistics, and fold-change
        )
 # Eventually, if return_as_scanpy=True:
 adata.uns["rank_genes_groups"] = de_genes

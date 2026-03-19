@@ -1,4 +1,3 @@
-import math
 from typing import Literal
 
 import anndata as ad
@@ -12,6 +11,7 @@ from tqdm.auto import tqdm
 
 from illico.utils.compile import _precompile
 from illico.utils.groups import GroupContainer, encode_and_count_groups
+from illico.utils.math import compute_batch_bounds
 from illico.utils.memory import log_memory_usage
 from illico.utils.ranking import check_indices_sorted_per_parcel
 from illico.utils.registry import (
@@ -254,24 +254,9 @@ def asymptotic_wilcoxon(
     rows = pd.Series(unique_raw_groups, name="pert", dtype=str)
     results = np.empty((len(rows), len(cols), 4), dtype=np.float64)
 
-    # Adapt batch size to leverage multithreading regarding the number of genes, if requested
-    if n_genes < 256:
-        batch_size = n_genes  # No batching for small number of genes
-        n_threads = 1  # No multithreading for small number of genes
-        iterator = [[0, n_genes]]
-    elif isinstance(batch_size, int):
-        batch_size = min(batch_size, math.ceil(n_genes / n_threads))
-        bounds = np.append(np.arange(0, n_genes, batch_size), n_genes)
-        iterator = list(zip(bounds[:-1], bounds[1:]))
-    elif batch_size == "auto":
-        n_dispatches = max(int(n_genes / 256 / n_threads), 1)  # Aim for approximately 256 genes per chunk
-        splits = np.array_split(np.arange(n_genes + 1), indices_or_sections=n_threads * n_dispatches)
-        iterator = [[split[0], split[-1] + 1] for split in splits]
-        iterator[-1][-1] = n_genes  # Ensure the last upper bound is exactly n_genes
-        batch_size = int(np.ceil(n_genes / (n_dispatches * n_threads)))
-    else:
-        raise ValueError(f"Invalid batch_size value: {batch_size}. Must be 'auto' or an integer.")
-    logger.trace(f"Using batch size of {batch_size} for {n_threads} threads and {n_genes} genes.")
+    # Compute the batch bounds for each thread
+    iterator, batch_size = compute_batch_bounds(n_genes, batch_size, n_threads)
+    logger.trace(f"Processing {n_genes} genes through {len(iterator)} batches with {n_threads} threads.")
 
     # Compute estimated mem footprint
     _ = log_memory_usage(data_handler, group_container, batch_size, n_threads)

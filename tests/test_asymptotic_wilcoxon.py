@@ -494,6 +494,7 @@ def test_asymptotic_wilcoxon_auto_batchsize(eager_rand_adata):
     bigger_eager_rand_adata = ad.concat(
         [eager_rand_adata] * int(math.ceil(target_n_cols / eager_rand_adata.n_vars)), axis=1
     )
+    bigger_eager_rand_adata.var_names_make_unique()
     bigger_eager_rand_adata.obs = eager_rand_adata.obs.copy()
     asy_results = asymptotic_wilcoxon(
         adata=bigger_eager_rand_adata,

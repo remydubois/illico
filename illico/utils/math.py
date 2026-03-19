@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import warnings
-from typing import Literal
+from typing import List, Literal, Tuple
 
 import numpy as np
 from numba import njit
@@ -281,3 +281,49 @@ def chunk_and_fortranize(X: np.ndarray, chunk_lb: int, chunk_ub: int, indices: n
             for j in range(0, chunk_ub - chunk_lb):
                 chunk[i, j] = X[i, chunk_lb + j]
     return chunk
+
+
+def compute_batch_bounds(n_genes: int, batch_size: Literal["auto"] | int, n_threads: int) -> List[Tuple[int, int]]:
+    """Computes ideal batch bounds for processing genes in batches.
+    This function ensures no worker is starving. This could happen if we have 8 workers but 9 batches to allocate.
+    In this case, because each batch takes the same time to be processed, all but one workers will be idle waiting for one worker to process the last batch.
+
+    Args:
+        n_genes (int): Total number of genes
+        batch_size (Literal["auto"] | int): Batch size, or "auto" to compute ideal batch size.
+        n_threads (int): Number of threads to use.
+    Returns:
+        List[Tuple[int, int]]: List of (lower_bound, upper_bound) for each batch. Upper bound is excluding, following slicing conventions.
+    """
+    # No batching nor multithreading for small inputs
+    if n_genes < n_threads or n_genes < 256:
+        batch_size = n_genes
+        # n_threads = 1
+        batch_size = n_genes
+        bounds_iterator = [[0, n_genes]]
+    elif isinstance(batch_size, int):
+        # batch_size = min(batch_size, math.ceil(n_genes / n_threads))
+        bounds = list(range(0, n_genes + 1, batch_size))
+        if bounds[-1] != n_genes:
+            bounds.append(n_genes)
+        bounds_iterator = list(zip(bounds[:-1], bounds[1:]))
+    elif batch_size == "auto":
+        target_batch_size = 256
+        min_batches = (n_genes + target_batch_size - 1) // target_batch_size
+        num_batches = ((min_batches + n_threads - 1) // n_threads) * n_threads
+        base_size = n_genes // num_batches
+        remainder = n_genes % num_batches
+        bounds_iterator = []
+        start = 0
+        for i in range(num_batches):
+            end = start + base_size + (1 if i < remainder else 0)
+            bounds_iterator.append((start, end))
+            start = end
+        # Append the last gene as the right bound is excluding
+        if bounds_iterator[-1][1] != n_genes:
+            bounds_iterator[-1][1] = n_genes
+        batch_size = base_size
+    else:
+        raise ValueError(f"Invalid batch_size value: {batch_size}. Must be 'auto' or an integer.")
+
+    return bounds_iterator, batch_size
