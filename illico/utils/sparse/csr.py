@@ -261,13 +261,14 @@ def csr_get_contig_cols_into_csc(csr_matrix: CSRMatrix, chunk_lb: int, chunk_ub:
 
 # TODO: move this in the same file as its subroutines, so that caching as no risk of staling
 @njit(nogil=True, fastmath=True, cache=False)
-def csr_fold_change(X: CSRMatrix, grpc: GroupContainer, is_log1p: bool) -> np.ndarray:
+def csr_fold_change(X: CSRMatrix, grpc: GroupContainer, is_log1p: bool, exp_post_agg: bool = False) -> np.ndarray:
     """Compute fold change from a CSR matrix of expression counts.
 
     Args:
         X (CSRMatrix): Input expression counts CSR matrix
         grpc (GroupContainer): GroupContainer
         is_log1p (bool): User-indicated flag telling if data was log1p or not.
+        exp_post_agg (bool, optional): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that `scanpy.rank_genes_groups` assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.
 
     Returns:
         np.ndarray: Fold change of change (n_groups, n_genes)
@@ -281,8 +282,11 @@ def csr_fold_change(X: CSRMatrix, grpc: GroupContainer, is_log1p: bool) -> np.nd
         start = X.indptr[i]
         end = X.indptr[i + 1]
         col_indices = X.indices[start:end]
-        row_data = np.expm1(X.data[start:end]) if is_log1p else X.data[start:end]
+        if is_log1p and not exp_post_agg:
+            row_data = np.expm1(X.data[start:end])
+        else:
+            row_data = X.data[start:end]
         group_id = grpc.encoded_groups[i]
         _add_at_vec(group_agg_counts[group_id], col_indices, row_data)
-    fold_change = fold_change_from_summed_expr(group_agg_counts, grpc)
+    fold_change = fold_change_from_summed_expr(group_agg_counts, grpc, exp_post_agg & is_log1p)
     return fold_change

@@ -1,13 +1,13 @@
 # illico
 `illico` is a python library performing fast and lightweight wilcoxon rank-sum tests (same as `scanpy.tl.rank_genes_groups(…, method="wilcoxon")`), useful for single-cell RNASeq data analyses and processing.
-Approximate speed benchmarks ran on k562-essential can be found below.
+Approximate speed benchmarks (done on a 8-CPUs, 1 GPU machine) ran on k562-essential (~300k cells, 8k genes, 2k perturbations) can be found below.
 
-|               Test               | Format | illico | scanpy | pdex |
-|----------------------------------|--------|--------|--------|------|
-| OVO (reference="non-targeting")  | Dense  |  ~30s  | ~1h    | ~4h  |
-| OVO (reference="non-targeting")  | Sparse |  ~30s  | ~1h30  | ~4h  |
-| OVR (reference=None)             | Dense  |  ~30s  | ~11h   |  X   |
-| OVR (reference=None)             | Sparse |  ~30s  | ~10h   |  X   |
+|               Test               | Format | illico | scanpy | pdex | rapids-singlecell (GPU) |
+|----------------------------------|--------|--------|--------|------|------------------ |
+| OVO (reference="non-targeting")  | Dense  |  ~20s  | ~1h    | ~20min  | ~25min |
+| OVO (reference="non-targeting")  | Sparse |  ~15s  | ~1h30min  | ~8min  | ~1h10min |
+| OVR (reference=None)             | Dense  |  ~10s  | >10h   |  >10h   | ~1min |
+| OVR (reference=None)             | Sparse |  ~10s  | >10h   |  >10h   | ~1min |
 
 ## Installation
 illico is compatible with python 3.11 and onward:
@@ -30,7 +30,10 @@ de_genes = asymptotic_wilcoxon(
        group_keys="perturbation",
        reference=["non-targeting"|None], # <- `None` computes cluster-wise DE genes. Any other `str` will be interpreted as label of the control cells.
        is_log1p=[False|True], # <-- Specify if your data underwent log1p or not
+       return_as_scanpy=[False|True], # <-- Whether to return a dict compatible with Scanpy's `rank_genes_groups` function, or a pd.DataFrame holding all p-values, statistics, and fold-change
        )
+# Eventually, if return_as_scanpy=True:
+adata.uns["rank_genes_groups"] = de_genes
 ```
 
 ## Release notes
@@ -312,5 +315,5 @@ The name *illico* is a wordplay inspired by the R package `presto` (now the Wilc
 
 # Other tools available
 1. `scanpy` also implements OVO and OVR asymptotic wilcoxon rank-sum tests.
-2. `pdex` only implements OVO wilcoxon rank-sum tests.
-3. As of December 2025, `rapids-singlecell` has a pending PR adding a `rank_genes_groups` feature. I could not benchmark this solution as I had no GPU available, but it is expected that it runs at least as fast as `illico`, because GPU-based.
+2. `pdex` also implements OVO and OVR wilcoxon rank-sum tests.
+3. As of March 2026, `rapids-singlecell` also implements OVO and OVR asymptotic wilcoxon rank-sum tests on GPU, with a focus on out-of-core datasets. If you are working with large datasets that do not fit in memory, you should check it out. For in-memory datasets, `illico` was benchmarked to be faster, even if CPU based.

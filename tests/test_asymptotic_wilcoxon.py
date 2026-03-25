@@ -1,5 +1,6 @@
 import contextlib
 import gc
+import math
 import os
 import re
 import warnings
@@ -12,8 +13,7 @@ import pandas as pd
 import pytest
 import scanpy as sc
 from numba import set_num_threads
-from pdex import parallel_differential_expression
-from pdex._single_cell import parallel_differential_expression_vec_wrapper
+from pdex import pdex
 from scipy import sparse as py_sparse
 from scipy.stats import mannwhitneyu
 
@@ -60,7 +60,7 @@ def scanpy_mannwhitneyu(adata, groupby_key, reference):
     return df.set_index(["target", "feature"])
 
 
-def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternative, is_log1p=False):
+def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternative, exp_post_agg=False, is_log1p=False):
     if reference is not None:
         ref_counts = adata[adata.obs[groupby_key].eq(reference)].X
         if not isinstance(ref_counts, np.ndarray):
@@ -83,15 +83,15 @@ def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternativ
             ref_counts = ref_counts.toarray()
 
         # Compute FC
-        if is_log1p:
-            grp_counts = np.expm1(grp_counts)
-            ref_counts = np.expm1(ref_counts)
+        if is_log1p and not exp_post_agg:
             fc = np.expm1(grp_counts).mean(axis=0) / np.expm1(ref_counts).mean(axis=0)
+        if is_log1p and exp_post_agg:
+            fc = np.expm1(grp_counts.mean(axis=0)) / np.expm1(ref_counts.mean(axis=0))
         else:
             fc = np.mean(grp_counts, axis=0) / np.mean(ref_counts, axis=0)
 
         stats, pvals = mannwhitneyu(
-            ref_counts, grp_counts, axis=0, method="asymptotic", use_continuity=use_continuity, alternative=alternative
+            grp_counts, ref_counts, axis=0, method="asymptotic", use_continuity=use_continuity, alternative=alternative
         )
         results.append(
             pd.DataFrame(
@@ -106,6 +106,104 @@ def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternativ
         )
     results = pd.concat(results, axis=0).set_index(["target", "feature"])
     return results
+
+
+@pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
+@pytest.mark.parametrize("exp_post_agg", [True, False], ids=["exp-post-agg", "exp-pre-agg"])
+@pytest.mark.parametrize("is_log1p", [True, False], ids=["is-log1p", "is-not-log1p"])
+@pytest.mark.parametrize("test", ["ovo", "ovr"])
+def test_fold_change_asymptotic_wilcoxon(eager_rand_adata, test, is_log1p, exp_post_agg, use_rust):
+    """Keep this in a separate test as this does not impact p-values and u-stats."""
+    if test == "ovo":
+        reference = eager_rand_adata.obs.pert.iloc[0]
+    else:
+        reference = None
+
+    asy_results = asymptotic_wilcoxon(
+        adata=eager_rand_adata,
+        is_log1p=False,
+        group_keys="pert",
+        reference=reference,
+        use_continuity=True,
+        tie_correct=True,
+        exp_post_agg=exp_post_agg,
+        n_threads=1,
+        batch_size=16,
+        alternative="two-sided",
+        use_rust=use_rust,
+    )
+
+    scipy_results = scipy_mannwhitneyu(
+        adata=eager_rand_adata,
+        groupby_key="pert",
+        reference=reference,
+        is_log1p=False,
+        use_continuity=True,
+        alternative="two-sided",
+        exp_post_agg=exp_post_agg,
+    )
+    # Test FC with mid tolerance
+    np.testing.assert_allclose(
+        asy_results.loc[scipy_results.index].fold_change.values,
+        scipy_results.fold_change.values,
+        atol=0.0,
+        rtol=1.0e-6,
+    )
+
+
+@pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
+@pytest.mark.parametrize("test", ["ovo", "ovr"])
+def test_scanpy_format_output(eager_rand_adata, test, corr_method):
+    """Test that the output of `asymptotic_wilcoxon` with `return_as_scanpy=True` is compatible with Scanpy's output format, and that the values are close to those obtained with Scanpy's implementation.
+    Note: because Scanpy only implements a subset of all the possible setups, this test is kept separately from `test_asymptotic_wilcoxon`, and only sweep the parameters that are relevant to Scanpy's implementation.
+    """
+    if test == "ovo":
+        reference = eager_rand_adata.obs.pert.iloc[0]
+    else:
+        reference = None
+
+    asy_results = asymptotic_wilcoxon(
+        adata=eager_rand_adata,
+        group_keys="pert",
+        is_log1p=True,  # Scanpy assumes log1p
+        exp_post_agg=True,  # Post-aggregation exponentiation is needed to match Scanpy's fold change output
+        reference=reference,
+        use_continuity=False,  # False because scanpy does not apply continuity correction
+        tie_correct=False,  # False because scanpy takes a lot of time to adjust
+        n_threads=1,
+        batch_size=16,
+        alternative="two-sided",  # Scanpy only implments two-sided test
+        use_rust=True,
+        return_as_scanpy=True,
+        corr_method=corr_method,
+    )
+
+    sc.tl.rank_genes_groups(
+        eager_rand_adata,
+        groupby="pert",
+        method="wilcoxon",
+        reference=reference if test == "ovo" else "rest",
+        n_genes=eager_rand_adata.n_vars,
+        tie_correct=False,
+        corr_method=corr_method,
+    )
+    scanpy_results = eager_rand_adata.uns["rank_genes_groups"]
+    assert set(asy_results.keys()) == set(scanpy_results.keys()), "Output keys do not match Scanpy's output format."
+
+    for k, ref in scanpy_results.items():
+        if k in ["params", "names"]:
+            # We can skip names ordering check as if incorrect, other values will mismatch
+            continue
+        res = np.array(asy_results[k].tolist())
+        ref = np.array(ref.tolist())
+        mask = np.isfinite(ref) * np.isfinite(res)  # Mask to ignore inf values in the comparison
+        np.testing.assert_allclose(
+            ref[mask],
+            res[mask],
+            rtol=0,
+            atol=1e-6,
+            err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
+        )
 
 
 @pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
@@ -285,19 +383,21 @@ def call_routine(data, method, test, num_threads, use_rust):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             if method == "pdex":
-                parallel_differential_expression(
+                mode = "ref" if test == "ovo" else "all"
+                pdex(
                     data,
-                    groupby_key="gene",
+                    groupby="gene",
+                    mode=mode,
                     reference="non-targeting",
-                    num_workers=num_threads,
+                    threads=num_threads,
                 )
-            elif method == "pdexp":
-                parallel_differential_expression_vec_wrapper(
-                    data,
-                    groupby_key="gene",
-                    reference="non-targeting",
-                    num_workers=num_threads,
-                )
+            # elif method == "pdexp":
+            #     parallel_differential_expression_vec_wrapper(
+            #         data,
+            #         groupby_key="gene",
+            #         reference="non-targeting",
+            #         num_workers=num_threads,
+            #     )
             elif method == "illico":
                 reference = "non-targeting" if test == "ovo" else None
                 asymptotic_wilcoxon(
@@ -332,12 +432,14 @@ def call_routine(data, method, test, num_threads, use_rust):
 @pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
 @pytest.mark.parametrize("num_threads", [1, 2, 4, 8, 16], ids=lambda v: f"nthreads={v}")
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
-@pytest.mark.parametrize("method", ["illico", "scanpy", "pdex", "pdexp"])
+@pytest.mark.parametrize("method", ["illico", "scanpy", "pdex"])
 def test_speed_benchmark(adata, method, test, num_threads, use_rust, benchmark, request):
     """Not a test, just a speed benchmark."""
-    if test != "ovo" and method in ["pdex", "pdexp"]:
-        # This exits the test, not running the benchmark, and not raising an error
-        pytest.skip("pdex only implements OVO test.")
+    # if test != "ovo" and method in ["pdex"]:
+    #     # This exits the test, not running the benchmark, and not raising an error
+    #     pytest.skip("pdex only implements OVO test.")
+    if use_rust and method != "illico":
+        pytest.skip("Rust implementation only available for illico method.")
 
     # Compile
     if method == "illico":
@@ -382,3 +484,51 @@ def test_memory_benchmark(adata, method, test, num_threads, request):
         # Cleanup the file if an error happened
         _fp.unlink(missing_ok=True)
         raise e
+
+
+def test_asymptotic_wilcoxon_auto_batchsize(eager_rand_adata):
+    """Test that the auto batch size splits the data in appropriate chunks, not missing any column."""
+    reference = None
+
+    target_n_cols = 1024  # 4 batches of 256 cols each
+    bigger_eager_rand_adata = ad.concat(
+        [eager_rand_adata] * int(math.ceil(target_n_cols / eager_rand_adata.n_vars)), axis=1
+    )
+    bigger_eager_rand_adata.var_names_make_unique()
+    bigger_eager_rand_adata.obs = eager_rand_adata.obs.copy()
+    asy_results = asymptotic_wilcoxon(
+        adata=bigger_eager_rand_adata,
+        is_log1p=False,
+        group_keys="pert",
+        reference=reference,
+        use_continuity=True,
+        tie_correct=True,
+        n_threads=1,
+        batch_size="auto",
+        alternative="two-sided",
+        use_rust=True,
+    )
+
+    scipy_results = scipy_mannwhitneyu(
+        adata=bigger_eager_rand_adata,
+        groupby_key="pert",
+        reference=reference,
+        is_log1p=False,
+        use_continuity=True,
+        alternative="two-sided",
+    )
+
+    # Test statistics exactly
+    np.testing.assert_allclose(
+        asy_results.loc[scipy_results.index].statistic.values,
+        scipy_results.statistic.values,
+        atol=0.0,
+        rtol=0.0,
+    )
+    # Test p-values with low tolerance
+    np.testing.assert_allclose(
+        asy_results.loc[scipy_results.index].p_value.values,
+        scipy_results.p_value.values,
+        atol=0.0,
+        rtol=1.0e-12,
+    )

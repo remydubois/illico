@@ -22,6 +22,7 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
     is_log1p: bool,
     use_continuity: bool = True,
     tie_correct: bool = True,
+    exp_post_agg: bool = False,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
 ) -> tuple[np.ndarray]:
     """Compute OVR ranksum test on a dense matrix of expression counts.
@@ -34,10 +35,11 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
         transformation or not. Defaults to False.
         use_continuity (bool, optional): Whether to use continuity correction when computing p-values. Defaults to True.
         tie_correct (bool, optional): Whether to apply tie correction when computing p-values. Defaults to True.
+        exp_post_agg (bool, optional): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that `scanpy.rank_genes_groups` assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis. Defaults to "two-sided".
 
     Returns:
-        tuple[np.ndarray]: Two-sided p-values, U-statistic and fold change.
+        tuple[np.ndarray]: Two-sided p-values, U-statistic, z-scores and fold change.
         Each np.ndarray of shape (n_groups, n_genes)
 
     Author: Rémy Dubois
@@ -57,13 +59,14 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
     n = chunk.shape[0]
     n_ref = np.expand_dims(n - grpc.counts, -1)  # (g, 1)
     n_tgt = np.expand_dims(grpc.counts, -1)  # (g, 1)
-    statistics = (n_ref * n_tgt + n_tgt * (n_tgt + 1) / 2) - ranksums
+    statistics = ranksums - n_tgt * (n_tgt + 1) / 2
     mu = n_ref * n_tgt / 2.0
     # Compute pvals
     pvals = np.empty(shape=(grpc.counts.size, chunk.shape[1]), dtype=np.float64)
+    zscores = np.empty(shape=(grpc.counts.size, chunk.shape[1]), dtype=np.float64)
     for j in range(chunk.shape[1]):
         for k in range(grpc.counts.size):
-            pvals[k, j] = compute_pval(
+            pvals[k, j], zscores[k, j] = compute_pval(
                 n_ref=n_ref[k, 0],
                 n_tgt=n_tgt[k, 0],
                 n=n,
@@ -75,6 +78,6 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
             )
 
     # Get fold change
-    fold_change = dense_fold_change(chunk, grpc=grpc, is_log1p=is_log1p)
+    fold_change = dense_fold_change(chunk, grpc=grpc, is_log1p=is_log1p, exp_post_agg=exp_post_agg)
 
-    return pvals, statistics, fold_change
+    return pvals, statistics, zscores, fold_change
