@@ -243,13 +243,12 @@
 <h1>Benchmarks<a class="headerlink" href="#benchmarks" title="Link to this heading">¶</a></h1>
 <section id="benchmarking-against-other-solutions">
 <h2>Benchmarking against other solutions<a class="headerlink" href="#benchmarking-against-other-solutions" title="Link to this heading">¶</a></h2>
-<p>In order for benchmarks to run in a reasonable amount of time, the timings reported below were obtained by running each solution on <strong>a subset of each cell line</strong> (20% of the genes). All solutions were find to scale linearly with the number of genes (columns in the adata). Extrapolating (x5) the elapsed times below will approximate runtime of those solutions on the whole datasets. Numbers in parenthesis report the multiplicative factor versus the fastest solution of each benchmark. A “benchmark” is defined by:</p>
+<p>A <em>benchmark</em> is defined by:</p>
 <ol class="arabic simple">
 <li><p>The cell line (K562 essential, RPE1, Hep-G2, Jurkat) used as input.</p></li>
 <li><p>The data format (CSR, or dense) used to contain the expression matrix.</p></li>
 <li><p>The test performed: OVO (<code class="docutils literal notranslate"><span class="pre">reference=&quot;non-targeting&quot;</span></code>) or OVR (<code class="docutils literal notranslate"><span class="pre">reference=None</span></code>).</p></li>
 </ol>
-<p>💡 Keep in mind that <code class="docutils literal notranslate"><span class="pre">pdex</span></code> does not implement <em>OVR</em> test.</p>
 <center>
   <img src="https://github.com/remydubois/illico/blob/main/assets/method-runtimes-comparison.png?raw=true" width="100%" />
   <figcaption>Runtime comparison for scanpy, pdex and illico on four cell lines.</figcaption>
@@ -257,17 +256,11 @@
 </section>
 <section id="scalability">
 <h2>Scalability<a class="headerlink" href="#scalability" title="Link to this heading">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">illico</span></code> scales reasonably well with your compute budget. On the K562-essential dataset spanning 8 threads instead of 1 brings a 7-folds speedup.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>----------------------<span class="w"> </span>benchmark<span class="w"> </span><span class="s1">&#39;k562-dense-ovo&#39;</span>:<span class="w"> </span><span class="m">4</span><span class="w"> </span>tests<span class="w"> </span>-----------------------
-Name<span class="w"> </span><span class="o">(</span><span class="nb">time</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>s<span class="o">)</span><span class="w">                                                    </span>Mean
-----------------------------------------------------------------------------------
-test_speed_benchmark<span class="o">[</span>k562-dense-100%-illico-ovo-nthreads<span class="o">=</span><span class="m">8</span><span class="o">]</span><span class="w">      </span><span class="m">29</span>.6962<span class="w"> </span><span class="o">(</span><span class="m">1</span>.0<span class="o">)</span>
-test_speed_benchmark<span class="o">[</span>k562-dense-100%-illico-ovo-nthreads<span class="o">=</span><span class="m">4</span><span class="o">]</span><span class="w">      </span><span class="m">53</span>.4369<span class="w"> </span><span class="o">(</span><span class="m">1</span>.80<span class="o">)</span>
-test_speed_benchmark<span class="o">[</span>k562-dense-100%-illico-ovo-nthreads<span class="o">=</span><span class="m">2</span><span class="o">]</span><span class="w">     </span><span class="m">100</span>.3919<span class="w"> </span><span class="o">(</span><span class="m">3</span>.38<span class="o">)</span>
-test_speed_benchmark<span class="o">[</span>k562-dense-100%-illico-ovo-nthreads<span class="o">=</span><span class="m">1</span><span class="o">]</span><span class="w">     </span><span class="m">208</span>.2443<span class="w"> </span><span class="o">(</span><span class="m">7</span>.01<span class="o">)</span>
-----------------------------------------------------------------------------------
-</pre></div>
-</div>
+<p><code class="docutils literal notranslate"><span class="pre">illico</span></code> scales reasonably well with your compute budget, with a quasi-linear speedup up to 16 threads.</p>
+<center>
+  <img src="https://github.com/remydubois/illico/blob/main/assets/illico-scaling-rust.png?raw=true" width="100%" />
+  <figcaption>Throughput of illico with increasing compute budget, compared to a perfect scaling.</figcaption>
+</center>
 </section>
 </section>
 

@@ -241,92 +241,8 @@
         <article role="main" id="furo-main-content">
           <section id="api-reference">
 <h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h1>
-<section id="module-illico.asymptotic_wilcoxon">
-<span id="illico-package"></span><h2>illico package<a class="headerlink" href="#module-illico.asymptotic_wilcoxon" title="Link to this heading">¶</a></h2>
-<dl class="py function">
-<dt class="sig sig-object py" id="illico.asymptotic_wilcoxon.asymptotic_wilcoxon">
-<span class="sig-prename descclassname"><span class="pre">illico.asymptotic_wilcoxon.</span></span><span class="sig-name descname"><span class="pre">asymptotic_wilcoxon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_keys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'auto'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precompile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_rust</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/illico/asymptotic_wilcoxon.html#asymptotic_wilcoxon"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#illico.asymptotic_wilcoxon.asymptotic_wilcoxon" title="Link to this definition">¶</a></dt>
-<dd><p>Perform asymptotic Mann-Whitney tests for differential gene expression.</p>
-<p>Mann-Whitney test is the same as Wilcoxon rank-sum test.
-This function takes as input an AnnData object of shape (n_cells, n_genes) with a group
-(e.g., perturbation) variable stored in .obs. It performs either one-versus-rest (OVR) or
-one-versus-one (OVO) Wilcoxon-Mann-Whitney tests for each gene, depending on whether a
-reference group is provided.</p>
-<p>It supports in-RAM dense, sparse CSC and sparse CSR matrices, as well as backed dense and sparse CSC matrices.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>adata</strong> (<em>ad.AnnData</em>) – Annotated data matrix of shape (n_cells, n_genes).</p></li>
-<li><p><strong>is_log1p</strong> (<em>bool</em>) – Whether the data is log1p transformed.</p></li>
-<li><p><strong>group_keys</strong> (<em>str</em>) – Key in <cite>adata.obs</cite> specifying the group variable.</p></li>
-<li><p><strong>reference</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Name of the reference group for OVO tests. If <cite>None</cite>, OVR tests are performed.</p></li>
-<li><p><strong>n_threads</strong> (<em>int</em><em>, </em><em>default=1</em>) – Number of threads to use for parallel computation.</p></li>
-<li><p><strong>batch_size</strong> (<em>int</em><em> or </em><em>&quot;auto&quot;</em><em>, </em><em>default=&quot;auto&quot;</em>) – Number of genes to process in each batch. If “auto”, automatically determines
-optimal batch size aiming for approximately 256 genes per chunk.</p></li>
-<li><p><strong>alternative</strong> (<em>str</em><em>, </em><em>default=&quot;two-sided&quot;</em>) – Type of alternative hypothesis. One of ‘two-sided’, ‘less’, or ‘greater’.</p></li>
-<li><p><strong>use_continuity</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to apply continuity correction.</p></li>
-<li><p><strong>tie_correct</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to apply tie correction in the test statistic.</p></li>
-<li><p><strong>layer</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Layer in <cite>adata.layers</cite> to use for the data. If <cite>None</cite>, uses <cite>adata.X</cite>.</p></li>
-<li><p><strong>precompile</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to precompile necessary functions for performance. It is recommended to set this to <cite>True</cite>.</p></li>
-<li><p><strong>use_rust</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to use the Rust implementation of the test. If <cite>False</cite>, uses the Numba implementation.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A DataFrame with MultiIndex (pert, feature) containing columns:
-- ‘p_value’: P-value from the Mann-Whitney test
-- ‘statistic’: Test statistic (U-statistic)
-- ‘fold_change’: Fold change between groups</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.DataFrame</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If input data matrix indices are not sorted (for sparse CSR matrices).
-    If batch_size is not ‘auto’ or an integer.</p>
-</dd>
-</dl>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create example AnnData object</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">n_cells</span><span class="p">,</span> <span class="n">n_genes</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">500</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">negative_binomial</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="n">n_genes</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">obs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;cell_type&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">([</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">],</span> <span class="n">n_cells</span><span class="p">)})</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">var</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;gene_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_genes</span><span class="p">)])</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">obs</span><span class="p">,</span> <span class="n">var</span><span class="o">=</span><span class="n">var</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Perform one-versus-rest tests</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">results</span> <span class="o">=</span> <span class="n">asymptotic_wilcoxon</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">adata</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">is_log1p</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">group_keys</span><span class="o">=</span><span class="s1">&#39;cell_type&#39;</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">n_threads</span><span class="o">=</span><span class="mi">4</span>
-<span class="gp">... </span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Perform one-versus-one tests against reference</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">results_ovo</span> <span class="o">=</span> <span class="n">asymptotic_wilcoxon</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">adata</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">is_log1p</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">group_keys</span><span class="o">=</span><span class="s1">&#39;cell_type&#39;</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">reference</span><span class="o">=</span><span class="s1">&#39;A&#39;</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">n_threads</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">alternative</span><span class="o">=</span><span class="s1">&#39;greater&#39;</span>
-<span class="gp">... </span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Filter significant results</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">significant</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;p_value&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">significant</span><span class="p">)</span><span class="si">}</span><span class="s2"> significant tests&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-<p class="rubric">Notes</p>
-<p>The function automatically handles both dense and sparse matrices. For sparse CSR matrices,
-indices must be sorted per row to ensure correct results.</p>
-<p>Author: Rémy Dubois</p>
-</dd></dl>
-
+<section id="illico-package">
+<h2>illico package<a class="headerlink" href="#illico-package" title="Link to this heading">¶</a></h2>
 </section>
 <section id="module-illico.ovo.dense_ovo">
 <span id="ovo-subpackage"></span><h2>ovo subpackage<a class="headerlink" href="#module-illico.ovo.dense_ovo" title="Link to this heading">¶</a></h2>
@@ -345,7 +261,7 @@ indices must be sorted per row to ensure correct results.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>two-sided p-values, U-statistics. Each of shape (n_genes,).</p>
+<dd class="field-even"><p>two-sided p-values, U-statistics, z-scores. Each of shape (n_genes,).</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple[np.ndarray]</p>
@@ -356,7 +272,7 @@ indices must be sorted per row to ensure correct results.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="illico.ovo.dense_ovo.dense_ovo_mwu_kernel_over_contiguous_col_chunk">
-<span class="sig-prename descclassname"><span class="pre">illico.ovo.dense_ovo.</span></span><span class="sig-name descname"><span class="pre">dense_ovo_mwu_kernel_over_contiguous_col_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_ub</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.ovo.dense_ovo.dense_ovo_mwu_kernel_over_contiguous_col_chunk" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">illico.ovo.dense_ovo.</span></span><span class="sig-name descname"><span class="pre">dense_ovo_mwu_kernel_over_contiguous_col_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_ub</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_post_agg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.ovo.dense_ovo.dense_ovo_mwu_kernel_over_contiguous_col_chunk" title="Link to this definition">¶</a></dt>
 <dd><p>Perform OVO tests group-wise and gene(col)-wise.</p>
 <p>Update: There is no need to fortranize the whole chunk at once, it can be done group by group within the loop. The memo</p>
 <p>Memory footprint investigations:
@@ -374,6 +290,7 @@ I was not allocating anything.
 <li><p><strong>grpc</strong> (<a class="reference internal" href="#illico.utils.groups.GroupContainer" title="illico.utils.groups.GroupContainer"><em>GroupContainer</em></a>) – GroupContainer, contains information about which group each row belongs to.</p></li>
 <li><p><strong>use_continuity</strong> (<em>bool</em><em>, </em><em>optional</em>) – Apply continuity factor or not. Defaults to True.</p></li>
 <li><p><strong>tie_correct</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to apply tie correction when computing p-values. Defaults to True.</p></li>
+<li><p><strong>exp_post_agg</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that <cite>scanpy.rank_genes_groups</cite> assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.</p></li>
 <li><p><strong>alternative</strong> (<em>Literal</em><em>[</em><em>&quot;two-sided&quot;</em><em>, </em><em>&quot;less&quot;</em><em>, </em><em>&quot;greater&quot;</em><em>]</em>) – Type of alternative hypothesis</p></li>
 <li><p><strong>is_log1p</strong> (<em>bool</em><em>, </em><em>optional</em>) – User-indicated flag telling if data underwent log1p transform or not. Defaults to False.</p></li>
 </ul>
@@ -382,7 +299,7 @@ I was not allocating anything.
 <dd class="field-even"><p><strong>ValueError</strong> – If bounds are not intelligible.</p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>two-sided p-values, U-statistics, fold change. Each
+<dd class="field-odd"><p>two-sided p-values, U-statistics, z-scores, fold change. Each
 of shape (n_groups, chunk_ub - chunk_lb).</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -412,7 +329,7 @@ of shape (n_groups, chunk_ub - chunk_lb).</p>
 <dd class="field-even"><p><strong>ValueError</strong> – If shape mismatche</p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>two-sided p-values, U-statistics. Each of shape (n_genes,).</p>
+<dd class="field-odd"><p>two-sided p-values, U-statistics, zscores. Each of shape (n_genes,).</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>tuple[np.ndarray]</p>
@@ -437,7 +354,7 @@ of shape (n_groups, chunk_ub - chunk_lb).</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>two-sided p-values, U-statistics. Each of shape (n_groups, n_genes).</p>
+<dd class="field-even"><p>two-sided p-values, U-statistics, zscores. Each of shape (n_groups, n_genes).</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple[np.ndarray]</p>
@@ -448,7 +365,7 @@ of shape (n_groups, chunk_ub - chunk_lb).</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="illico.ovo.sparse_ovo.csc_ovo_mwu_kernel_over_contiguous_col_chunk">
-<span class="sig-prename descclassname"><span class="pre">illico.ovo.sparse_ovo.</span></span><span class="sig-name descname"><span class="pre">csc_ovo_mwu_kernel_over_contiguous_col_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_ub</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.ovo.sparse_ovo.csc_ovo_mwu_kernel_over_contiguous_col_chunk" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">illico.ovo.sparse_ovo.</span></span><span class="sig-name descname"><span class="pre">csc_ovo_mwu_kernel_over_contiguous_col_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_ub</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_post_agg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.ovo.sparse_ovo.csc_ovo_mwu_kernel_over_contiguous_col_chunk" title="Link to this definition">¶</a></dt>
 <dd><p>Perform OVO test over contiguous chunk of column of a CSC matrix.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -460,6 +377,7 @@ of shape (n_groups, chunk_ub - chunk_lb).</p>
 <li><p><strong>is_log1p</strong> (<em>bool</em>) – User-indicated flag telling if data underwent log1p transform.</p></li>
 <li><p><strong>use_continuity</strong> (<em>bool</em>) – Whether to use continuity correction when computing p-values.</p></li>
 <li><p><strong>tie_correct</strong> (<em>bool</em>) – Whether to apply tie correction when computing p-values.</p></li>
+<li><p><strong>exp_post_agg</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that <cite>scanpy.rank_genes_groups</cite> assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.</p></li>
 <li><p><strong>alternative</strong> (<em>Literal</em><em>[</em><em>&quot;two-sided&quot;</em><em>, </em><em>&quot;less&quot;</em><em>, </em><em>&quot;greater&quot;</em><em>]</em>) – Type of alternative hypothesis</p></li>
 </ul>
 </dd>
@@ -467,7 +385,7 @@ of shape (n_groups, chunk_ub - chunk_lb).</p>
 <dd class="field-even"><p><strong>ValueError</strong> – If chunk bounds are inintelligible.</p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>two-sided p-values, U-statistics, fold change. Each
+<dd class="field-odd"><p>two-sided p-values, U-statistics, z-scores, fold change. Each
 of shape (n_groups, chunk_ub - chunk_lb).</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -479,7 +397,7 @@ of shape (n_groups, chunk_ub - chunk_lb).</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="illico.ovo.sparse_ovo.csr_ovo_mwu_kernel_over_contiguous_col_chunk">
-<span class="sig-prename descclassname"><span class="pre">illico.ovo.sparse_ovo.</span></span><span class="sig-name descname"><span class="pre">csr_ovo_mwu_kernel_over_contiguous_col_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_ub</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.ovo.sparse_ovo.csr_ovo_mwu_kernel_over_contiguous_col_chunk" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">illico.ovo.sparse_ovo.</span></span><span class="sig-name descname"><span class="pre">csr_ovo_mwu_kernel_over_contiguous_col_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_ub</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_post_agg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.ovo.sparse_ovo.csr_ovo_mwu_kernel_over_contiguous_col_chunk" title="Link to this definition">¶</a></dt>
 <dd><p>Perform OVO test over contiguous chunk of column of a CSR matrix.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -491,6 +409,7 @@ of shape (n_groups, chunk_ub - chunk_lb).</p>
 <li><p><strong>is_log1p</strong> (<em>bool</em>) – User-indicated flag telling if data underwent log1p transform.</p></li>
 <li><p><strong>use_continuity</strong> (<em>bool</em>) – Whether to use continuity correction when computing p-values.</p></li>
 <li><p><strong>tie_correct</strong> (<em>bool</em>) – Whether to apply tie correction when computing p-values.</p></li>
+<li><p><strong>exp_post_agg</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that <cite>scanpy.rank_genes_groups</cite> assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.</p></li>
 <li><p><strong>alternative</strong> (<em>Literal</em><em>[</em><em>&quot;two-sided&quot;</em><em>, </em><em>&quot;less&quot;</em><em>, </em><em>&quot;greater&quot;</em><em>]</em>) – Type of alternative hypothesis</p></li>
 </ul>
 </dd>
@@ -498,7 +417,7 @@ of shape (n_groups, chunk_ub - chunk_lb).</p>
 <dd class="field-even"><p><strong>ValueError</strong> – If chunk bounds are inintelligible.</p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>two-sided p-values, U-statistics, fold change. Each
+<dd class="field-odd"><p>two-sided p-values, U-statistics, z-scores, fold change. Each
 of shape (n_groups, chunk_ub - chunk_lb).</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -514,7 +433,7 @@ of shape (n_groups, chunk_ub - chunk_lb).</p>
 <p>Runs in 3.4 seconds for 100 genes, so roughly a 3.4 x 180 = 9 minutes for the whole H1.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="illico.ovr.dense_ovr.dense_ovr_mwu_kernel_over_contiguous_col_chunk">
-<span class="sig-prename descclassname"><span class="pre">illico.ovr.dense_ovr.</span></span><span class="sig-name descname"><span class="pre">dense_ovr_mwu_kernel_over_contiguous_col_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_ub</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.ovr.dense_ovr.dense_ovr_mwu_kernel_over_contiguous_col_chunk" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">illico.ovr.dense_ovr.</span></span><span class="sig-name descname"><span class="pre">dense_ovr_mwu_kernel_over_contiguous_col_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_ub</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_post_agg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.ovr.dense_ovr.dense_ovr_mwu_kernel_over_contiguous_col_chunk" title="Link to this definition">¶</a></dt>
 <dd><p>Compute OVR ranksum test on a dense matrix of expression counts.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -526,13 +445,14 @@ of shape (n_groups, chunk_ub - chunk_lb).</p>
 <li><p><strong>False.</strong> (<em>transformation</em><em> or </em><em>not. Defaults to</em>)</p></li>
 <li><p><strong>use_continuity</strong> – Whether to use continuity correction when computing p-values. Defaults to True.</p></li>
 <li><p><strong>tie_correct</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to apply tie correction when computing p-values. Defaults to True.</p></li>
+<li><p><strong>exp_post_agg</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that <cite>scanpy.rank_genes_groups</cite> assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.</p></li>
 <li><p><strong>alternative</strong> (<em>Literal</em><em>[</em><em>&quot;two-sided&quot;</em><em>, </em><em>&quot;less&quot;</em><em>, </em><em>&quot;greater&quot;</em><em>]</em>) – Type of alternative hypothesis. Defaults to “two-sided”.</p></li>
 <li><p><strong>chunk_lb</strong> (<em>int</em>)</p></li>
 <li><p><strong>chunk_ub</strong> (<em>int</em>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Two-sided p-values, U-statistic and fold change.
+<dd class="field-even"><p>Two-sided p-values, U-statistic, z-scores and fold change.
 Each np.ndarray of shape (n_groups, n_genes)</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -558,7 +478,7 @@ Each np.ndarray of shape (n_groups, n_genes)</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Two-sided p-values and U-statistics, per group and per gene (column).</p>
+<dd class="field-even"><p>Two-sided p-values, U-statistics and z-scores, per group and per gene (column).</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>tuple[np.ndarray]</p>
@@ -569,7 +489,7 @@ Each np.ndarray of shape (n_groups, n_genes)</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="illico.ovr.sparse_ovr.csc_ovr_mwu_kernel_over_contiguous_col_chunk">
-<span class="sig-prename descclassname"><span class="pre">illico.ovr.sparse_ovr.</span></span><span class="sig-name descname"><span class="pre">csc_ovr_mwu_kernel_over_contiguous_col_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_ub</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.ovr.sparse_ovr.csc_ovr_mwu_kernel_over_contiguous_col_chunk" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">illico.ovr.sparse_ovr.</span></span><span class="sig-name descname"><span class="pre">csc_ovr_mwu_kernel_over_contiguous_col_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_ub</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_post_agg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.ovr.sparse_ovr.csc_ovr_mwu_kernel_over_contiguous_col_chunk" title="Link to this definition">¶</a></dt>
 <dd><p>Perform OVR ranksum test over the contiguous column chunk defined by the bounds.</p>
 <p>This function only applies to data stored in a CSC matrix.</p>
 <dl class="field-list simple">
@@ -582,6 +502,7 @@ Each np.ndarray of shape (n_groups, n_genes)</p>
 <li><p><strong>is_log1p</strong> (<em>bool</em>) – User-indicated flag telling if data was log1p transformed or not.</p></li>
 <li><p><strong>use_continuity</strong> (<em>bool</em>) – Whether to use continuity correction when computing p-values. Defaults to True.</p></li>
 <li><p><strong>tie_correct</strong> (<em>bool</em>) – Whether to apply tie correction when computing p-values. Defaults to True.</p></li>
+<li><p><strong>exp_post_agg</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that <cite>scanpy.rank_genes_groups</cite> assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.</p></li>
 <li><p><strong>alternative</strong> (<em>Literal</em><em>[</em><em>&quot;two-sided&quot;</em><em>, </em><em>&quot;less&quot;</em><em>, </em><em>&quot;greater&quot;</em><em>]</em>) – Type of alternative hypothesis.</p></li>
 </ul>
 </dd>
@@ -589,7 +510,7 @@ Each np.ndarray of shape (n_groups, n_genes)</p>
 <dd class="field-even"><p><strong>ValueError</strong> – If bounds are not intelligible</p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>two-sided p-values, u-statistics and fold changes,
+<dd class="field-odd"><p>two-sided p-values, u-statistics, z-scores and fold changes,
 each of shape (n_groups, chunk_lb - chunk_ub).</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -601,7 +522,7 @@ each of shape (n_groups, chunk_lb - chunk_ub).</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="illico.ovr.sparse_ovr.csr_ovr_mwu_kernel_over_contiguous_col_chunk">
-<span class="sig-prename descclassname"><span class="pre">illico.ovr.sparse_ovr.</span></span><span class="sig-name descname"><span class="pre">csr_ovr_mwu_kernel_over_contiguous_col_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_ub</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.ovr.sparse_ovr.csr_ovr_mwu_kernel_over_contiguous_col_chunk" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">illico.ovr.sparse_ovr.</span></span><span class="sig-name descname"><span class="pre">csr_ovr_mwu_kernel_over_contiguous_col_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_lb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_ub</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_post_agg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.ovr.sparse_ovr.csr_ovr_mwu_kernel_over_contiguous_col_chunk" title="Link to this definition">¶</a></dt>
 <dd><p>Perform OVR ranksum test over the contiguous column chunk defined by the bounds.</p>
 <p>This function only applies to data stored in a CSR matrix.</p>
 <dl class="field-list simple">
@@ -614,6 +535,7 @@ each of shape (n_groups, chunk_lb - chunk_ub).</p>
 <li><p><strong>is_log1p</strong> (<em>bool</em>) – User-indicated flag telling if data was log1p transformed or not.</p></li>
 <li><p><strong>use_continuity</strong> (<em>bool</em>) – Whether to use continuity correction when computing p-values.</p></li>
 <li><p><strong>tie_correct</strong> (<em>bool</em>) – Whether to apply tie correction when computing p-values.</p></li>
+<li><p><strong>exp_post_agg</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details. Note that <cite>scanpy.rank_genes_groups</cite> assumes the data to be log1p, and exponentiates post aggregation by default. Defaults to False.</p></li>
 <li><p><strong>alternative</strong> (<em>Literal</em><em>[</em><em>&quot;two-sided&quot;</em><em>, </em><em>&quot;less&quot;</em><em>, </em><em>&quot;greater&quot;</em><em>]</em>) – Type of alternative hypothesis</p></li>
 </ul>
 </dd>
@@ -621,7 +543,7 @@ each of shape (n_groups, chunk_lb - chunk_ub).</p>
 <dd class="field-even"><p><strong>ValueError</strong> – If bounds are not intelligible</p>
 </dd>
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>two-sided p-values, u-statistics and fold changes,
+<dd class="field-odd"><p>two-sided p-values, u-statistics, z-scores and fold changes,
 each of shape (n_groups, chunk_lb - chunk_ub).</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -738,10 +660,10 @@ all six routines.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>P-value</p>
+<dd class="field-even"><p>P-value and z-score</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>float</p>
+<dd class="field-odd"><p>tuple[float]</p>
 </dd>
 </dl>
 <p>Author: Rémy Dubois</p>
@@ -765,13 +687,14 @@ all six routines.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="illico.utils.math.fold_change_from_summed_expr">
-<span class="sig-prename descclassname"><span class="pre">illico.utils.math.</span></span><span class="sig-name descname"><span class="pre">fold_change_from_summed_expr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">group_agg_counts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.utils.math.fold_change_from_summed_expr" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">illico.utils.math.</span></span><span class="sig-name descname"><span class="pre">fold_change_from_summed_expr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">group_agg_counts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_post_agg</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.utils.math.fold_change_from_summed_expr" title="Link to this definition">¶</a></dt>
 <dd><p>Compute fold change from summed expression values, per group.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>group_agg_counts</strong> (<em>np.ndarray</em>) – Sum of expression values of shape (n_groups, n_genes)</p></li>
 <li><p><strong>grpc</strong> (<a class="reference internal" href="#illico.utils.groups.GroupContainer" title="illico.utils.groups.GroupContainer"><em>GroupContainer</em></a>) – GroupContainer holding group information</p></li>
+<li><p><strong>exp_post_agg</strong> (<em>bool</em>) – Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -786,7 +709,7 @@ all six routines.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="illico.utils.math.dense_fold_change">
-<span class="sig-prename descclassname"><span class="pre">illico.utils.math.</span></span><span class="sig-name descname"><span class="pre">dense_fold_change</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.utils.math.dense_fold_change" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">illico.utils.math.</span></span><span class="sig-name descname"><span class="pre">dense_fold_change</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grpc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_post_agg</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.utils.math.dense_fold_change" title="Link to this definition">¶</a></dt>
 <dd><p>Compute fold change from a dense array of expression counts.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -794,6 +717,7 @@ all six routines.</p>
 <li><p><strong>X</strong> (<em>np.ndarray</em>) – Expression counts</p></li>
 <li><p><strong>grpc</strong> (<a class="reference internal" href="#illico.utils.groups.GroupContainer" title="illico.utils.groups.GroupContainer"><em>GroupContainer</em></a>) – GroupContainer holding group information</p></li>
 <li><p><strong>is_log1p</strong> (<em>bool</em>) – User-indicated flag if data is log1p or not.</p></li>
+<li><p><strong>exp_post_agg</strong> (<em>bool</em>) – Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -848,6 +772,29 @@ this function performs one memory allocation instead of 2, which happens if call
 </dd>
 </dl>
 <p>Author: Rémy Dubois</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="illico.utils.math.compute_batch_bounds">
+<span class="sig-prename descclassname"><span class="pre">illico.utils.math.</span></span><span class="sig-name descname"><span class="pre">compute_batch_bounds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_genes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_threads</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/illico/utils/math.html#compute_batch_bounds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#illico.utils.math.compute_batch_bounds" title="Link to this definition">¶</a></dt>
+<dd><p>Computes ideal batch bounds for processing genes in batches.
+This function ensures no worker is starving. This could happen if we have 8 workers but 9 batches to allocate.
+In this case, because each batch takes the same time to be processed, all but one workers will be idle waiting for one worker to process the last batch.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_genes</strong> (<em>int</em>) – Total number of genes</p></li>
+<li><p><strong>batch_size</strong> (<em>Literal</em><em>[</em><em>&quot;auto&quot;</em><em>] </em><em>| </em><em>int</em>) – Batch size, or “auto” to compute ideal batch size.</p></li>
+<li><p><strong>n_threads</strong> (<em>int</em>) – Number of threads to use.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of (lower_bound, upper_bound) for each batch. Upper bound is excluding, following slicing conventions.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[Tuple[int, int]]</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function" id="module-illico.utils.memory">
@@ -1034,10 +981,7 @@ binary search on indices, which requires sorted indices.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">API Reference</a><ul>
-<li><a class="reference internal" href="#module-illico.asymptotic_wilcoxon">illico package</a><ul>
-<li><a class="reference internal" href="#illico.asymptotic_wilcoxon.asymptotic_wilcoxon"><code class="docutils literal notranslate"><span class="pre">asymptotic_wilcoxon()</span></code></a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#illico-package">illico package</a></li>
 <li><a class="reference internal" href="#module-illico.ovo.dense_ovo">ovo subpackage</a><ul>
 <li><a class="reference internal" href="#illico.ovo.dense_ovo.dense_ovo_mwu_kernel"><code class="docutils literal notranslate"><span class="pre">dense_ovo_mwu_kernel()</span></code></a></li>
 <li><a class="reference internal" href="#illico.ovo.dense_ovo.dense_ovo_mwu_kernel_over_contiguous_col_chunk"><code class="docutils literal notranslate"><span class="pre">dense_ovo_mwu_kernel_over_contiguous_col_chunk()</span></code></a></li>
@@ -1071,6 +1015,7 @@ binary search on indices, which requires sorted indices.</p>
 <li><a class="reference internal" href="#illico.utils.math.dense_fold_change"><code class="docutils literal notranslate"><span class="pre">dense_fold_change()</span></code></a></li>
 <li><a class="reference internal" href="#illico.utils.math.compute_sparsity"><code class="docutils literal notranslate"><span class="pre">compute_sparsity()</span></code></a></li>
 <li><a class="reference internal" href="#illico.utils.math.chunk_and_fortranize"><code class="docutils literal notranslate"><span class="pre">chunk_and_fortranize()</span></code></a></li>
+<li><a class="reference internal" href="#illico.utils.math.compute_batch_bounds"><code class="docutils literal notranslate"><span class="pre">compute_batch_bounds()</span></code></a></li>
 <li><a class="reference internal" href="#illico.utils.memory.log_memory_usage"><code class="docutils literal notranslate"><span class="pre">log_memory_usage()</span></code></a></li>
 <li><a class="reference internal" href="#illico.utils.ranking.rank_sum_and_ties_from_sorted"><code class="docutils literal notranslate"><span class="pre">rank_sum_and_ties_from_sorted()</span></code></a></li>
 <li><a class="reference internal" href="#illico.utils.ranking.sort_along_axis"><code class="docutils literal notranslate"><span class="pre">sort_along_axis()</span></code></a></li>

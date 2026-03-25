@@ -237,7 +237,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Tuple</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">numba</span><span class="w"> </span><span class="kn">import</span> <span class="n">njit</span>
@@ -308,7 +308,7 @@
     <span class="n">mu</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">contin_corr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
     <span class="n">alternative</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;two-sided&quot;</span><span class="p">,</span> <span class="s2">&quot;less&quot;</span><span class="p">,</span> <span class="s2">&quot;greater&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;two-sided&quot;</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute p-value.</span>
 
 <span class="sd">    This small piece of code was isolated here because it was duplicated in the</span>
@@ -325,7 +325,7 @@
 <span class="sd">        alternative (Literal[&quot;two-sided&quot;, &quot;less&quot;, &quot;greater&quot;]): Type of alternative hypothesis.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        float: P-value</span>
+<span class="sd">        tuple[float]: P-value and z-score</span>
 
 <span class="sd">    Author: Rémy Dubois</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -335,24 +335,23 @@
 
         <span class="k">if</span> <span class="n">alternative</span> <span class="o">==</span> <span class="s2">&quot;two-sided&quot;</span><span class="p">:</span>  <span class="c1"># two-sided</span>
             <span class="c1"># Compute both-sided statistic</span>
-            <span class="n">min_u</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">n_ref</span> <span class="o">*</span> <span class="n">n_tgt</span> <span class="o">-</span> <span class="n">U</span><span class="p">)</span>
-            <span class="n">delta</span> <span class="o">=</span> <span class="n">min_u</span> <span class="o">-</span> <span class="n">mu</span>
-            <span class="n">z</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">*</span> <span class="n">contin_corr</span><span class="p">)</span> <span class="o">/</span> <span class="n">sigma</span>
-            <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">erfc</span><span class="p">(</span><span class="n">z</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span><span class="p">))</span>
+            <span class="n">delta</span> <span class="o">=</span> <span class="n">U</span> <span class="o">-</span> <span class="n">mu</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="p">(</span><span class="n">delta</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">*</span> <span class="n">contin_corr</span><span class="p">)</span> <span class="o">/</span> <span class="n">sigma</span>
+            <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">erfc</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">z</span><span class="p">)</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)),</span> <span class="n">z</span>
         <span class="k">elif</span> <span class="n">alternative</span> <span class="o">==</span> <span class="s2">&quot;greater&quot;</span><span class="p">:</span>  <span class="c1"># greater (right-tailed)</span>
             <span class="n">delta</span> <span class="o">=</span> <span class="n">U</span> <span class="o">-</span> <span class="n">mu</span>
             <span class="n">z</span> <span class="o">=</span> <span class="p">(</span><span class="n">delta</span> <span class="o">-</span> <span class="n">contin_corr</span><span class="p">)</span> <span class="o">/</span> <span class="n">sigma</span>
             <span class="c1"># P(Z &gt; z) = 0.5 * erfc(z / sqrt(2))</span>
-            <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">erfc</span><span class="p">(</span><span class="n">z</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span><span class="p">))</span>
+            <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">erfc</span><span class="p">(</span><span class="n">z</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)),</span> <span class="n">z</span>
         <span class="k">elif</span> <span class="n">alternative</span> <span class="o">==</span> <span class="s2">&quot;less&quot;</span><span class="p">:</span>  <span class="c1"># less (left-tailed)</span>
             <span class="n">delta</span> <span class="o">=</span> <span class="n">U</span> <span class="o">-</span> <span class="n">mu</span>
             <span class="n">z</span> <span class="o">=</span> <span class="p">(</span><span class="n">delta</span> <span class="o">+</span> <span class="n">contin_corr</span><span class="p">)</span> <span class="o">/</span> <span class="n">sigma</span>
             <span class="c1"># P(Z &lt; z) = 0.5 * erfc(-z / sqrt(2))</span>
-            <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">erfc</span><span class="p">(</span><span class="o">-</span><span class="n">z</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span><span class="p">))</span>
+            <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">erfc</span><span class="p">(</span><span class="o">-</span><span class="n">z</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)),</span> <span class="n">z</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported alternative hypothesis: </span><span class="si">{</span><span class="n">alternative</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="mf">1.0</span>
+        <span class="k">return</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span>
 
 
 <span class="nd">@njit</span><span class="p">(</span><span class="n">nogil</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -403,12 +402,13 @@
 
 
 <span class="nd">@njit</span><span class="p">(</span><span class="n">nogil</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">fold_change_from_summed_expr</span><span class="p">(</span><span class="n">group_agg_counts</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">grpc</span><span class="p">:</span> <span class="n">GroupContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">fold_change_from_summed_expr</span><span class="p">(</span><span class="n">group_agg_counts</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">grpc</span><span class="p">:</span> <span class="n">GroupContainer</span><span class="p">,</span> <span class="n">exp_post_agg</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute fold change from summed expression values, per group.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        group_agg_counts (np.ndarray): Sum of expression values of shape (n_groups, n_genes)</span>
 <span class="sd">        grpc (GroupContainer): GroupContainer holding group information</span>
+<span class="sd">        exp_post_agg (bool): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        np.ndarray: Fold change values of shape (n_groups, n_genes)</span>
@@ -426,18 +426,24 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># Else, the reference is the reference group</span>
         <span class="n">mu_ref</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">mu_tgt</span><span class="p">[</span><span class="n">grpc</span><span class="o">.</span><span class="n">encoded_ref_group</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># (1, n_genes)</span>
-    <span class="n">fold_change</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mu_ref</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">mu_tgt</span> <span class="o">/</span> <span class="n">mu_ref</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">exp_post_agg</span><span class="p">:</span>
+        <span class="n">fold_change</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mu_ref</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">mu_tgt</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">mu_ref</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">fold_change</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mu_ref</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">mu_tgt</span> <span class="o">/</span> <span class="n">mu_ref</span><span class="p">)</span>
+
     <span class="k">return</span> <span class="n">fold_change</span>
 
 
 <span class="nd">@njit</span><span class="p">(</span><span class="n">nogil</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">dense_fold_change</span><span class="p">(</span><span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">grpc</span><span class="p">:</span> <span class="n">GroupContainer</span><span class="p">,</span> <span class="n">is_log1p</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">dense_fold_change</span><span class="p">(</span><span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">grpc</span><span class="p">:</span> <span class="n">GroupContainer</span><span class="p">,</span> <span class="n">is_log1p</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">exp_post_agg</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute fold change from a dense array of expression counts.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        X (np.ndarray): Expression counts</span>
 <span class="sd">        grpc (GroupContainer): GroupContainer holding group information</span>
 <span class="sd">        is_log1p (bool): User-indicated flag if data is log1p or not.</span>
+<span class="sd">        exp_post_agg (bool): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        np.ndarray: Fold change values of shape (n_groups, n_genes)</span>
@@ -446,15 +452,12 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">group_agg_counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">grpc</span><span class="o">.</span><span class="n">counts</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
     <span class="c1"># Sum expressions per group</span>
-    <span class="n">_add_at_vec</span><span class="p">(</span><span class="n">group_agg_counts</span><span class="p">,</span> <span class="n">grpc</span><span class="o">.</span><span class="n">encoded_groups</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="k">if</span> <span class="n">is_log1p</span> <span class="k">else</span> <span class="n">X</span><span class="p">)</span>
-    <span class="c1"># for group_id in range(grpc.counts.size):</span>
-    <span class="c1">#     idx_start = grpc.indptr[group_id]</span>
-    <span class="c1">#     idx_end = grpc.indptr[group_id + 1]</span>
-    <span class="c1">#     if is_log1p:</span>
-    <span class="c1">#         group_agg_counts[group_id, :] = np.expm1(X[idx_start:idx_end]).sum(axis=0)</span>
-    <span class="c1">#     else:</span>
-    <span class="c1">#         group_agg_counts[group_id, :] = X[idx_start:idx_end].sum(axis=0)</span>
-    <span class="n">fold_change</span> <span class="o">=</span> <span class="n">fold_change_from_summed_expr</span><span class="p">(</span><span class="n">group_agg_counts</span><span class="p">,</span> <span class="n">grpc</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">is_log1p</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">exp_post_agg</span><span class="p">:</span>
+        <span class="n">_add_at_vec</span><span class="p">(</span><span class="n">group_agg_counts</span><span class="p">,</span> <span class="n">grpc</span><span class="o">.</span><span class="n">encoded_groups</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">_add_at_vec</span><span class="p">(</span><span class="n">group_agg_counts</span><span class="p">,</span> <span class="n">grpc</span><span class="o">.</span><span class="n">encoded_groups</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+
+    <span class="n">fold_change</span> <span class="o">=</span> <span class="n">fold_change_from_summed_expr</span><span class="p">(</span><span class="n">group_agg_counts</span><span class="p">,</span> <span class="n">grpc</span><span class="p">,</span> <span class="n">exp_post_agg</span><span class="o">=</span><span class="n">exp_post_agg</span> <span class="o">&amp;</span> <span class="n">is_log1p</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">fold_change</span>
 
 
@@ -516,6 +519,55 @@
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">chunk_ub</span> <span class="o">-</span> <span class="n">chunk_lb</span><span class="p">):</span>
                 <span class="n">chunk</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">chunk_lb</span> <span class="o">+</span> <span class="n">j</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">chunk</span>
+
+
+<div class="viewcode-block" id="compute_batch_bounds">
+<a class="viewcode-back" href="../../../api.html#illico.utils.math.compute_batch_bounds">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_batch_bounds</span><span class="p">(</span><span class="n">n_genes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;auto&quot;</span><span class="p">]</span> <span class="o">|</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_threads</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes ideal batch bounds for processing genes in batches.</span>
+<span class="sd">    This function ensures no worker is starving. This could happen if we have 8 workers but 9 batches to allocate.</span>
+<span class="sd">    In this case, because each batch takes the same time to be processed, all but one workers will be idle waiting for one worker to process the last batch.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        n_genes (int): Total number of genes</span>
+<span class="sd">        batch_size (Literal[&quot;auto&quot;] | int): Batch size, or &quot;auto&quot; to compute ideal batch size.</span>
+<span class="sd">        n_threads (int): Number of threads to use.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        List[Tuple[int, int]]: List of (lower_bound, upper_bound) for each batch. Upper bound is excluding, following slicing conventions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># No batching nor multithreading for small inputs</span>
+    <span class="k">if</span> <span class="n">n_genes</span> <span class="o">&lt;</span> <span class="n">n_threads</span> <span class="ow">or</span> <span class="n">n_genes</span> <span class="o">&lt;</span> <span class="mi">256</span><span class="p">:</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">n_genes</span>
+        <span class="c1"># n_threads = 1</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">n_genes</span>
+        <span class="n">bounds_iterator</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_genes</span><span class="p">]]</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="c1"># batch_size = min(batch_size, math.ceil(n_genes / n_threads))</span>
+        <span class="n">bounds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_genes</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">bounds</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">n_genes</span><span class="p">:</span>
+            <span class="n">bounds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n_genes</span><span class="p">)</span>
+        <span class="n">bounds_iterator</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">bounds</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+    <span class="k">elif</span> <span class="n">batch_size</span> <span class="o">==</span> <span class="s2">&quot;auto&quot;</span><span class="p">:</span>
+        <span class="n">target_batch_size</span> <span class="o">=</span> <span class="mi">256</span>
+        <span class="n">min_batches</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_genes</span> <span class="o">+</span> <span class="n">target_batch_size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="n">target_batch_size</span>
+        <span class="n">num_batches</span> <span class="o">=</span> <span class="p">((</span><span class="n">min_batches</span> <span class="o">+</span> <span class="n">n_threads</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="n">n_threads</span><span class="p">)</span> <span class="o">*</span> <span class="n">n_threads</span>
+        <span class="n">base_size</span> <span class="o">=</span> <span class="n">n_genes</span> <span class="o">//</span> <span class="n">num_batches</span>
+        <span class="n">remainder</span> <span class="o">=</span> <span class="n">n_genes</span> <span class="o">%</span> <span class="n">num_batches</span>
+        <span class="n">bounds_iterator</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_batches</span><span class="p">):</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">base_size</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">remainder</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">bounds_iterator</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">))</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="n">end</span>
+        <span class="c1"># Append the last gene as the right bound is excluding</span>
+        <span class="k">if</span> <span class="n">bounds_iterator</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">n_genes</span><span class="p">:</span>
+            <span class="n">bounds_iterator</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">n_genes</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">base_size</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid batch_size value: </span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2">. Must be &#39;auto&#39; or an integer.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">bounds_iterator</span><span class="p">,</span> <span class="n">batch_size</span></div>
+
 </pre></div>
         </article>
       </div>

@@ -246,6 +246,7 @@
 <li><p>It is <strong>required</strong> to indicate if the data you run the tests on underwent log1p transform. This only impacts the fold-change calculation and not the test results (p-values, u-stats). The choice was made to not try to guess this information, as those often lead to error-prone and potentially harmful rules of thumb.</p></li>
 <li><p>By default, <code class="docutils literal notranslate"><span class="pre">illico.asymptotic_wilcoxon</span></code> will use what lies in <code class="docutils literal notranslate"><span class="pre">adata.X</span></code> to compute DE genes. If you want a specific layer to be used to perform the tests, you must specify it.</p></li>
 <li><p>By default again, <code class="docutils literal notranslate"><span class="pre">illico.asymptotic_wilcoxon</span></code> will apply continuity correction and tie correction factors. This is controllable with the <code class="docutils literal notranslate"><span class="pre">use_continuity</span></code> and <code class="docutils literal notranslate"><span class="pre">tie_correct</span></code> arguments.</p></li>
+<li><p>If you are coming from the <code class="docutils literal notranslate"><span class="pre">scanpy</span></code> ecosystem and want a drop-in replacement of <code class="docutils literal notranslate"><span class="pre">sc.tl.rank_genes_groups(…,</span> <span class="pre">method=&quot;wilcoxon&quot;)</span></code>, you can set <code class="docutils literal notranslate"><span class="pre">return_as_scanpy=True</span></code> when calling <code class="docutils literal notranslate"><span class="pre">illico.asymptotic_wilcoxon</span></code>. This will return a dictionary formatted for Scanpy’s <code class="docutils literal notranslate"><span class="pre">rank_genes_groups</span></code> results, which you can then attach to <code class="docutils literal notranslate"><span class="pre">adata.uns[&quot;rank_genes_groups&quot;]</span></code> and use with the rest of your Scanpy workflow as usual. See last section.</p></li>
 </ol>
 <section id="de-genes-compared-to-control-cells">
 <h2>DE genes compared to control cells<a class="headerlink" href="#de-genes-compared-to-control-cells" title="Link to this heading">¶</a></h2>
@@ -259,6 +260,7 @@
        <span class="n">group_keys</span><span class="o">=</span><span class="s2">&quot;perturbation&quot;</span><span class="p">,</span>
        <span class="n">reference</span><span class="o">=</span><span class="s2">&quot;non-targeting&quot;</span><span class="p">,</span>
        <span class="n">is_log1p</span><span class="o">=</span><span class="p">[</span><span class="kc">False</span><span class="o">|</span><span class="kc">True</span><span class="p">],</span> <span class="c1"># &lt;-- Specify if your data underwent log1p or not</span>
+       <span class="n">return_as_scanpy</span><span class="o">=</span><span class="p">[</span><span class="kc">False</span><span class="o">|</span><span class="kc">True</span><span class="p">],</span> <span class="c1"># &lt;-- Whether to return a dict compatible with Scanpy&#39;s `rank_genes_groups` function, or a pd.DataFrame</span>
        <span class="p">)</span>
 </pre></div>
 </div>
@@ -275,6 +277,27 @@
 </pre></div>
 </div>
 <p>In this case, the resulting dataframe contains <code class="docutils literal notranslate"><span class="pre">n_clusters</span> <span class="pre">*</span> <span class="pre">n_genes</span></code> rows and the same three columns: <code class="docutils literal notranslate"><span class="pre">(p_value,</span> <span class="pre">statistic,</span> <span class="pre">fold_change)</span></code>. In this case, the wilcoxon rank-sum test is performed between cells belonging to cluster <em>c_i</em> and all the other cells (one-versus-the-rest), for all <em>c_i</em>.</p>
+</section>
+<section id="integrating-with-scanpy">
+<h2>Integrating with Scanpy<a class="headerlink" href="#integrating-with-scanpy" title="Link to this heading">¶</a></h2>
+<p>Users coming from the <code class="docutils literal notranslate"><span class="pre">scanpy</span></code> ecosystem looking for a drop-in replacement of <code class="docutils literal notranslate"><span class="pre">sc.tl.rank_genes_groups(…,</span> <span class="pre">method=&quot;wilcoxon&quot;)</span></code> can set <code class="docutils literal notranslate"><span class="pre">return_as_scanpy=True</span></code> when calling <code class="docutils literal notranslate"><span class="pre">illico.asymptotic_wilcoxon</span></code>. This will return a dictionary formatted for Scanpy’s <code class="docutils literal notranslate"><span class="pre">rank_genes_groups</span></code> results. Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">illico</span><span class="w"> </span><span class="kn">import</span> <span class="n">asymptotic_wilcoxon</span>
+<span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span><span class="s1">&#39;dataset.h5ad&#39;</span><span class="p">)</span> <span class="c1"># (n_cells, n_genes)</span>
+
+<span class="c1"># ... Your preprocessing steps here ...</span>
+
+<span class="n">de_genes</span> <span class="o">=</span> <span class="n">asymptotic_wilcoxon</span><span class="p">(</span>
+       <span class="n">adata</span><span class="p">,</span>
+       <span class="n">group_keys</span><span class="o">=</span><span class="s2">&quot;perturbation&quot;</span><span class="p">,</span>
+       <span class="n">reference</span><span class="o">=</span><span class="s2">&quot;non-targeting&quot;</span><span class="p">,</span>
+       <span class="n">is_log1p</span><span class="o">=</span><span class="p">[</span><span class="kc">False</span><span class="o">|</span><span class="kc">True</span><span class="p">],</span> <span class="c1"># &lt;-- Specify if your data underwent log1p or not</span>
+       <span class="n">return_as_scanpy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1"># &lt;-- /!\</span>
+       <span class="p">)</span>
+<span class="n">adata</span><span class="o">.</span><span class="n">uns</span><span class="p">[</span><span class="s2">&quot;rank_genes_groups&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">de_genes</span> <span class="c1"># Attach results to adata.uns</span>
+<span class="c1"># Then the rest of your scanpy workflow can remain unchanged, for example:</span>
+<span class="n">sc</span><span class="o">.</span><span class="n">pl</span><span class="o">.</span><span class="n">rank_genes_groups</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
 </section>
 </section>
 
@@ -336,6 +359,7 @@
 <li><a class="reference internal" href="#">How to use</a><ul>
 <li><a class="reference internal" href="#de-genes-compared-to-control-cells">DE genes compared to control cells</a></li>
 <li><a class="reference internal" href="#de-genes-for-clustering-analyses">DE genes for clustering analyses</a></li>
+<li><a class="reference internal" href="#integrating-with-scanpy">Integrating with Scanpy</a></li>
 </ul>
 </li>
 </ul>

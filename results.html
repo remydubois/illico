@@ -259,17 +259,54 @@
 </section>
 <section id="fold-change">
 <h3>Fold-change<a class="headerlink" href="#fold-change" title="Link to this heading">¶</a></h3>
-<p>The fold-change computed by illico is the most naive form of the fold-change:</p>
-<div class="math-wrapper docutils container">
-<div class="math notranslate nohighlight">
-\[\text{fold-change} = \frac{E[X_{\text{perturbed}}]}{E[X_{\text{control}}]}\]</div>
+<!-- The fold-change computed by illico is the most naive form of the fold-change:
+
+$$\text{fold-change} = \frac{E[X_{\text{perturbed}}]}{E[X_{\text{control}}]}$$
+
+If your data underwent log1p transform, where `np.expm1` is applied depends on the value of `exp_post_agg`.
+1. If `exp_post_agg` is `True`, expression values are **averaged then exponentiated**.
+$$\text{fold-change} = \frac{E[e^{X_{\text{perturbed}}} - 1]}{E[e^{X_{\text{control}}} - 1]}$$
+2. If `exp_post_agg` is `False`, expression values are **exponentiated then averaged**.
+$$\text{fold-change} = \frac{e^{E[X_{\text{perturbed}}]} - 1}{e^{E[X_{\text{control}}]} - 1}$$ -->
+<p>The fold-change computed by <code class="docutils literal notranslate"><span class="pre">illico</span></code> depends on the value of <code class="docutils literal notranslate"><span class="pre">is_log1p</span></code> and <code class="docutils literal notranslate"><span class="pre">exp_post_agg</span></code> as follows:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">is_log1p</span></code></p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">exp_post_agg</span></code></p></th>
+<th class="head"><p>Fold-change equation</p></th>
+<th class="head"><p>Remark</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">True</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(\text{fold-change} = \frac{E[X_{\text{perturbed}}]}{E[X_{\text{control}}]}\)</span></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(\text{fold-change} = \frac{E[X_{\text{perturbed}}]}{E[X_{\text{control}}]}\)</span></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">True</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">True</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(\text{fold-change} = \frac{E[e^{X_{\text{perturbed}}} - 1]}{E[e^{X_{\text{control}}} - 1]}\)</span></p></td>
+<td><p>🎯 Scanpy’s default</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">True</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(\text{fold-change} = \frac{e^{E[X_{\text{perturbed}}]} - 1}{e^{E[X_{\text{control}}]} - 1}\)</span></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
 </div>
-<p>If your data underwent log1p transform, <code class="docutils literal notranslate"><span class="pre">np.expm1</span></code> is applied <strong>before</strong> computing the expectations (means), in which case the fold change expression becomes:</p>
-<div class="math-wrapper docutils container">
-<div class="math notranslate nohighlight">
-\[\text{fold-change} = \frac{E[e^{X_{\text{perturbed}}} - 1]}{E[e^{X_{\text{control}}} - 1]}\]</div>
+<p>⚠️ Please note that by default, <code class="docutils literal notranslate"><span class="pre">scanpy.rank_genes_groups</span></code> assumes that your data is log1p-transformed, and exponentiates after aggregation. Consequently, if you are coming from <code class="docutils literal notranslate"><span class="pre">scanpy</span></code> and want to drop-in replace <code class="docutils literal notranslate"><span class="pre">scanpy.tl.rank_genes_groups</span></code>, you should set:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">asymptotic_wilcoxon</span><span class="p">(</span><span class="n">adata</span><span class="p">,</span> <span class="err">…</span><span class="p">,</span> <span class="n">is_log1p</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exp_post_agg</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
 </div>
-<p>I know several definitions exist, and adding more control over this should not be complicated. If this is your case, please open an issue.</p>
+<!-- I know several definitions exist, and adding more control over this should not be complicated. If this is your case, please open an issue. -->
 </section>
 </section>
 </section>
