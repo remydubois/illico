@@ -8,9 +8,8 @@ from illico.utils.sparse.csc import CSCMatrix, _assert_is_csc
 def _accumulate_group_ranksums_from_argsort(
     arr: np.ndarray, idx: np.ndarray, groups: np.ndarray, ranksums: np.ndarray
 ) -> np.ndarray:
-    """
-    From a given array of values, indices of sorted values (result of np.argsort) and groups,
-    accumulate group rank sums in the placegolder `ranksums`.
+    """From a given array of values, indices of sorted values (result of np.argsort) and groups, accumulate group rank
+    sums in the placegolder `ranksums`.
 
     Args:
         arr (np.ndarray): Array of non sorted values
@@ -22,6 +21,7 @@ def _accumulate_group_ranksums_from_argsort(
         np.ndarray: tie sums
 
     Author: Rémy Dubois
+
     """
     # if ranks is None:
     #     ranks = np.empty(arr.size, dtype=np.float64)
@@ -68,6 +68,7 @@ def rank_sum_and_ties_from_sorted(A: np.ndarray, B: np.ndarray) -> tuple[np.ndar
         arrays.
 
     Author: Rémy Dubois
+
     """
     nA = len(A)
     nB = len(B)
@@ -166,6 +167,7 @@ def _sort_csc_columns_inplace(csc_matrix: CSCMatrix) -> None:
         csc_matrix (CSCMatrix): Input CSC matrix.
 
     Author: Rémy Dubois
+
     """
     _assert_is_csc(csc_matrix)
     for j in range(csc_matrix.shape[1]):
@@ -184,6 +186,7 @@ def sort_along_axis(X: np.ndarray, axis: int = 0) -> np.ndarray:
         np.ndarray: Sorted array.
 
     Author: Rémy Dubois
+
     """
     sorted_X = np.empty_like(X)
     if axis == 0:
@@ -209,6 +212,7 @@ def _sort_along_axis_inplace(X: np.ndarray, axis: int = 0) -> np.ndarray:
         np.ndarray: Sorted array.
 
     Author: Rémy Dubois
+
     """
     if axis == 0:
         for j in range(X.shape[1]):
@@ -235,6 +239,7 @@ def check_if_sorted(arr: np.ndarray) -> bool:
         If sorted or not.
 
     Author: Rémy Dubois
+
     """
     for i in range(1, arr.size):
         if arr[i] < arr[i - 1]:
@@ -263,6 +268,7 @@ def check_indices_sorted_per_parcel(
     -------
     bool
         True if all indices subarrays are sorted. False otherwise.
+
     """
     is_sorted = np.empty(indptr.size - 1, dtype=np.bool_)
     for k in prange(indptr.size - 1):

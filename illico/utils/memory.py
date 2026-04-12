@@ -21,6 +21,7 @@ def log_memory_usage(data_handler, grpc: GroupContainer, batch_size: int, n_thre
         Number of threads used for processing genes
 
     Author: Rémy Dubois
+
     """
     X = data_handler.data
     data_handler = data_handler_registry.get(X)

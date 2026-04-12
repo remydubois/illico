@@ -1,9 +1,8 @@
-use crate::csr::csr_fold_change;
 use crate::groups::{GroupContainer, GroupContainerNamedTuple};
+use crate::math::fold_change_from_summed_expr;
 use crate::ranking::rank_sum_and_ties;
 use crate::sparse::types::{
-    CSCMatrix, CSRMatrix, OwnedCSCMatrix, OwnedCSRMatrix, PyCSCMatrix, PyCSRMatrix, SparseFloat,
-    SparseIndex,
+    CSCMatrix, CSRMatrix, OwnedCSCMatrix, PyCSCMatrix, PyCSRMatrix, SparseFloat, SparseIndex,
 };
 use crate::stats::compute_pvalue;
 use ndarray::prelude::*;
@@ -85,13 +84,19 @@ pub fn single_group_sparse_ovo_mwu_kernel<D: SparseFloat, I: SparseIndex>(
     Ok(())
 }
 
-pub fn multigroup_sparse_ovo_mwu_kernel<D: SparseFloat, I: SparseIndex>(
-    x: &OwnedCSRMatrix<D, I>,
-    grpc: &GroupContainer,
+pub fn csc_ovo_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: SparseIndex>(
+    x: &'py CSCMatrix<'py, D, I>,
+    grpc: GroupContainer,
+    chunk_lb: usize,
+    chunk_ub: usize,
+    is_log1p: bool,
     use_continuity: bool,
     tie_correct: bool,
+    exp_post_agg: bool,
     alternative: String,
-) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>), String> {
+) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f64>), String> {
+    let chunk = x.contig_cols_into_csr(chunk_lb, chunk_ub)?;
+
     if grpc.encoded_ref_group < 0 {
         return Err(format!(
             "Encoded ref group can not be negative. Received {}.",
@@ -103,25 +108,35 @@ pub fn multigroup_sparse_ovo_mwu_kernel<D: SparseFloat, I: SparseIndex>(
     let start = grpc.indptr[encoded_ref_group];
     let end = grpc.indptr[encoded_ref_group + 1];
     let control_indices = grpc.indices.slice(s![start..end]);
-    let mut control_chunk = x.index_rows_into_csc(control_indices)?;
+    let mut control_chunk = chunk.index_rows_into_csc(control_indices)?;
     control_chunk.sort_columns_inplace()?;
 
+    // Allocate result arrays
     let n_groups = grpc.counts.len();
-    let mut pvalues = Array2::zeros((n_groups, x.shape.1));
-    let mut u_stats = Array2::zeros((n_groups, x.shape.1));
-    let mut zscores = Array2::zeros((n_groups, x.shape.1));
+    let mut agg_count = Array2::<D>::zeros((n_groups, control_chunk.shape.1));
+    let mut pvalues = Array2::zeros((n_groups, control_chunk.shape.1));
+    let mut u_stats = Array2::zeros((n_groups, control_chunk.shape.1));
+    let mut zscores = Array2::zeros((n_groups, control_chunk.shape.1));
     for group_idx in 0..n_groups {
         if group_idx == encoded_ref_group {
             pvalues.row_mut(group_idx).fill(1.);
             u_stats.row_mut(group_idx).fill(-1.);
             zscores.row_mut(group_idx).fill(0.);
+            agg_count
+                .row_mut(group_idx)
+                .assign(&control_chunk.sum_axis0(is_log1p & !exp_post_agg)?);
         } else {
             // Chunk the target
             let start = grpc.indptr[group_idx as usize];
             let end = grpc.indptr[group_idx as usize + 1];
             let tgt_indices = grpc.indices.slice(s![start..end]);
-            let mut tgt_chunk = x.index_rows_into_csc(tgt_indices)?;
+            let mut tgt_chunk = chunk.index_rows_into_csc(tgt_indices)?;
             tgt_chunk.sort_columns_inplace()?;
+
+            // Aggregate counts
+            agg_count
+                .row_mut(group_idx)
+                .assign(&tgt_chunk.sum_axis0(is_log1p & !exp_post_agg)?);
 
             // Now compute p-values and u-stats
             _ = single_group_sparse_ovo_mwu_kernel(
@@ -136,27 +151,13 @@ pub fn multigroup_sparse_ovo_mwu_kernel<D: SparseFloat, I: SparseIndex>(
             )?;
         }
     }
-
-    Ok((pvalues, u_stats, zscores))
-}
-
-pub fn csc_ovo_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: SparseIndex>(
-    x: &'py CSCMatrix<'py, D, I>,
-    grpc: GroupContainer,
-    chunk_lb: usize,
-    chunk_ub: usize,
-    is_log1p: bool,
-    use_continuity: bool,
-    tie_correct: bool,
-    exp_post_agg: bool,
-    alternative: String,
-) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f32>), String> {
-    let chunk = x.contig_cols_into_csr(chunk_lb, chunk_ub)?;
-
-    let (pvalues, u_stats, zscores) =
-        multigroup_sparse_ovo_mwu_kernel(&chunk, &grpc, use_continuity, tie_correct, alternative)?;
-
-    let fc = csr_fold_change(&chunk, &grpc, is_log1p, exp_post_agg)?;
+    // Kind of ugly to force conversion here, but for now fold_change_from_summed_expr only accepts f32.
+    // TODO: this could take D
+    let fc = fold_change_from_summed_expr(
+        agg_count.map(|&x| x.to_f64()),
+        &grpc,
+        is_log1p & exp_post_agg,
+    )?;
 
     Ok((pvalues, u_stats, zscores, fc))
 }
@@ -171,13 +172,71 @@ pub fn csr_ovo_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: Spar
     tie_correct: bool,
     exp_post_agg: bool,
     alternative: String,
-) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f32>), String> {
-    let chunk = x.contig_cols_into_csr(chunk_lb, chunk_ub)?;
+) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f64>), String> {
+    if grpc.encoded_ref_group < 0 {
+        return Err(format!(
+            "Encoded ref group can not be negative. Received {}.",
+            grpc.encoded_ref_group
+        ));
+    }
+    let encoded_ref_group = grpc.encoded_ref_group as usize;
+    // chunk control cells
+    let start = grpc.indptr[encoded_ref_group];
+    let end = grpc.indptr[encoded_ref_group + 1];
+    let control_indices = grpc.indices.slice(s![start..end]);
+    let mut control_chunk =
+        x.index_rows_contig_cols_into_csc(chunk_lb, chunk_ub, control_indices)?;
+    control_chunk.sort_columns_inplace()?;
 
-    let (pvalues, u_stats, zscores) =
-        multigroup_sparse_ovo_mwu_kernel(&chunk, &grpc, use_continuity, tie_correct, alternative)?;
+    // Allocate result arrays
+    let n_groups = grpc.counts.len();
+    let mut agg_count = Array2::<D>::zeros((n_groups, control_chunk.shape.1));
+    let mut pvalues = Array2::zeros((n_groups, control_chunk.shape.1));
+    let mut u_stats = Array2::zeros((n_groups, control_chunk.shape.1));
+    let mut zscores = Array2::zeros((n_groups, control_chunk.shape.1));
+    for group_idx in 0..n_groups {
+        if group_idx == encoded_ref_group {
+            pvalues.row_mut(group_idx).fill(1.);
+            u_stats.row_mut(group_idx).fill(-1.);
+            zscores.row_mut(group_idx).fill(0.);
+            // agg_count[group_idx] = control_chunk.sum_axis0()?;
+            agg_count
+                .row_mut(group_idx)
+                .assign(&control_chunk.sum_axis0(is_log1p & !exp_post_agg)?);
+        } else {
+            // Chunk the target
+            let start = grpc.indptr[group_idx as usize];
+            let end = grpc.indptr[group_idx as usize + 1];
+            let tgt_indices = grpc.indices.slice(s![start..end]);
+            let mut tgt_chunk =
+                x.index_rows_contig_cols_into_csc(chunk_lb, chunk_ub, tgt_indices)?;
+            tgt_chunk.sort_columns_inplace()?;
 
-    let fc = csr_fold_change(&chunk, &grpc, is_log1p, exp_post_agg)?;
+            // Aggregate counts
+            agg_count
+                .row_mut(group_idx)
+                .assign(&tgt_chunk.sum_axis0(is_log1p & !exp_post_agg)?);
+
+            // Now compute p-values and u-stats
+            _ = single_group_sparse_ovo_mwu_kernel(
+                &control_chunk,
+                tgt_chunk,
+                use_continuity,
+                tie_correct,
+                &alternative,
+                pvalues.row_mut(group_idx),
+                u_stats.row_mut(group_idx),
+                zscores.row_mut(group_idx),
+            )?;
+        }
+    }
+    // Kind of ugly to force conversion here, but for now fold_change_from_summed_expr only accepts f32.
+    // TODO: this could take D
+    let fc = fold_change_from_summed_expr(
+        agg_count.map(|&x| x.to_f64()),
+        &grpc,
+        is_log1p & exp_post_agg,
+    )?;
 
     Ok((pvalues, u_stats, zscores, fc))
 }
@@ -251,7 +310,7 @@ pub fn csr_ovo_mwu_kernel_over_contiguous_col_chunk_rust<'py>(
     PyArr2f64<'py>,
     PyArr2f64<'py>,
     PyArr2f64<'py>,
-    PyArr2f32<'py>,
+    PyArr2f64<'py>,
 )> {
     let grpc = grpc.as_group_container();
 
@@ -301,7 +360,7 @@ pub fn csc_ovo_mwu_kernel_over_contiguous_col_chunk_rust<'py>(
     PyArr2f64<'py>,
     PyArr2f64<'py>,
     PyArr2f64<'py>,
-    PyArr2f32<'py>,
+    PyArr2f64<'py>,
 )> {
     let grpc = grpc.as_group_container();
 

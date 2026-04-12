@@ -37,3 +37,6 @@ jobs:
     - name: Test with tox
       run: |
         python -m tox -e unit-tests
+    - name: docformatter
+      run: |
+        poetry run docformatter --check --recursive illico tests

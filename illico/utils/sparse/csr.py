@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import namedtuple
 from typing import Any
 
 import numpy as np
@@ -13,9 +12,7 @@ from illico.utils.math import (
     diff,
     fold_change_from_summed_expr,
 )
-
-CSCMatrix = namedtuple("CSCMatrix", ["data", "indices", "indptr", "shape"])
-CSRMatrix = namedtuple("CSRMatrix", ["data", "indices", "indptr", "shape"])
+from illico.utils.sparse.types import CSCMatrix, CSRMatrix
 
 
 @njit(nogil=True, cache=False)
@@ -26,6 +23,7 @@ def _assert_is_csr(matrix: Any) -> None:
         matrix: Input matrix to check.
 
     Author: Rémy Dubois
+
     """
     try:
         n_parcels = matrix.indptr.size - 1
@@ -50,6 +48,7 @@ def csr_count_nonzeros(csr_matrix: CSRMatrix, axis: int | None = None) -> np.nda
         np.ndarray: Number of non-zero values, always a 1-d array for compilation purposes.
 
     Author: Rémy Dubois
+
     """
     if axis is None:
         nnz = np.empty((1,), dtype=np.int32)
@@ -67,22 +66,27 @@ def csr_count_nonzeros(csr_matrix: CSRMatrix, axis: int | None = None) -> np.nda
 
 
 @njit(nogil=True, fastmath=True, cache=False)
-def csr_to_csc(csr_matrix: CSRMatrix) -> CSCMatrix:
+def csr_to_csc(csr_matrix: CSRMatrix, include_indices: bool = True) -> CSCMatrix:
     """Convert a CSR matrix to CSC.
 
     Args:
         csr_matrix (CSRMatrix): Input CSR matrix
+        include_indices (bool, optional): Whether to include indices in the resulting CSC matrix. If False, the `indices` array of the resulting CSC matrix will be filled with zeros. Defaults to True.
 
     Returns:
         CSCMatrix: The resulting CSC matrix.
 
     Author: Rémy Dubois
+
     """
     nnz = csr_matrix.data.size
 
     # Allocate placeholders
     csc_indptr = np.zeros(csr_matrix.shape[1] + 1, dtype=csr_matrix.indptr.dtype)
-    csc_indices = np.empty(nnz, dtype=csr_matrix.indices.dtype)
+    if include_indices:
+        csc_indices = np.empty(nnz, dtype=csr_matrix.indices.dtype)
+    else:
+        csc_indices = np.zeros(0, dtype=csr_matrix.indices.dtype)
     csc_data = np.empty(nnz, dtype=csr_matrix.data.dtype)
 
     # Pass 1: count number of entries per column
@@ -96,7 +100,8 @@ def csr_to_csc(csr_matrix: CSRMatrix) -> CSCMatrix:
         for idx in range(row_start, row_end):
             col = csr_matrix.indices[idx]
             dest = next_col[col]
-            csc_indices[dest] = row
+            if include_indices:
+                csc_indices[dest] = row
             csc_data[dest] = csr_matrix.data[idx]
             next_col[col] += 1
     return CSCMatrix(csc_data, csc_indices, csc_indptr, csr_matrix.shape)
@@ -116,6 +121,7 @@ def csr_get_rows_into_csc(csr_matrix: CSRMatrix, indices: np.ndarray) -> CSCMatr
         CSCMatrix: The resulting CSC matrix holding data of the sliced rows.
 
     Author: Rémy Dubois
+
     """
     # Count non zeros per col
     csc_nnz = np.zeros(csr_matrix.shape[1], dtype=np.int64)
@@ -159,6 +165,7 @@ def csr_get_contig_cols_into_csr(csr_matrix: CSRMatrix, lb: int, ub: int) -> CSR
         CSRMatrix: The CSR matrix holding data of the sliced columns.
 
     Author: Rémy Dubois
+
     """
     if lb < 0 or ub > csr_matrix.shape[1] or lb > ub:
         raise ValueError((lb, ub))
@@ -214,6 +221,7 @@ def csr_get_contig_cols_into_csc(csr_matrix: CSRMatrix, chunk_lb: int, chunk_ub:
         CSCMatrix: The CSC matrix holding data of the sliced columns.
 
     Author: Rémy Dubois
+
     """
 
     if chunk_lb < 0 or chunk_ub > csr_matrix.shape[1] or chunk_lb > chunk_ub:
@@ -259,6 +267,67 @@ def csr_get_contig_cols_into_csc(csr_matrix: CSRMatrix, chunk_lb: int, chunk_ub:
     )
 
 
+@njit(nogil=True, fastmath=True, cache=False)
+def csr_get_rows_contig_cols_into_csc(
+    csr_matrix: CSRMatrix,
+    chunk_lb: int,
+    chunk_ub: int,
+    indices: np.ndarray,
+) -> CSCMatrix:
+    """Perform row slicing and contiguous column slicing of a CSR matrix into a CSC matrix.
+
+    Equivalent of `scipy.sparse.csr_matrix[indices, chunk_lb:chunk_ub].tocsc()`.
+
+    Args:
+        csr_matrix (CSRMatrix): Input CSR matrix.
+        chunk_lb (int): Lower bound of the contiguous column slice.
+        chunk_ub (int): Upper bound of the contiguous column slice.
+        indices (np.ndarray): Indices of rows to select.
+
+    Raises:
+        ValueError: If column bounds are not intelligible.
+
+    Returns:
+        CSCMatrix: The CSC matrix holding data of the sliced chunk.
+
+    Author: Rémy Dubois
+
+    """
+    if chunk_lb < 0 or chunk_ub > csr_matrix.shape[1] or chunk_lb > chunk_ub:
+        raise ValueError((chunk_lb, chunk_ub))
+
+    # Pass 1: count non-zeros per output column and store per-row bounds.
+    csc_nnz = np.zeros(chunk_ub - chunk_lb, dtype=csr_matrix.indptr.dtype)
+    bounds = np.empty((indices.size, 2), dtype=np.int64)
+    for i in range(indices.size):
+        row_idx = indices[i]
+        start, end = csr_matrix.indptr[row_idx], csr_matrix.indptr[row_idx + 1]
+        cb, rb = np.searchsorted(csr_matrix.indices[start:end], [chunk_lb, chunk_ub])
+        bounds[i, 0] = cb
+        bounds[i, 1] = rb
+        for j in range(start + cb, start + rb):
+            csc_nnz[csr_matrix.indices[j] - chunk_lb] += 1
+
+    csc_indptr = np.cumsum(np.roll(np.append(csc_nnz, 0), 1)).astype(csr_matrix.indptr.dtype)
+
+    # Pass 2: fill CSC buffers.
+    new_data = np.empty(csc_indptr[-1], dtype=csr_matrix.data.dtype)
+    new_indices = np.empty(csc_indptr[-1], dtype=csr_matrix.indices.dtype)
+    pointer = csc_indptr[:-1].copy()
+    for i in range(indices.size):
+        row_idx = indices[i]
+        start, _ = csr_matrix.indptr[row_idx], csr_matrix.indptr[row_idx + 1]
+        cb, rb = bounds[i, 0], bounds[i, 1]
+        for j in range(start + cb, start + rb):
+            col_idx = csr_matrix.indices[j] - chunk_lb
+            ph_idx = pointer[col_idx]
+            new_data[ph_idx] = csr_matrix.data[j]
+            new_indices[ph_idx] = i
+            pointer[col_idx] += 1
+
+    return CSCMatrix(new_data, new_indices, csc_indptr, (indices.size, chunk_ub - chunk_lb))
+
+
 # TODO: move this in the same file as its subroutines, so that caching as no risk of staling
 @njit(nogil=True, fastmath=True, cache=False)
 def csr_fold_change(X: CSRMatrix, grpc: GroupContainer, is_log1p: bool, exp_post_agg: bool = False) -> np.ndarray:
@@ -274,6 +343,7 @@ def csr_fold_change(X: CSRMatrix, grpc: GroupContainer, is_log1p: bool, exp_post
         np.ndarray: Fold change of change (n_groups, n_genes)
 
     Author: Rémy Dubois
+
     """
     _assert_is_csr(X)
     group_agg_counts = np.zeros(shape=(grpc.counts.size, X.shape[1]), dtype=np.float64)
@@ -290,3 +360,31 @@ def csr_fold_change(X: CSRMatrix, grpc: GroupContainer, is_log1p: bool, exp_post
         _add_at_vec(group_agg_counts[group_id], col_indices, row_data)
     fold_change = fold_change_from_summed_expr(group_agg_counts, grpc, exp_post_agg & is_log1p)
     return fold_change
+
+
+@njit(nogil=True, fastmath=True, cache=False)
+def csr_sum_along_cols(csr_matrix: CSRMatrix, out: np.ndarray | None = None, expm1: bool = False) -> np.ndarray:
+    """Sum values along columns of a CSR matrix.
+
+    Args:
+        csr_matrix (CSRMatrix): Input CSR matrix
+        out (np.ndarray | None, optional): Optional pre-allocated array to store the result. If None, a new array will be allocated. Defaults to None.
+        expm1 (bool, optional): Whether to apply `expm1` to the values before summing. Defaults to False.
+
+    Returns:
+        np.ndarray: Sum along columns.
+
+    """
+    if out is None:
+        out = np.zeros(csr_matrix.shape[1], dtype=csr_matrix.data.dtype)
+    for i in range(csr_matrix.shape[0]):
+        start = csr_matrix.indptr[i]
+        end = csr_matrix.indptr[i + 1]
+        col_indices = csr_matrix.indices[start:end]
+        if expm1:
+            row_data = np.expm1(csr_matrix.data[start:end])
+        else:
+            row_data = csr_matrix.data[start:end]
+
+        _add_at_vec(out, col_indices, row_data)
+    return out

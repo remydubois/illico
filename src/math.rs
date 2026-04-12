@@ -138,12 +138,12 @@ pub fn add_at_vec_rust(
 }
 
 pub fn fold_change_from_summed_expr(
-    summed_x: Array2<f32>,
+    summed_x: Array2<f64>,
     grpc: &GroupContainer,
     exp_post_agg: bool,
-) -> Result<Array2<f32>, String> {
+) -> Result<Array2<f64>, String> {
     // Convert and unsqueeze the counts
-    let counts = grpc.counts.map(|x| *x as f32).insert_axis(Axis(1)); // (#groups, 1)
+    let counts = grpc.counts.map(|x| *x as f64).insert_axis(Axis(1)); // (#groups, 1)
     let mu_tgt = &summed_x / &counts;
     // Idk how to avoid repeating the if exp_post_agg else syntax
     if grpc.encoded_ref_group == -1 {
@@ -154,9 +154,9 @@ pub fn fold_change_from_summed_expr(
         let mu_ctrl = ctrl_sum / other_count;
         // println!("Mu ctrl: {:?}", mu_ctrl);
         if exp_post_agg {
-            return Ok(mu_tgt.exp_m1().map(|&x| x as f32) / mu_ctrl.exp_m1().map(|&x| x as f32));
+            return Ok((mu_tgt.exp_m1() + 1e-9) / (mu_ctrl.exp_m1() + 1e-9));
         } else {
-            return Ok(mu_tgt / mu_ctrl);
+            return Ok((mu_tgt + 1e-9) / (mu_ctrl + 1e-9));
         }
     } else {
         if grpc.encoded_ref_group < 0 {
@@ -169,9 +169,9 @@ pub fn fold_change_from_summed_expr(
             .row(grpc.encoded_ref_group as usize)
             .insert_axis(Axis(0));
         if exp_post_agg {
-            return Ok(&mu_tgt.exp_m1() / &mu_ctrl.exp_m1());
+            return Ok((mu_tgt.exp_m1() + 1e-9) / (mu_ctrl.exp_m1() + 1e-9));
         } else {
-            return Ok(&mu_tgt / &mu_ctrl);
+            return Ok((&mu_tgt + 1e-9) / (&mu_ctrl + 1e-9));
         }
     }
 }
@@ -179,10 +179,10 @@ pub fn fold_change_from_summed_expr(
 #[pyfunction]
 pub fn fold_change_from_summed_expr_rust<'py>(
     py: Python<'py>,
-    summed_x: PyReadonlyArray2<'py, f32>,
+    summed_x: PyReadonlyArray2<'py, f64>,
     grpc: GroupContainerNamedTuple<'py>,
     exp_post_agg: bool,
-) -> PyResult<Bound<'py, PyArray2<f32>>> {
+) -> PyResult<Bound<'py, PyArray2<f64>>> {
     let x = summed_x.as_array().to_owned();
     let grpc = grpc.as_group_container();
     let fc = fold_change_from_summed_expr(x, &grpc, exp_post_agg).map_err(PyValueError::new_err)?;
@@ -194,9 +194,9 @@ pub fn dense_fold_change<D: SparseFloat>(
     grpc: &GroupContainer,
     is_log1p: bool,
     exp_post_agg: bool,
-) -> Result<Array2<f32>, String> {
+) -> Result<Array2<f64>, String> {
     let n_groups = grpc.counts.len();
-    let mut group_agg_counts = Array2::<f32>::zeros((n_groups, x.dim().1));
+    let mut group_agg_counts = Array2::<f64>::zeros((n_groups, x.dim().1));
 
     let row_indexer = grpc.encoded_groups;
     // Check on the row indices to catch out of bounds
@@ -220,7 +220,7 @@ pub fn dense_fold_change<D: SparseFloat>(
             let mut row = group_agg_counts.row_mut(grpc.encoded_groups[i]);
             // row += &x.row(i).exp_m1();
             for j in 0..x.dim().1 {
-                row[j] += x[[i, j]].to_f32().exp_m1()
+                row[j] += x[[i, j]].to_f64().exp_m1()
             }
         }
     } else {
@@ -228,7 +228,7 @@ pub fn dense_fold_change<D: SparseFloat>(
             let mut row = group_agg_counts.row_mut(grpc.encoded_groups[i]);
             // row += &x.row(i);
             for j in 0..x.dim().1 {
-                row[j] += x[[i, j]].to_f32()
+                row[j] += x[[i, j]].to_f64()
             }
         }
     }
@@ -242,11 +242,11 @@ pub fn dense_fold_change<D: SparseFloat>(
 #[pyfunction]
 pub fn dense_fold_change_rust<'py>(
     py: Python<'py>,
-    x: PyReadonlyArray2<'py, f32>,
+    x: PyReadonlyArray2<'py, f64>,
     grpc: GroupContainerNamedTuple<'py>,
     is_log1p: bool,
     exp_post_agg: bool,
-) -> PyResult<Bound<'py, PyArray2<f32>>> {
+) -> PyResult<Bound<'py, PyArray2<f64>>> {
     let x = x.as_array();
     let grpc = grpc.as_group_container();
     let fc = dense_fold_change(x, &grpc, is_log1p, exp_post_agg).map_err(PyValueError::new_err)?;

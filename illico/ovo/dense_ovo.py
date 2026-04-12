@@ -33,6 +33,7 @@ def dense_ovo_mwu_kernel(
         tuple[np.ndarray]: two-sided p-values, U-statistics, z-scores. Each of shape (n_genes,).
 
     Author: Rémy Dubois
+
     """
     n_ref, ncols = sorted_ref_data.shape
     n_tgt, _ = sorted_tgt_data.shape
@@ -107,6 +108,7 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
         of shape (n_groups, chunk_ub - chunk_lb).
 
     Author: Rémy Dubois
+
     """
     chunk = X[:, chunk_lb:chunk_ub]
     n_groups = grpc.counts.size

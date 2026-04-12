@@ -1,6 +1,6 @@
 [project]
 name = "illico"
-version = "0.4.0"
+version = "0.5.0rc1"
 description = "Fast asymptotic mannwhitney-u test"
 authors = [
     {name = "remydubois",email = "remydubois14@gmail.com"}
@@ -42,6 +42,7 @@ dev = [
     "memray (>=1.19.1,<2.0.0)",
     "pdex (>=0.2.0)",
     "ipdb (>=0.13.13,<0.14.0)",
+    "tomli (>=2.4.1,<3.0.0)",
 ]
 doc = [
     "Sphinx>=5.0",
@@ -51,6 +52,13 @@ doc = [
 
 [tool.black]
 line-length = 120
+
+[tool.docformatter]
+recursive = true
+wrap-summaries = 120
+wrap-descriptions = 120
+force-wrap = false
+blank = true
 
 [tool.isort]
 profile = "black"

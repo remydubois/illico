@@ -21,6 +21,7 @@ def _add_at_scalar(a: np.ndarray, b: np.ndarray, c: float | int) -> None:
         c (float | int): Scalar value to accumulate in `a` at `indices`.
 
     Author: Rémy Dubois
+
     """
     for i in range(len(b)):
         a[b[i]] += c
@@ -36,6 +37,7 @@ def _add_at_vec(a: np.ndarray, b: np.ndarray, c: float | int) -> None:
         c (float | int): Vector holding value to accumulate in `a` at `indices`.
 
     Author: Rémy Dubois
+
     """
     for i in range(len(b)):
         a[b[i]] += c[i]
@@ -55,6 +57,7 @@ def diff(x: np.ndarray) -> np.ndarray:
         np.ndarray: Results diff array, of size x.size - 1.
 
     Author: Rémy Dubois
+
     """
     assert x.ndim == 1
     result = np.empty(x.size - 1, dtype=x.dtype)
@@ -93,6 +96,7 @@ def compute_pval(
         tuple[float]: P-value and z-score
 
     Author: Rémy Dubois
+
     """
     tie_corr = 1.0 - tie_sum / (n * (n - 1) * (n + 1))
     if tie_corr > 1.0e-9:  # TODO: do that properly
@@ -142,6 +146,7 @@ def _warn_log1p(X: np.ndarray | sc_sparse.spmatrix, is_log1p: bool, sample_size:
         ValueError: If data is neither sparse nor dense.
 
     Author: Rémy Dubois
+
     """
     if isinstance(X, sc_sparse.spmatrix):
         data = X.data
@@ -179,6 +184,7 @@ def fold_change_from_summed_expr(group_agg_counts: np.ndarray, grpc: GroupContai
         np.ndarray: Fold change values of shape (n_groups, n_genes)
 
     Author: Rémy Dubois
+
     """
     assert group_agg_counts.shape[0] == grpc.counts.size
     assert group_agg_counts.ndim == 2
@@ -193,9 +199,9 @@ def fold_change_from_summed_expr(group_agg_counts: np.ndarray, grpc: GroupContai
         mu_ref = np.expand_dims(mu_tgt[grpc.encoded_ref_group], 0)  # (1, n_genes)
 
     if exp_post_agg:
-        fold_change = np.where(mu_ref == 0, np.inf, np.expm1(mu_tgt) / np.expm1(mu_ref))
+        fold_change = (np.expm1(mu_tgt) + 1e-9) / (np.expm1(mu_ref) + 1e-9)
     else:
-        fold_change = np.where(mu_ref == 0, np.inf, mu_tgt / mu_ref)
+        fold_change = (mu_tgt + 1e-9) / (mu_ref + 1e-9)
 
     return fold_change
 
@@ -214,6 +220,7 @@ def dense_fold_change(X: np.ndarray, grpc: GroupContainer, is_log1p: bool, exp_p
         np.ndarray: Fold change values of shape (n_groups, n_genes)
 
     Author: Rémy Dubois
+
     """
     group_agg_counts = np.zeros(shape=(grpc.counts.size, X.shape[1]), dtype=np.float64)
     # Sum expressions per group
@@ -236,6 +243,7 @@ def compute_sparsity(X: np.ndarray | sc_sparse.spmatrix) -> float:
         float: Sparsity (fraction of zero elements)
 
     Author: Rémy Dubois
+
     """
     if isinstance(X, sc_sparse.spmatrix):
         n_elements = X.shape[0] * X.shape[1]
@@ -268,6 +276,7 @@ def chunk_and_fortranize(X: np.ndarray, chunk_lb: int, chunk_ub: int, indices: n
         np.ndarray: Chunked Fortran-contiguous array with reordered rows.
 
     Author: Rémy Dubois
+
     """
     # Now just fill it by making groups contiguous vertically, this will speed up sorting later on.
     if indices is not None:
@@ -284,9 +293,9 @@ def chunk_and_fortranize(X: np.ndarray, chunk_lb: int, chunk_ub: int, indices: n
 
 
 def compute_batch_bounds(n_genes: int, batch_size: Literal["auto"] | int, n_threads: int) -> List[Tuple[int, int]]:
-    """Computes ideal batch bounds for processing genes in batches.
-    This function ensures no worker is starving. This could happen if we have 8 workers but 9 batches to allocate.
-    In this case, because each batch takes the same time to be processed, all but one workers will be idle waiting for one worker to process the last batch.
+    """Computes ideal batch bounds for processing genes in batches. This function ensures no worker is starving. This
+    could happen if we have 8 workers but 9 batches to allocate. In this case, because each batch takes the same time to
+    be processed, all but one workers will be idle waiting for one worker to process the last batch.
 
     Args:
         n_genes (int): Total number of genes
@@ -294,6 +303,7 @@ def compute_batch_bounds(n_genes: int, batch_size: Literal["auto"] | int, n_thre
         n_threads (int): Number of threads to use.
     Returns:
         List[Tuple[int, int]]: List of (lower_bound, upper_bound) for each batch. Upper bound is excluding, following slicing conventions.
+
     """
     # No batching nor multithreading for small inputs
     if n_genes < n_threads or n_genes < 256:

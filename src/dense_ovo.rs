@@ -94,7 +94,7 @@ pub fn dense_ovo_over_contiguous_col_chunk<D: SparseFloat>(
     tie_correct: bool,
     exp_post_agg: bool,
     alternative: &String,
-) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f32>), String> {
+) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f64>), String> {
     if chunk_lb >= chunk_ub {
         return Err(format!(
             "Chunking error: lower bound ({}) is not smaller than upper bound ({}).",
@@ -205,7 +205,7 @@ pub fn dense_ovo_over_contiguous_col_chunk_rust<'py>(
     PyArr2<'py>,
     PyArr2<'py>,
     PyArr2<'py>,
-    Bound<'py, PyArray2<f32>>,
+    PyArr2<'py>,
 )> {
     let grpc = grpc.as_group_container();
     // let x = x.as_array();

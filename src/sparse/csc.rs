@@ -151,12 +151,28 @@ impl<'py, D: SparseFloat, I: SparseIndex> CSCMatrix<'py, D, I> {
     }
 }
 
+impl<I: SparseIndex, D: SparseFloat> OwnedCSCMatrix<D, I> {
+    pub fn sum_axis0(&self, expm1: bool) -> Result<Array1<D>, String> {
+        let mut out = Array1::<D>::zeros(self.shape.1);
+        for j in 0..self.shape.1 {
+            let start = self.indptr[j].to_usize();
+            let end = self.indptr[j + 1].to_usize();
+            if !expm1 {
+                out[j] = self.data.slice(s![start..end]).sum();
+            } else {
+                out[j] = self.data.slice(s![start..end]).exp_m1().sum();
+            }
+        }
+        Ok(out)
+    }
+}
+
 pub fn csc_fold_change<D: SparseFloat, I: SparseIndex>(
     x: &OwnedCSCMatrix<D, I>,
     grpc: &GroupContainer,
     is_log1p: bool,
     exp_post_agg: bool,
-) -> Result<Array2<f32>, String> {
+) -> Result<Array2<f64>, String> {
     let mut summed_expr = Array2::zeros((grpc.counts.len(), x.shape.1));
 
     for j in 0..x.shape.1 {
@@ -167,9 +183,9 @@ pub fn csc_fold_change<D: SparseFloat, I: SparseIndex>(
             let group_idx = grpc.encoded_groups[row_idx];
             let val = x.data[i].to_f32();
             summed_expr[[group_idx, j]] += if is_log1p && !exp_post_agg {
-                val.exp_m1()
+                val.exp_m1() as f64
             } else {
-                val
+                val as f64
             };
         }
     }

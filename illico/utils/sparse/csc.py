@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import namedtuple
 from typing import Any
 
 import numpy as np
@@ -8,9 +7,7 @@ from numba import njit
 
 from illico.utils.groups import GroupContainer
 from illico.utils.math import _add_at_scalar, _add_at_vec, fold_change_from_summed_expr
-
-CSCMatrix = namedtuple("CSCMatrix", ["data", "indices", "indptr", "shape"])
-CSRMatrix = namedtuple("CSRMatrix", ["data", "indices", "indptr", "shape"])
+from illico.utils.sparse.types import CSCMatrix, CSRMatrix
 
 
 @njit(nogil=True, cache=False)
@@ -21,6 +18,7 @@ def _assert_is_csc(matrix: Any) -> None:
         obj Any: The matrix to check.
 
     Author: Rémy Dubois
+
     """
     try:
         n_parcels = matrix.indptr.size - 1
@@ -45,6 +43,7 @@ def csc_count_nonzeros(csc_matrix: CSCMatrix, axis: int | None = None) -> np.nda
         np.ndarray: Number of non-zero values, always a 1-d array for compilation purposes.
 
     Author: Rémy Dubois
+
     """
     if axis is None:
         nnz = np.empty((1,), dtype=np.int32)
@@ -75,6 +74,7 @@ def csc_to_csr(csc_matrix: CSCMatrix) -> CSRMatrix:
         CSRMatrix: The resulting CSR matrix.
 
     Author: Rémy Dubois
+
     """
     nnz = csc_matrix.data.size
     csr_indptr = np.zeros(csc_matrix.shape[0] + 1, dtype=csc_matrix.indptr.dtype)
@@ -115,6 +115,7 @@ def csc_get_cols(csc_matrix: CSCMatrix, indices: np.ndarray) -> CSCMatrix:
         CSCMatrix: The resulting (sliced) CSC matrix
 
     Author: Rémy Dubois
+
     """
     if indices.min() < 0 or indices.max() > csc_matrix.shape[0]:
         raise ValueError(indices.min(), indices.max())
@@ -156,6 +157,7 @@ def csc_get_contig_cols_into_csr(csc_matrix: CSCMatrix, chunk_lb: int, chunk_ub:
         CSRMatrix: Resulting CSR matrix
 
     Author: Rémy Dubois
+
     """
     if chunk_lb < 0 or chunk_ub > csc_matrix.shape[1] or chunk_lb > chunk_ub:
         raise ValueError((chunk_lb, chunk_ub))
@@ -199,6 +201,7 @@ def csc_fold_change(X: CSCMatrix, grpc: GroupContainer, is_log1p: bool, exp_post
         np.ndarray: Fold change of change (n_groups, n_genes)
 
     Author: Rémy Dubois
+
     """
     _assert_is_csc(X)
     group_agg_counts = np.zeros(shape=(grpc.counts.size, X.shape[1]), dtype=np.float64)
@@ -215,3 +218,36 @@ def csc_fold_change(X: CSCMatrix, grpc: GroupContainer, is_log1p: bool, exp_post
         _add_at_vec(group_agg_counts[:, j], group_id, row_data)
     fold_change = fold_change_from_summed_expr(group_agg_counts, grpc, exp_post_agg=exp_post_agg & is_log1p)
     return fold_change
+
+
+@njit(nogil=True, fastmath=True, cache=False)
+def csc_sum_axis0(csc_matrix: CSCMatrix, expm1: bool = False) -> np.ndarray:
+    """Sum a CSC matrix along axis 0.
+
+    Equivalent of scipy.sparse.csc_matrix.sum(axis=0) (returned as a 1-d array).
+
+    Args:
+        csc_matrix (CSCMatrix): Input CSC matrix.
+        expm1 (bool, optional): Whether to apply expm1 to values before summing.
+
+    Returns:
+        np.ndarray: Column-wise sums.
+
+    Author: Remy Dubois
+
+    """
+    summed = np.zeros(csc_matrix.shape[1], dtype=np.float64)
+    for j in range(csc_matrix.shape[1]):
+        start = csc_matrix.indptr[j]
+        end = csc_matrix.indptr[j + 1]
+        # acc = 0.0
+        if expm1:
+            # for idx in range(start, end):
+            #     acc += np.expm1(csc_matrix.data[idx])
+            summed[j] = np.expm1(csc_matrix.data[start:end]).sum()
+        else:
+            # for idx in range(start, end):
+            #     acc += csc_matrix.data[idx]
+            summed[j] = csc_matrix.data[start:end].sum()
+        # summed[j] = acc
+    return summed

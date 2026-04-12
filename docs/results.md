@@ -28,12 +28,15 @@ $$\text{fold-change} = \frac{E[e^{X_{\text{perturbed}}} - 1]}{E[e^{X_{\text{cont
 2. If `exp_post_agg` is `False`, expression values are **exponentiated then averaged**.
 $$\text{fold-change} = \frac{e^{E[X_{\text{perturbed}}]} - 1}{e^{E[X_{\text{control}}]} - 1}$$ -->
 The fold-change computed by `illico` depends on the value of `is_log1p` and `exp_post_agg` as follows:
+
+⚠️ Note that a `1.e-9` will be added to both numerator and denominator to avoid division by zero, and to be more consistent with `scanpy`'s implementation. This has no effect on the ranking of genes, but allows to get finite fold change values for all genes.
+
 | `is_log1p` | `exp_post_agg` | Fold-change equation | Remark |
 |---|---|---|---|
 | `False` | `True` | $\text{fold-change} = \frac{E[X_{\text{perturbed}}]}{E[X_{\text{control}}]}$ | |
 | `False` | `False` | $\text{fold-change} = \frac{E[X_{\text{perturbed}}]}{E[X_{\text{control}}]}$ | |
-| `True` | `True` | $\text{fold-change} = \frac{E[e^{X_{\text{perturbed}}} - 1]}{E[e^{X_{\text{control}}} - 1]}$ | 🎯 Scanpy's default |
-| `True` | `False` | $\text{fold-change} = \frac{e^{E[X_{\text{perturbed}}]} - 1}{e^{E[X_{\text{control}}]} - 1}$ | |
+| `True` | `False` | $\text{fold-change} = \frac{E[e^{X_{\text{perturbed}}} - 1]}{E[e^{X_{\text{control}}} - 1]}$ | |
+| `True` | `True` | $\text{fold-change} = \frac{e^{E[X_{\text{perturbed}}]} - 1}{e^{E[X_{\text{control}}]} - 1}$ | 🎯 Scanpy's default |
 
 ⚠️ Please note that by default, `scanpy.rank_genes_groups` assumes that your data is log1p-transformed, and exponentiates after aggregation. Consequently, if you are coming from `scanpy` and want to drop-in replace `scanpy.tl.rank_genes_groups`, you should set:
 ```python

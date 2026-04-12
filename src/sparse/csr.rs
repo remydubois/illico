@@ -81,9 +81,9 @@ pub fn csr_fold_change<D: SparseFloat, I: SparseIndex>(
     grpc: &GroupContainer,
     is_log1p: bool,
     exp_post_agg: bool,
-) -> Result<Array2<f32>, String> {
+) -> Result<Array2<f64>, String> {
     // Compute summed expression
-    let mut summed_expr = Array2::<f32>::zeros((grpc.counts.len(), x.shape.1));
+    let mut summed_expr = Array2::<f64>::zeros((grpc.counts.len(), x.shape.1));
     for i in 0..x.shape.0 {
         let start = x.indptr[i].to_usize();
         let end = x.indptr[i + 1].to_usize();
@@ -93,9 +93,9 @@ pub fn csr_fold_change<D: SparseFloat, I: SparseIndex>(
             let group_idx = grpc.encoded_groups[i];
             let val = x.data[pointer].to_f32();
             summed_expr[[group_idx, col_idx]] += if is_log1p && !exp_post_agg {
-                val.exp_m1()
+                val.exp_m1() as f64
             } else {
-                val
+                val as f64
             };
         }
     }
@@ -260,6 +260,62 @@ impl<'py, D: SparseFloat, I: SparseIndex> CSRMatrix<'py, D, I> {
             indices: new_indices,
             indptr: indptr.mapv(|x| I::from(x).unwrap()),
             shape: (self.shape.0, chunk_ub - chunk_lb),
+        })
+    }
+
+    pub fn index_rows_contig_cols_into_csc(
+        &'py self,
+        chunk_lb: usize,
+        chunk_ub: usize,
+        row_indices: ArrayView1<usize>,
+    ) -> Result<OwnedCSCMatrix<D, I>, String> {
+        let mut bounds = Array2::<usize>::zeros((row_indices.len(), 2));
+        let mut chunk_nnz = Array1::<i64>::zeros(chunk_ub - chunk_lb + 1);
+        let indices = self
+            .indices
+            .as_slice()
+            .ok_or_else(|| format!("CSR indices should a C-contiguous array."))?;
+
+        for (row_idx, i) in row_indices.iter().enumerate() {
+            let col_indices = &indices[self.indptr[*i].to_usize()..self.indptr[*i + 1].to_usize()];
+
+            let cb = searchsorted_left(col_indices, chunk_lb);
+            let rb = searchsorted_left(col_indices, chunk_ub);
+            bounds[[row_idx, 0]] = cb;
+            bounds[[row_idx, 1]] = rb;
+            for j in cb..rb {
+                let col_idx = col_indices[j].to_usize() - chunk_lb;
+                chunk_nnz[col_idx + 1] += 1
+            }
+        }
+        for i in 1..chunk_nnz.len() {
+            chunk_nnz[i] += chunk_nnz[i - 1]
+        }
+
+        let nnz_total = chunk_nnz[chunk_nnz.len() - 1] as usize;
+        let mut csc_data = Array1::<D>::zeros(nnz_total);
+        let mut csc_indices = Array1::<I>::zeros(nnz_total);
+        let mut counter = chunk_nnz.mapv(|x| x.to_usize());
+        for (row_idx, j) in row_indices.iter().enumerate() {
+            let org_start = self.indptr[*j].to_usize();
+            let chunk_start = org_start + bounds[[row_idx, 0]];
+            let chunk_end = org_start + bounds[[row_idx, 1]];
+            for i in chunk_start..chunk_end {
+                let i = i as usize;
+                let col_idx = self.indices[i].to_usize() - chunk_lb;
+                csc_data[counter[col_idx]] = self.data[i];
+                csc_indices[counter[col_idx]] = I::from(row_idx).ok_or_else(|| {
+                    format!("Can't format row index into generic integer: {row_idx}")
+                })?;
+                counter[col_idx] += 1;
+            }
+        }
+
+        Ok(OwnedCSCMatrix {
+            data: csc_data,
+            indices: csc_indices,
+            indptr: chunk_nnz.mapv(|x| I::from(x).unwrap()),
+            shape: (row_indices.len(), chunk_ub - chunk_lb),
         })
     }
 }
