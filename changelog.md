@@ -14,7 +14,7 @@ It also includes some performance improvements:
     - On TAHOE's `plate3` (in RAM) with `batch_size=1024`, this reduced memory footprint from 35GB to 1.5GB, and runtime from 1:17 to 0:50 with 8 CPUs.
     - The reduced footprint allows to scale more aggressively `n_threads`. With 32 threads, TAHOE's `plate3` runs in 21 seconds, while eating only 2.5GB of RAM.
 
-And add support for OVO test on lazy CSR (h5-based) datasets, through a specific parallelization scenario where groups are processed one by one.
+Also, it adds support for OVO test on lazy CSR (h5-based) datasets, through a specific parallelization scenario where groups are processed one by one.
 
 Version 0.4.0
 ------------
