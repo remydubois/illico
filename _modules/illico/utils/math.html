@@ -256,6 +256,7 @@
 <span class="sd">        c (float | int): Scalar value to accumulate in `a` at `indices`.</span>
 
 <span class="sd">    Author: Rémy Dubois</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)):</span>
         <span class="n">a</span><span class="p">[</span><span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">c</span>
@@ -271,6 +272,7 @@
 <span class="sd">        c (float | int): Vector holding value to accumulate in `a` at `indices`.</span>
 
 <span class="sd">    Author: Rémy Dubois</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)):</span>
         <span class="n">a</span><span class="p">[</span><span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">c</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
@@ -290,6 +292,7 @@
 <span class="sd">        np.ndarray: Results diff array, of size x.size - 1.</span>
 
 <span class="sd">    Author: Rémy Dubois</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">assert</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
@@ -328,6 +331,7 @@
 <span class="sd">        tuple[float]: P-value and z-score</span>
 
 <span class="sd">    Author: Rémy Dubois</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">tie_corr</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">tie_sum</span> <span class="o">/</span> <span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">tie_corr</span> <span class="o">&gt;</span> <span class="mf">1.0e-9</span><span class="p">:</span>  <span class="c1"># TODO: do that properly</span>
@@ -377,6 +381,7 @@
 <span class="sd">        ValueError: If data is neither sparse nor dense.</span>
 
 <span class="sd">    Author: Rémy Dubois</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">sc_sparse</span><span class="o">.</span><span class="n">spmatrix</span><span class="p">):</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">data</span>
@@ -414,6 +419,7 @@
 <span class="sd">        np.ndarray: Fold change values of shape (n_groups, n_genes)</span>
 
 <span class="sd">    Author: Rémy Dubois</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">assert</span> <span class="n">group_agg_counts</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">grpc</span><span class="o">.</span><span class="n">counts</span><span class="o">.</span><span class="n">size</span>
     <span class="k">assert</span> <span class="n">group_agg_counts</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span>
@@ -428,9 +434,9 @@
         <span class="n">mu_ref</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">mu_tgt</span><span class="p">[</span><span class="n">grpc</span><span class="o">.</span><span class="n">encoded_ref_group</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># (1, n_genes)</span>
 
     <span class="k">if</span> <span class="n">exp_post_agg</span><span class="p">:</span>
-        <span class="n">fold_change</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mu_ref</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">mu_tgt</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">mu_ref</span><span class="p">))</span>
+        <span class="n">fold_change</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">mu_tgt</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">mu_ref</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">fold_change</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mu_ref</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">mu_tgt</span> <span class="o">/</span> <span class="n">mu_ref</span><span class="p">)</span>
+        <span class="n">fold_change</span> <span class="o">=</span> <span class="p">(</span><span class="n">mu_tgt</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">mu_ref</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">fold_change</span>
 
@@ -449,6 +455,7 @@
 <span class="sd">        np.ndarray: Fold change values of shape (n_groups, n_genes)</span>
 
 <span class="sd">    Author: Rémy Dubois</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">group_agg_counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">grpc</span><span class="o">.</span><span class="n">counts</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
     <span class="c1"># Sum expressions per group</span>
@@ -473,6 +480,7 @@
 <span class="sd">        float: Sparsity (fraction of zero elements)</span>
 
 <span class="sd">    Author: Rémy Dubois</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">sc_sparse</span><span class="o">.</span><span class="n">spmatrix</span><span class="p">):</span>
         <span class="n">n_elements</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
@@ -506,6 +514,7 @@
 <span class="sd">        np.ndarray: Chunked Fortran-contiguous array with reordered rows.</span>
 
 <span class="sd">    Author: Rémy Dubois</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Now just fill it by making groups contiguous vertically, this will speed up sorting later on.</span>
     <span class="k">if</span> <span class="n">indices</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -524,9 +533,9 @@
 <div class="viewcode-block" id="compute_batch_bounds">
 <a class="viewcode-back" href="../../../api.html#illico.utils.math.compute_batch_bounds">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">compute_batch_bounds</span><span class="p">(</span><span class="n">n_genes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;auto&quot;</span><span class="p">]</span> <span class="o">|</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_threads</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes ideal batch bounds for processing genes in batches.</span>
-<span class="sd">    This function ensures no worker is starving. This could happen if we have 8 workers but 9 batches to allocate.</span>
-<span class="sd">    In this case, because each batch takes the same time to be processed, all but one workers will be idle waiting for one worker to process the last batch.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes ideal batch bounds for processing genes in batches. This function ensures no worker is starving. This</span>
+<span class="sd">    could happen if we have 8 workers but 9 batches to allocate. In this case, because each batch takes the same time to</span>
+<span class="sd">    be processed, all but one workers will be idle waiting for one worker to process the last batch.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        n_genes (int): Total number of genes</span>
@@ -534,6 +543,7 @@
 <span class="sd">        n_threads (int): Number of threads to use.</span>
 <span class="sd">    Returns:</span>
 <span class="sd">        List[Tuple[int, int]]: List of (lower_bound, upper_bound) for each batch. Upper bound is excluding, following slicing conventions.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># No batching nor multithreading for small inputs</span>
     <span class="k">if</span> <span class="n">n_genes</span> <span class="o">&lt;</span> <span class="n">n_threads</span> <span class="ow">or</span> <span class="n">n_genes</span> <span class="o">&lt;</span> <span class="mi">256</span><span class="p">:</span>

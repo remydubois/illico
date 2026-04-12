@@ -269,6 +269,7 @@ $$\text{fold-change} = \frac{E[e^{X_{\text{perturbed}}} - 1]}{E[e^{X_{\text{cont
 2. If `exp_post_agg` is `False`, expression values are **exponentiated then averaged**.
 $$\text{fold-change} = \frac{e^{E[X_{\text{perturbed}}]} - 1}{e^{E[X_{\text{control}}]} - 1}$$ -->
 <p>The fold-change computed by <code class="docutils literal notranslate"><span class="pre">illico</span></code> depends on the value of <code class="docutils literal notranslate"><span class="pre">is_log1p</span></code> and <code class="docutils literal notranslate"><span class="pre">exp_post_agg</span></code> as follows:</p>
+<p>⚠️ Note that a <code class="docutils literal notranslate"><span class="pre">1.e-9</span></code> will be added to both numerator and denominator to avoid division by zero, and to be more consistent with <code class="docutils literal notranslate"><span class="pre">scanpy</span></code>’s implementation. This has no effect on the ranking of genes, but allows to get finite fold change values for all genes.</p>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">
 <thead>
@@ -290,14 +291,14 @@ $$\text{fold-change} = \frac{e^{E[X_{\text{perturbed}}]} - 1}{e^{E[X_{\text{cont
 <td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">True</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">True</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
 <td><p><span class="math notranslate nohighlight">\(\text{fold-change} = \frac{E[e^{X_{\text{perturbed}}} - 1]}{E[e^{X_{\text{control}}} - 1]}\)</span></p></td>
-<td><p>🎯 Scanpy’s default</p></td>
+<td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">True</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">True</span></code></p></td>
 <td><p><span class="math notranslate nohighlight">\(\text{fold-change} = \frac{e^{E[X_{\text{perturbed}}]} - 1}{e^{E[X_{\text{control}}]} - 1}\)</span></p></td>
-<td><p></p></td>
+<td><p>🎯 Scanpy’s default</p></td>
 </tr>
 </tbody>
 </table>

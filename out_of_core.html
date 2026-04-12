@@ -245,13 +245,72 @@
 <ul class="simple">
 <li><p>h5-dense (np.ndarray) disk-backed dataset are natively supported</p></li>
 <li><p>h5-CSC (sparse along the columns) disk-backed datasets are natively supported</p></li>
-<li><p>:warning: <strong>h5-CSR (sparse along the rows) disk-backed datasets are not supported</strong></p></li>
+<li><p>h5-CSR (sparse along the rows) disk-backed datasets are natively supported <strong>only for OVO (perturbed vs controls) test</strong>. If you want to perform OVR (each group vs the rest) tests, you are better off loading it entirely in memory, as OVR test requires each column to be entirely in RAM at once, and CSR format does not allow to load columns from disk without loading the entire <code class="docutils literal notranslate"><span class="pre">.indices</span></code> in RAM (without telling you).</p></li>
 </ul>
-<p>If your data is backed through Dask or another backend, please open an issue as dense and CSC use cases should require very little rework to be supported.</p>
+<p>If your data is backed through Dask or another backend, please open an issue as it should require little rework for it to be supported.</p>
+<p>Summary:</p>
+<div class="table-wrapper colwidths-auto docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>Format</p></th>
+<th class="head"><p>Storage</p></th>
+<th class="head"><p>Supported ?</p></th>
+<th class="head"><p>Remark</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>[OVO|OVR]</p></td>
+<td><p>[Dense|CSC|CSR]</p></td>
+<td><p>In RAM</p></td>
+<td><p>✅</p></td>
+<td><p>-</p></td>
+</tr>
+<tr class="row-odd"><td><p>OVO (reference=”non-targeting”)</p></td>
+<td><p>Dense</p></td>
+<td><p>Lazy (H5)</p></td>
+<td><p>✅</p></td>
+<td><p>-</p></td>
+</tr>
+<tr class="row-even"><td><p>OVO (reference=”non-targeting”)</p></td>
+<td><p>CSR</p></td>
+<td><p>Lazy (H5)</p></td>
+<td><p>✅</p></td>
+<td><p>Specific parallelization scheme</p></td>
+</tr>
+<tr class="row-odd"><td><p>OVO (reference=”non-targeting”)</p></td>
+<td><p>CSC</p></td>
+<td><p>Lazy (H5)</p></td>
+<td><p>✅</p></td>
+<td><p>-</p></td>
+</tr>
+<tr class="row-even"><td><p>OVR (reference=None)</p></td>
+<td><p>Dense</p></td>
+<td><p>Lazy (H5)</p></td>
+<td><p>✅</p></td>
+<td><p>-</p></td>
+</tr>
+<tr class="row-odd"><td><p>OVR (reference=None)</p></td>
+<td><p>CSR</p></td>
+<td><p>Lazy (H5)</p></td>
+<td><p>❌</p></td>
+<td><p>Voluntarily not supported, better off loading in RAM</p></td>
+</tr>
+<tr class="row-even"><td><p>OVR (reference=None)</p></td>
+<td><p>CSC</p></td>
+<td><p>Lazy (H5)</p></td>
+<td><p>✅</p></td>
+<td><p>-</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <p>Notes:</p>
 <ol class="arabic simple">
-<li><p>Supporting the CSR use case is highly non trivial, and running <code class="docutils literal notranslate"><span class="pre">adata[:,</span> <span class="pre">idxs]</span></code> on a backed CSR matrix will load (temporarily) the entirety of the indices in RAM, resulting in a memory footprint almost equivalent to loading everything at once, on top of being extremely slow.</p></li>
+<li><p>Supporting the CSR use case is highly non trivial, and running <code class="docutils literal notranslate"><span class="pre">adata[:,</span> <span class="pre">idxs]</span></code> on a backed CSR matrix will load (temporarily) the entirety of the indices in RAM, resulting in a memory footprint almost equivalent to loading everything at once, on top of being extremely slow. That’s why OVR test on lazy CSR is not supported.</p></li>
 <li><p>Users struggling with out-of-core single cell RNASeq analyses should visit <code class="docutils literal notranslate"><span class="pre">rapids-singlecell</span></code>, which explicitely targets this use-case.</p></li>
+<li><p>The “Specific parallelization scheme mentioned for the OVO lazy CSR use case simply relies on the fact that due to the nature of the OVR test, we can run it group by group, and thus only load one group at a time in RAM, which is not the case for OVR where we need to load all groups at once.</p></li>
+<li><p>Note also that illico is expected to scale less well on lazy datasets, as most of the time the data loading part (such as the one of h5 datasets) is GIL-blocking.</p></li>
 </ol>
 </section>
 
