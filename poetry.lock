@@ -437,14 +437,14 @@ files = [
 
 [[package]]
 name = "docformatter"
-version = "1.7.7"
+version = "1.7.6"
 description = "Formats docstrings to follow PEP 257"
 optional = false
-python-versions = "<4.0,>=3.9"
+python-versions = "<4.0,>=3.7"
 groups = ["dev"]
 files = [
-    {file = "docformatter-1.7.7-py3-none-any.whl", hash = "sha256:7af49f8a46346a77858f6651f431b882c503c2f4442c8b4524b920c863277834"},
-    {file = "docformatter-1.7.7.tar.gz", hash = "sha256:ea0e1e8867e5af468dfc3f9e947b92230a55be9ec17cd1609556387bffac7978"},
+    {file = "docformatter-1.7.6-py3-none-any.whl", hash = "sha256:3259698c29b411fc53ac363c5f90b5e1c0ccb7224b166df33224b85d98f2e540"},
+    {file = "docformatter-1.7.6.tar.gz", hash = "sha256:911f03dd302d0045739dd4daf6a007ce26256db693494b19a4ccdc9136a59dbb"},
 ]
 
 [package.dependencies]
@@ -3639,4 +3639,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "a00b900573f6e37ef9587b0c6237f8047586f7fcf3c6909876956a04ea647e49"
+content-hash = "4f8cef9f4ea61b779f2b6bad1a34fb91aa1951b12df8e631dfdc5e74382c1163"
