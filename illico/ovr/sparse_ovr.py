@@ -43,6 +43,7 @@ def sparse_ovr_mwu_kernel(
         tuple[np.ndarray]: Two-sided p-values, U-statistics and z-scores, per group and per gene (column).
 
     Author: Rémy Dubois
+
     """
     _, n_cols = X.shape
     # Convert n_zeros to float64 as they will be used for tie sum later
@@ -67,7 +68,6 @@ def sparse_ovr_mwu_kernel(
         _idxs = np.argsort(X.data[start:end])
         tie_sum = _accumulate_group_ranksums_from_argsort(X.data[start:end], _idxs, groups[nz_idx], R1_nz[:, j])
         n0 = n_zeros[j]
-
         """Step 2: offset non-zero elements ranks by the number of zeros that precedes them"""
         if nz_idx.size:
             _add_at_scalar(nnz_per_group[:, j], groups[nz_idx], 1.0)
@@ -76,7 +76,6 @@ def sparse_ovr_mwu_kernel(
         # Offset the non-zero ranks by the amount of 0 that precedes them
         # All ranks must be shifted, so the sum is shifted by that many elements.
         R1_nz[:, j] += n0 * nnz_per_group[:, j]
-
         """ Step 3: Add ranksums of zero elements, per group"""
         # add zero contribution: number of zeros * avg rank
         R1 = R1_nz[:, j] + nz_per_group * (n0 + 1) / 2.0
@@ -134,6 +133,7 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
         each of shape (n_groups, chunk_lb - chunk_ub).
 
     Author: Rémy Dubois
+
     """
     _assert_is_csc(X)
 
@@ -194,6 +194,7 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
         each of shape (n_groups, chunk_lb - chunk_ub).
 
     Author: Rémy Dubois
+
     """
     _assert_is_csr(X)
 

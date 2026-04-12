@@ -7,7 +7,6 @@ mod ranking;
 mod sparse;
 mod stats;
 use sparse::csc;
-use sparse::csr;
 mod sparse_ovo;
 mod sparse_ovr;
 

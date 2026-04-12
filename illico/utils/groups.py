@@ -36,6 +36,7 @@ def encode_and_count_groups(groups: np.ndarray, ref_group: Any) -> tuple[np.ndar
         GroupContainer: GroupContainer holding all group-related information.
 
     Author: Rémy Dubois
+
     """
     if ref_group not in groups and ref_group is not None:
         raise ValueError(f"Reference group `{ref_group}` is not present in the group labels.")

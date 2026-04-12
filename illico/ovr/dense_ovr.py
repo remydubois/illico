@@ -43,6 +43,7 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
         Each np.ndarray of shape (n_groups, n_genes)
 
     Author: Rémy Dubois
+
     """
     # Convert to F-order for faster column access and sorting later
     chunk = chunk_and_fortranize(X, chunk_lb, chunk_ub, None)

@@ -33,7 +33,7 @@ CELL_LINE_URLS = {
     ids=lambda p: f"{p[0]}-{p[1]}-{p[2]:.0%}",
 )
 def adata(request):
-    """Fixture to download, convert and cache cell line dataset with subsampling"""
+    """Fixture to download, convert and cache cell line dataset with subsampling."""
     cell_line, fmt, fraction = request.param
     # if fraction.values[0] < 1.0:
     #     request.node.add_marker("debug")
@@ -131,8 +131,10 @@ def eager_rand_adata(rand_adata):
 
 
 def download_if_missing(cell_line: Literal["k562", "rpe1"], dst: Path) -> Path:
-    """
-    Stream-download k562-essential. Skips if exists.
+    """Stream-download k562-essential.
+
+    Skips if exists.
+
     """
     url = CELL_LINE_URLS[cell_line]
     chunk_size = 10 * 1024 * 1024

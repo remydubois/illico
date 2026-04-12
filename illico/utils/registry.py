@@ -76,7 +76,12 @@ class DataHandler(ABC):
         pass
 
     @abstractmethod
-    def fetch(self, *args, **kwargs) -> tuple:
+    def fetch_rows(self, *args, **kwargs) -> np.ndarray:
+        """Fetch data from disk if needed."""
+        pass
+
+    @abstractmethod
+    def fetch_cols(self, *args, **kwargs) -> tuple:
         """Fetch data from disk if needed."""
         pass
 
@@ -95,11 +100,25 @@ class DataHandler(ABC):
         """Return estimated memory footprint of the data."""
         pass
 
+    @property
+    @abstractmethod
+    def is_lazy(self) -> bool:
+        """Return whether the data is lazy-loaded or backed on disk."""
+        pass
+
 
 class InRAMDataHandler(DataHandler):
-    def fetch(self, lb: int, ub: int) -> tuple:
+    def fetch_rows(self, indices: np.ndarray) -> tuple:
+        """If the data is already in RAM, let the kernels do optimized slicing."""
+        raise NotImplementedError("Rows fetching should only be used for the OVO test on lazy loaded sparse CSR data.")
+
+    def fetch_cols(self, lb: int, ub: int) -> tuple:
         """If the data is already in RAM, let the kernels do optimized slicing."""
         return self.data, (lb, ub)
+
+    @property
+    def is_lazy(self) -> bool:
+        return False
 
 
 @data_handler_registry.register(np.ndarray)
@@ -121,6 +140,7 @@ class DenseDataHandler(InRAMDataHandler):
         return X
 
 
+@data_handler_registry.register(py_sparse._csr.csr_array)
 @data_handler_registry.register(py_sparse._csr.csr_matrix)
 class CSRDataHandler(InRAMDataHandler):
     def input_signature(self) -> tuple:
@@ -130,8 +150,8 @@ class CSRDataHandler(InRAMDataHandler):
         return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSRMatrix)
 
     @classmethod
-    def to_nb(cls, X: py_sparse.csr_matrix) -> CSRMatrix:
-        assert isinstance(X, py_sparse.csr.csr_matrix)
+    def to_nb(cls, X: py_sparse.csr_matrix | py_sparse.csr_array) -> CSRMatrix:
+        assert isinstance(X, (py_sparse.csr_matrix, py_sparse.csr_array))
         return CSRMatrix(X.data, X.indices, X.indptr, X.shape)
 
     def kernel_data_format(self) -> KernelDataFormat:
@@ -141,6 +161,7 @@ class CSRDataHandler(InRAMDataHandler):
         return self.data.data.nbytes + self.data.indptr.nbytes + self.data.indices.nbytes
 
 
+@data_handler_registry.register(py_sparse._csc.csc_array)
 @data_handler_registry.register(py_sparse._csc.csc_matrix)
 class CSCDataHandler(InRAMDataHandler):
     def input_signature(self) -> tuple:
@@ -150,8 +171,8 @@ class CSCDataHandler(InRAMDataHandler):
         return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSCMatrix)
 
     @classmethod
-    def to_nb(cls, X: py_sparse.csc_matrix) -> CSCMatrix:
-        assert isinstance(X, py_sparse.csc.csc_matrix)
+    def to_nb(cls, X: py_sparse.csc_matrix | py_sparse.csc_array) -> CSCMatrix:
+        assert isinstance(X, (py_sparse.csc_matrix, py_sparse.csc_array))
         return CSCMatrix(X.data, X.indices, X.indptr, X.shape)
 
     def kernel_data_format(self) -> KernelDataFormat:
@@ -163,11 +184,18 @@ class CSCDataHandler(InRAMDataHandler):
 
 @data_handler_registry.register(h5py.Dataset)
 class H5pyDatasetDataHandler(DenseDataHandler):
-    def fetch(self, lb: int, ub: int) -> tuple:
+    def fetch_cols(self, lb: int, ub: int) -> tuple:
         return self.data[:, lb:ub], (0, ub - lb)
+
+    def fetch_rows(self, indices: np.ndarray) -> tuple:
+        raise NotImplementedError("Rows fetching should only be used for the OVO test on lazy loaded sparse CSR data.")
 
     def footprint(self):
         return self.data.nbytes
+
+    @property
+    def is_lazy(self) -> bool:
+        return True
 
 
 @data_handler_registry.register(ad._core.sparse_dataset._CSCDataset)
@@ -179,43 +207,50 @@ class H5pyBackedCSCDataHandler(CSCDataHandler):
         return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSCMatrix)
 
     @classmethod
-    def to_nb(cls, X: py_sparse.csc_matrix) -> CSCMatrix:
-        assert isinstance(X, py_sparse.csc.csc_matrix)
+    def to_nb(cls, X: py_sparse.csc_matrix | py_sparse.csc_array) -> CSCMatrix:
+        assert isinstance(X, (py_sparse.csc_matrix, py_sparse.csc_array))
         return CSCMatrix(X.data, X.indices, X.indptr, X.shape)
 
     def footprint(self) -> int:
         return self.data._data.nbytes + self.data._indptr.nbytes + self.data._indices.nbytes
 
-    def fetch(self, lb: int, ub: int) -> tuple:
+    def fetch_cols(self, lb: int, ub: int) -> tuple:
         return self.data[:, lb:ub], (0, ub - lb)
 
+    def fetch_rows(self, indices: np.ndarray) -> tuple:
+        raise NotImplementedError(
+            "Fetching rows from a CSC-backed dataset is slow and memory-costly. Instead, load the whole dataset in RAM at once."
+        )
 
-# Import kernel modules to trigger decorator registration
-# These imports must come after the registry definitions above
-from illico.ovo import (  # noqa: E402, F401
-    csc_ovo_mwu_kernel_over_contiguous_col_chunk,
-    csr_ovo_mwu_kernel_over_contiguous_col_chunk,
-    dense_ovo_mwu_kernel_over_contiguous_col_chunk,
-)
-from illico.ovr import (  # noqa: E402, F401
-    csc_ovr_mwu_kernel_over_contiguous_col_chunk,
-    csr_ovr_mwu_kernel_over_contiguous_col_chunk,
-    dense_ovr_mwu_kernel_over_contiguous_col_chunk,
-)
+    @property
+    def is_lazy(self) -> bool:
+        return True
 
-# Now register the Rust kernels
-from illico.rust_backend import (  # noqa: E402, F401
-    csc_ovo_mwu_kernel_over_contiguous_col_chunk_rust,
-    csc_ovr_mwu_kernel_over_contiguous_col_chunk_rust,
-    csr_ovo_mwu_kernel_over_contiguous_col_chunk_rust,
-    csr_ovr_mwu_kernel_over_contiguous_col_chunk_rust,
-    dense_ovo_over_contiguous_col_chunk_rust,
-    dense_ovr_over_contiguous_col_chunk_rust,
-)
 
-rs_dispatcher_registry.register(Test.OVO, KernelDataFormat.DENSE)(dense_ovo_over_contiguous_col_chunk_rust)
-rs_dispatcher_registry.register(Test.OVR, KernelDataFormat.DENSE)(dense_ovr_over_contiguous_col_chunk_rust)
-rs_dispatcher_registry.register(Test.OVO, KernelDataFormat.CSC)(csc_ovo_mwu_kernel_over_contiguous_col_chunk_rust)
-rs_dispatcher_registry.register(Test.OVO, KernelDataFormat.CSR)(csr_ovo_mwu_kernel_over_contiguous_col_chunk_rust)
-rs_dispatcher_registry.register(Test.OVR, KernelDataFormat.CSC)(csc_ovr_mwu_kernel_over_contiguous_col_chunk_rust)
-rs_dispatcher_registry.register(Test.OVR, KernelDataFormat.CSR)(csr_ovr_mwu_kernel_over_contiguous_col_chunk_rust)
+@data_handler_registry.register(ad._core.sparse_dataset._CSRDataset)
+class H5pyBackedCSRDataHandler(CSRDataHandler):
+    def input_signature(self) -> tuple:
+        data_type = getattr(types, str(self.data._data.dtype))[::1]
+        indices_type = getattr(types, str(self.data._indices.dtype))[::1]
+        indptr_type = getattr(types, str(self.data._indptr.dtype))[::1]
+        return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSRMatrix)
+
+    @classmethod
+    def to_nb(cls, X: py_sparse.csr_matrix | py_sparse.csr_array) -> CSRMatrix:
+        assert isinstance(X, (py_sparse.csr_matrix, py_sparse.csr_array))
+        return CSRMatrix(X.data, X.indices, X.indptr, X.shape)
+
+    def footprint(self) -> int:
+        return self.data._data.nbytes + self.data._indptr.nbytes + self.data._indices.nbytes
+
+    def fetch_cols(self, lb: int, ub: int) -> tuple:
+        raise NotImplementedError(
+            "Fetching columns from a CSR-backed dataset is slow and memory-costly. Instead, load the whole dataset in RAM at once."
+        )
+
+    def fetch_rows(self, indices: np.ndarray) -> tuple:
+        return self.data[indices, :]
+
+    @property
+    def is_lazy(self) -> bool:
+        return True

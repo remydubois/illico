@@ -20,7 +20,7 @@ pub fn dense_ovr_kernel<D: SparseFloat>(
     tie_correct: bool,
     exp_post_agg: bool,
     alternative: String,
-) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f32>), String> {
+) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f64>), String> {
     let chunk = chunk_and_fortranize(&x, chunk_lb, chunk_ub, None)?;
     // Now compute stats and pvalues
     let n_groups = grpc.counts.len();
@@ -112,7 +112,7 @@ pub fn dense_ovr_over_contiguous_col_chunk_rust<'py>(
     PyArr2<'py>,
     PyArr2<'py>,
     PyArr2<'py>,
-    Bound<'py, PyArray2<f32>>,
+    PyArr2<'py>,
 )> {
     let grpc = grpc.as_group_container();
     let data_dtype: String = x.getattr("dtype")?.getattr("str")?.extract()?;

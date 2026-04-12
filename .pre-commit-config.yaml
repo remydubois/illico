@@ -35,3 +35,13 @@ repos:
     #   entry: bash -lc 'rustup component add clippy >/dev/null 2>&1 || true; cargo clippy --all -- -D warnings'
     #   language: system
     #   files: '\.rs$'
+- repo: https://github.com/PyCQA/docformatter
+  rev: v1.7.7
+  hooks:
+    - id: docformatter
+      name: docformatter
+      entry: docformatter
+      language: python
+      types: [python]
+      additional_dependencies: [tomli]
+      args: [--in-place, --config, ./pyproject.toml]

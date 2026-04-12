@@ -1,6 +1,21 @@
 Changelog
 =========
 
+Version 0.5.0rc1
+------------
+This version improves compatibility with `scanpy`:
+- Added `n_genes` arguments allowing to return only the top N genes per group when `return_as_scanpy=True`. This allowed to match `scanpy`'s sorting method (partial sort) resulting in better reproducibility of scanpy results.
+- Fixed genes ordering in the scanpy formatter, by removing redundant sorting of perturbation names as `encode_and_count_groups` already returns sorted unique perturbation names. This ensures that gene names are sorted the same way everywhere.
+- Added explicit testing of genes ordering. In the PBMC dataset, lots of genes end up with identical z-scores but different logfoldchanges. This was not caught by previous tests.
+- Fold change is now computed with `(numerator + 1.e-9) / (denominator + 1.e-9)` to avoid division by zero, and to be more consistent with scanpy's implementation. This has no     effect on the ranking of genes, but allows to get finite fold change values for all genes.
+
+It also includes some performance improvements:
+- Improved CSR chunking mechanism for the OVO test, resulting in faster execution and much smaller memory footprint. A direct implication is that `batch_size` can grow much larger now.
+    - On TAHOE's `plate3` (in RAM) with `batch_size=1024`, this reduced memory footprint from 35GB to 1.5GB, and runtime from 1:17 to 0:50 with 8 CPUs.
+    - The reduced footprint allows to scale more aggressively `n_threads`. With 32 threads, TAHOE's `plate3` runs in 21 seconds, while eating only 2.5GB of RAM.
+
+Also, it adds support for OVO test on lazy CSR (h5-based) datasets, through a specific parallelization scenario where groups are processed one by one.
+
 Version 0.4.0
 ------------
 - Added option to return scanpy-friendly output with `return_as_scanpy` arg. `asymptotic_wilcoxon` returns either:

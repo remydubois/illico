@@ -84,11 +84,11 @@ def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternativ
 
         # Compute FC
         if is_log1p and not exp_post_agg:
-            fc = np.expm1(grp_counts).mean(axis=0) / np.expm1(ref_counts).mean(axis=0)
+            fc = (np.expm1(grp_counts) + 1e-9).mean(axis=0) / (np.expm1(ref_counts) + 1e-9).mean(axis=0)
         if is_log1p and exp_post_agg:
-            fc = np.expm1(grp_counts.mean(axis=0)) / np.expm1(ref_counts.mean(axis=0))
+            fc = (np.expm1(grp_counts + 1e-9).mean(axis=0)) / (np.expm1(ref_counts + 1e-9).mean(axis=0))
         else:
-            fc = np.mean(grp_counts, axis=0) / np.mean(ref_counts, axis=0)
+            fc = (np.mean(grp_counts, axis=0) + 1e-9) / (np.mean(ref_counts, axis=0) + 1e-9)
 
         stats, pvals = mannwhitneyu(
             grp_counts, ref_counts, axis=0, method="asymptotic", use_continuity=use_continuity, alternative=alternative
@@ -147,15 +147,19 @@ def test_fold_change_asymptotic_wilcoxon(eager_rand_adata, test, is_log1p, exp_p
         asy_results.loc[scipy_results.index].fold_change.values,
         scipy_results.fold_change.values,
         atol=0.0,
-        rtol=1.0e-6,
+        rtol=1.0e-9,
     )
 
 
+@pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
 @pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
-def test_scanpy_format_output(eager_rand_adata, test, corr_method):
-    """Test that the output of `asymptotic_wilcoxon` with `return_as_scanpy=True` is compatible with Scanpy's output format, and that the values are close to those obtained with Scanpy's implementation.
+def test_scanpy_format_output(eager_rand_adata, test, corr_method, use_rust):
+    """Test that the output of `asymptotic_wilcoxon` with `return_as_scanpy=True` is compatible with Scanpy's output
+    format, and that the values are close to those obtained with Scanpy's implementation.
+
     Note: because Scanpy only implements a subset of all the possible setups, this test is kept separately from `test_asymptotic_wilcoxon`, and only sweep the parameters that are relevant to Scanpy's implementation.
+
     """
     if test == "ovo":
         reference = eager_rand_adata.obs.pert.iloc[0]
@@ -173,7 +177,7 @@ def test_scanpy_format_output(eager_rand_adata, test, corr_method):
         n_threads=1,
         batch_size=16,
         alternative="two-sided",  # Scanpy only implments two-sided test
-        use_rust=True,
+        use_rust=use_rust,
         return_as_scanpy=True,
         corr_method=corr_method,
     )
@@ -191,19 +195,34 @@ def test_scanpy_format_output(eager_rand_adata, test, corr_method):
     assert set(asy_results.keys()) == set(scanpy_results.keys()), "Output keys do not match Scanpy's output format."
 
     for k, ref in scanpy_results.items():
-        if k in ["params", "names"]:
-            # We can skip names ordering check as if incorrect, other values will mismatch
+        if k == "params":
             continue
         res = np.array(asy_results[k].tolist())
         ref = np.array(ref.tolist())
-        mask = np.isfinite(ref) * np.isfinite(res)  # Mask to ignore inf values in the comparison
-        np.testing.assert_allclose(
-            ref[mask],
-            res[mask],
-            rtol=0,
-            atol=1e-6,
-            err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
-        )
+        if np.issubdtype(ref.dtype, np.number):
+            mask_ref = np.isfinite(ref)
+            mask_res = np.isfinite(res)
+            mask = mask_ref * mask_res  # Mask to ignore inf values in the comparison
+            np.testing.assert_array_equal(
+                mask_res,
+                mask_ref,
+                err_msg=f"NaN/Inf positions mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
+            )
+            if not np.any(mask):
+                raise ValueError(f"No valid values to compare for key '{k}'.")
+            np.testing.assert_allclose(
+                ref[mask],
+                res[mask],
+                rtol=0,
+                atol=1e-9,
+                err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
+            )
+        else:
+            np.testing.assert_array_equal(
+                ref,
+                res,
+                err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
+            )
 
 
 @pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
@@ -221,10 +240,10 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alte
         reference = None
 
     # If rand_adata is lazy and CSR, ensure we raise an error because this is not supported
-    if isinstance(rand_adata.X, ad._core.sparse_dataset._CSRDataset):
+    if isinstance(rand_adata.X, ad._core.sparse_dataset._CSRDataset) and test == "ovr":
         ctx = pytest.raises(
-            KeyError,
-            match="Support for data type <class 'anndata._core.sparse_dataset._CSRDataset'> is not implemented.",
+            NotImplementedError,
+            match="Fetching columns from a CSR-backed dataset is slow and memory-costly. Instead, load the whole dataset in RAM at once.",
         )
         should_raise = True
     else:
@@ -304,7 +323,7 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alte
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
 def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, use_rust, tmp_path):
     # No need to test that exception is raised, as it is done in `test_asymptotic_wilcoxon` already
-    if isinstance(eager_rand_adata.X, py_sparse.csr.csr_matrix) and backed:
+    if isinstance(eager_rand_adata.X, (py_sparse.csr_matrix, py_sparse.csr_array)) and backed:
         pytest.skip("CSR lazy data not supported for now.")
 
     if test == "ovo":
@@ -321,7 +340,7 @@ def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, use_rust, tm
     # Make this anndata bigger, otherwise memory measurements are not significant
     bigger_eager_rand_adata = ad.concat([eager_rand_adata] * 300, axis=1)
     # Concatenation converts to CSR, so revert back to CSC
-    if isinstance(eager_rand_adata.X, py_sparse.csc.csc_matrix):
+    if isinstance(eager_rand_adata.X, (py_sparse.csc_matrix, py_sparse.csc_array)):
         bigger_eager_rand_adata.X = py_sparse.csc_matrix(bigger_eager_rand_adata.X)
     bigger_eager_rand_adata.obs = eager_rand_adata.obs.copy()
     bigger_eager_rand_adata.var_names_make_unique()

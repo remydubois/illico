@@ -106,7 +106,7 @@ pub fn csr_ovr_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: Spar
     tie_correct: bool,
     exp_post_agg: bool,
     alternative: String,
-) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f32>), String> {
+) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f64>), String> {
     let csc_chunk = x.contig_col_chunk_into_csc(chunk_lb, chunk_ub)?;
 
     let (p_values, u_stats, zscores) =
@@ -126,7 +126,7 @@ pub fn csc_ovr_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: Spar
     tie_correct: bool,
     exp_post_agg: bool,
     alternative: String,
-) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f32>), String> {
+) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f64>), String> {
     let csc_chunk = x.contig_col_chunk_into_csc(chunk_lb, chunk_ub)?;
 
     let (p_values, u_stats, zscores) =
@@ -202,7 +202,7 @@ pub fn csr_ovr_mwu_kernel_over_contiguous_col_chunk_rust<'py>(
     PyArr2f64<'py>,
     PyArr2f64<'py>,
     PyArr2f64<'py>,
-    PyArr2f32<'py>,
+    PyArr2f64<'py>,
 )> {
     let grpc = grpc.as_group_container();
 
@@ -253,7 +253,7 @@ pub fn csc_ovr_mwu_kernel_over_contiguous_col_chunk_rust<'py>(
     PyArr2f64<'py>,
     PyArr2f64<'py>,
     PyArr2f64<'py>,
-    PyArr2f32<'py>,
+    PyArr2f64<'py>,
 )> {
     let grpc = grpc.as_group_container();
 
