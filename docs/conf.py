@@ -38,13 +38,15 @@ autodoc_mock_imports = [
     "anndata",
     "joblib",
     "loguru",
-    "tqdm",
     "numba",
     "h5py",
     "numpy",
     "scipy",
     "pandas",
     "sklearn",
+    "statsmodels",
+    "tqdm",
+    "illico.rust_backend",
 ]
 
 # Autodoc settings
