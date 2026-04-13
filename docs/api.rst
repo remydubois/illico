@@ -4,13 +4,19 @@ API Reference
 illico package
 --------------
 
-.. automodule:: illico.asymptotic_wilcoxon
+.. automodule:: illico
    :members: asymptotic_wilcoxon
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 ovo subpackage
 --------------
+
+.. automodule:: illico.ovo
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: illico.ovo.dense_ovo
    :members:
@@ -24,6 +30,11 @@ ovo subpackage
 
 ovr subpackage
 --------------
+
+.. automodule:: illico.ovr
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 .. automodule:: illico.ovr.dense_ovr
    :members:
