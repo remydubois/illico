@@ -30,18 +30,21 @@ features = ["pyo3/extension-module"]
 module-name = "illico.rust_backend"
 
 [dependency-groups]
-dev = [
+test = [
     "pytest (>=8.4.2,<9.0.0)",
-    "pytest-benchmark (>=5.1.0,<6.0.0)",
-    "pytest-benchmark[histogram] (>=5.2.3,<6.0.0)",
     "pre-commit (>=4.3.0,<5.0.0)",
     "scanpy (>=1.11.5,<2.0.0)",
-    "pytest-memray (>=1.8.0,<2.0.0)",
     "memory-profiler (>=0.61.0,<0.62.0)",
     "pytest-regex (>=0.2.0,<0.3.0)",
-    "memray (>=1.19.1,<2.0.0)",
     "ipdb (>=0.13.13,<0.14.0)",
     "tomli (>=2.4.1,<3.0.0)",
+    "memray (>=1.19.1,<2.0.0)",
+    "pytest-memray (>=1.8.0,<2.0.0)",
+]
+benchmark = [
+    "pdex (>=0.2.0)",
+    "pytest-benchmark (>=5.1.0,<6.0.0)",
+    "pytest-benchmark[histogram] (>=5.2.3,<6.0.0)",
 ]
 doc = [
     "Sphinx>=5.0",
