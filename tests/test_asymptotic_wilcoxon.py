@@ -13,7 +13,6 @@ import pandas as pd
 import pytest
 import scanpy as sc
 from numba import set_num_threads
-from pdex import pdex
 from scipy import sparse as py_sparse
 from scipy.stats import mannwhitneyu
 
@@ -402,6 +401,7 @@ def call_routine(data, method, test, num_threads, use_rust):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             if method == "pdex":
+                import pdex
                 mode = "ref" if test == "ovo" else "all"
                 pdex(
                     data,

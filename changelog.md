@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Version 0.5.0rc2
+------------
+- For better compatibility with `scanpy`, lower bounds on dependencies have been relaxed.
+
 Version 0.5.0rc1
 ------------
 This version improves compatibility with `scanpy`:
