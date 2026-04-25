@@ -33,12 +33,13 @@ pub fn dense_ovr_kernel<D: SparseFloat>(
     let mut tie_sums = Array1::zeros(chunk_ub - chunk_lb);
     for j in 0..chunk.dim().1 {
         let sorted_indices = argsort(chunk.column(j));
-        accumulate_rank_and_tie_sums_from_argsort(
+        _ = accumulate_rank_and_tie_sums_from_argsort(
             chunk.column(j),
             sorted_indices,
             grpc.encoded_groups,
             ranksums.column_mut(j),
             tie_sums.slice_mut(s![j]),
+            0,
         )?;
     }
 

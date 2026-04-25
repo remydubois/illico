@@ -51,13 +51,14 @@ pub fn single_group_sparse_ovo_mwu_kernel<D: SparseFloat, I: SparseIndex>(
         let (lbt, ubt) = (tgt.indptr[j].to_usize(), tgt.indptr[j + 1].to_usize());
 
         // Compute ranksum and tiesum on non zeros only first
-        let (mut ranksum, mut tiesum) =
-            rank_sum_and_ties(ctrl.data.slice(s![lbc..ubc]), tgt.data.slice(s![lbt..ubt]));
+        let (mut ranksum, mut tiesum, zero_pos) = rank_sum_and_ties(
+            ctrl.data.slice(s![lbc..ubc]),
+            tgt.data.slice(s![lbt..ubt]),
+            n_zeros_total as usize,
+        );
 
-        // Offset ranksum of nonzeros elements: all the ranks must be increase by n_zeros_total, and all the target elements (ubt - lbt) contribute to the ranksum
-        ranksum += n_zeros_total * (ubt - lbt) as f64;
         // Now compute the ranksum of zero elements, those contribute as well
-        let rank_of_zeros = (n_zeros_ctrl[j] + n_zeros_tgt[j] + 1.) * 0.5;
+        let rank_of_zeros = (n_zeros_ctrl[j] + n_zeros_tgt[j] + 1.) * 0.5 + zero_pos as f64;
         ranksum += rank_of_zeros * n_zeros_tgt[j];
 
         // Now, icnrement the tiesum with the zeros

@@ -73,15 +73,14 @@ def single_group_sparse_ovo_mwu_kernel(
         lbr, ubr = sorted_ref_data.indptr[j], sorted_ref_data.indptr[j + 1]
 
         # Compute ranksum and tie sum for non zero values
-        ranksum, tie_sum = rank_sum_and_ties_from_sorted(sorted_ref_data.data[lbr:ubr], sorted_tgt_data.data[lbt:ubt])
-
-        # Offset the ranks of the number of zeros in ref and perturbed
-        ranksum += n_zeros_combined * (ubt - lbt)
+        nz_ranksum, tie_sum, zpos = rank_sum_and_ties_from_sorted(
+            sorted_ref_data.data[lbr:ubr], sorted_tgt_data.data[lbt:ubt], zero_values_offset=n_zeros_combined
+        )
 
         # Compute ranksum
         n0 = n_zeros_tgt[j]
-        R1_nz = ranksum  # Sum ranks
-        R1 = R1_nz + n0 * (n_zeros_ref[j] + n0 + 1) / 2.0  # Add sumranks of zeros
+        z_ranksum = (zpos + (n_zeros_ref[j] + n0 + 1) / 2.0) * n0  # Add sumranks of zeros
+        R1 = nz_ranksum + z_ranksum  # Add sumranks of zeros
 
         # Compute U-stat
         U1 = R1 - n_tgt * (n_tgt + 1) / 2

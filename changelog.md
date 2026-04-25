@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Version 0.5.1
+------------
+- Fixes bug when sparse matrices contain strictly negative values, cf [this discussion](https://scverse.zulipchat.com/#narrow/channel/557094-differential-gene-expression/topic/Nonnegative.20expectation/near/590691572).
+
 Version 0.5.0rc2
 ------------
 - For better compatibility with `scanpy`, lower bounds on dependencies have been relaxed.

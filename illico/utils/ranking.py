@@ -6,8 +6,8 @@ from illico.utils.sparse.csc import CSCMatrix, _assert_is_csc
 
 @njit(nogil=True, cache=False, fastmath=True)
 def _accumulate_group_ranksums_from_argsort(
-    arr: np.ndarray, idx: np.ndarray, groups: np.ndarray, ranksums: np.ndarray
-) -> np.ndarray:
+    arr: np.ndarray, idx: np.ndarray, groups: np.ndarray, ranksums: np.ndarray, zero_values_offset: int = 0
+) -> tuple[np.ndarray, int]:
     """From a given array of values, indices of sorted values (result of np.argsort) and groups, accumulate group rank
     sums in the placegolder `ranksums`.
 
@@ -16,25 +16,33 @@ def _accumulate_group_ranksums_from_argsort(
         idx (np.ndarray): Array of indices of sorted values
         groups (np.ndarray): Array of group indicator
         ranksums (np.ndarray): Plaeholder of shape (n_groups, ) where to accumulate rank sums
+        zero_values_offset (int): If > 0, it means that there are zeros not present in the input arrays but that
+        they should be accounted for. This is only used when the input adata is sparse, and ranksum is computed
+        on non zero values.
 
     Returns:
         np.ndarray: tie sums
+        int: position of zeros in the sorted array (if zero_values_offset > 0)
 
     Author: Rémy Dubois
 
     """
-    # if ranks is None:
-    #     ranks = np.empty(arr.size, dtype=np.float64)
+    zero_pos = -1
     n = idx.size
     i = 0
+    rank = 0
     tie_sum = 0.0
+
     while i < n:
         # find tie block
         j = i + 1
+        if zero_values_offset > 0 and arr[idx[i]] > 0:
+            zero_pos = i
+            rank += zero_values_offset
+            zero_values_offset = 0
         while j < n and arr[idx[j]] == arr[idx[i]]:
             j += 1
-        # average rank for indices i..j-1 (1-based)
-        avg_rank = 0.5 * (i + 1 + j)  # mean of [i+1, ..., j]
+        avg_rank = rank + 0.5 * (j - i + 1)
         for k in range(i, j):
             if groups is not None:
                 ranksums[groups[idx[k]]] += avg_rank
@@ -42,15 +50,19 @@ def _accumulate_group_ranksums_from_argsort(
                 # If no group is specified, ranks are sum reduced into one value for the whole column
                 ranksums += avg_rank
         tie_count = j - i
-        # Tie sum is the same for all froups
+        # Tie sum is the same for all groups
         tie_sum += tie_count**3 - tie_count
         i = j
+        rank += tie_count
 
-    return tie_sum
+    if zero_pos == -1 and zero_values_offset > 0:
+        zero_pos = n
+
+    return tie_sum, zero_pos
 
 
 @njit(nogil=True)
-def rank_sum_and_ties_from_sorted(A: np.ndarray, B: np.ndarray) -> tuple[np.ndarray]:
+def rank_sum_and_ties_from_sorted(A: np.ndarray, B: np.ndarray, zero_values_offset: int = 0) -> tuple[np.ndarray]:
     """Compute rank sums and tie sums from two 1-d sorted arrays.
 
     This routine is similar to the leetcode "merge two sorted arrays", except it
@@ -62,6 +74,9 @@ def rank_sum_and_ties_from_sorted(A: np.ndarray, B: np.ndarray) -> tuple[np.ndar
     Args:
         A (np.ndarray): The first sorted array (controls)
         B (np.ndarray): The second sorted array (perturbed)
+        zero_values_offset (int): If > 0, it means that there are zeros not present in the input arrays but that
+        they should be accounted for. This is only used when the input adata is sparse, and ranksum is computed
+        on non zero values.
 
     Returns:
         tuple[np.ndarray]: Ranks sum from the second array, and tie sums for the combined
@@ -76,8 +91,9 @@ def rank_sum_and_ties_from_sorted(A: np.ndarray, B: np.ndarray) -> tuple[np.ndar
     i = 0
     j = 0
     k = 0  # number of items processed so far (0-based)
+    zero_pos = -1  # Default setting
 
-    sum_ranks_B = 0.0
+    sum_ranks_B = 0
     tie_sum = 0.0
 
     # main sweep
@@ -87,6 +103,11 @@ def rank_sum_and_ties_from_sorted(A: np.ndarray, B: np.ndarray) -> tuple[np.ndar
             v = A[i]
         else:
             v = B[j]
+
+        if v > 0 and zero_values_offset > 0:
+            zero_pos = k
+            k += zero_values_offset
+            zero_values_offset = 0
 
         # count occurrences in A
         tA = 0
@@ -118,6 +139,11 @@ def rank_sum_and_ties_from_sorted(A: np.ndarray, B: np.ndarray) -> tuple[np.ndar
     while i < nA:
         v = A[i]
 
+        if v > 0 and zero_values_offset > 0:
+            zero_pos = k
+            k += zero_values_offset
+            zero_values_offset = 0
+
         # count in A
         tA = 0
         ii = i
@@ -139,6 +165,11 @@ def rank_sum_and_ties_from_sorted(A: np.ndarray, B: np.ndarray) -> tuple[np.ndar
     while j < nB:
         v = B[j]
 
+        if v > 0 and zero_values_offset > 0:
+            zero_pos = k
+            k += zero_values_offset
+            zero_values_offset = 0
+
         # count in B
         tB = 0
         jj = j
@@ -156,7 +187,12 @@ def rank_sum_and_ties_from_sorted(A: np.ndarray, B: np.ndarray) -> tuple[np.ndar
         k += t
         j = jj
 
-    return sum_ranks_B, tie_sum
+    # if zero_pos is still not set, it means there are no positive values in the entire column.
+    # so zeros come at the end of it
+    if zero_pos == -1 and zero_values_offset > 0:
+        zero_pos = k
+
+    return sum_ranks_B, tie_sum, zero_pos
 
 
 @njit(nogil=True, cache=False)
