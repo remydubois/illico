@@ -31,7 +31,7 @@ pub fn dense_ovo_kernel<D: SparseFloat>(
 
     let remainder = &n_tgt * (&n_tgt + 1.) / 2.;
     for j in 0..n_cols as usize {
-        let (rs, ts) = rank_sum_and_ties(sorted_controls.column(j), sorted_tgt.column(j));
+        let (rs, ts, _) = rank_sum_and_ties(sorted_controls.column(j), sorted_tgt.column(j), 0);
 
         let u = rs - remainder;
 

@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from scipy import sparse as sc_sparse
 from scipy.stats import rankdata
 
@@ -10,46 +11,74 @@ from illico.utils.ranking import (
 from illico.utils.sparse.csc import CSCMatrix
 
 
-def test_rank_sum_and_ties_from_sorted():
+@pytest.mark.parametrize("format", ["dense", "sparse"])
+def test_rank_sum_and_ties_from_sorted(format):
     rng = np.random.RandomState(0)
-    A = rng.randint(0, 10, size=20)
-    B = rng.randint(0, 10, size=15)
-    A.sort()
-    B.sort()
+    A = rng.randint(-10, 10, size=20)
+    A[:2] = 0  # Add some zeros manually
+    B = rng.randint(-10, 10, size=15)
+    B[:3] = 0  # Add some zeros manually
 
-    ranksum_B, tie_sum = rank_sum_and_ties_from_sorted(A, B)
-
-    # Now manually compute ranksum
+    # First compute real ranksum and tie sum
     combined = np.concatenate([A, B])
     ranks = rankdata(combined, method="average")
     ranksum_B_manual = ranks[len(A) :].sum()
-    # Manually compute tie sum
     _, tie_counts = np.unique(combined, return_counts=True)
     manual_tie_sum = (tie_counts**3 - tie_counts).sum()
 
+    if format == "sparse":
+        n_zeros_A = (A == 0).sum()
+        n_zeros_B = (B == 0).sum()
+        n_zeros = n_zeros_A + n_zeros_B
+        A, B = A[A != 0], B[B != 0]  # Keep only non-null values to have ties
+    else:
+        n_zeros_A = n_zeros_B = n_zeros = 0
+    A.sort()
+    B.sort()
+
+    ranksum_B, tie_sum, zero_pos = rank_sum_and_ties_from_sorted(A, B, n_zeros)
+    # Add contributions of zeros to the ranksum
+    ranksum_B += n_zeros_B * (zero_pos + (n_zeros + 1) / 2.0)
+    # Add contributions of zeros to the tie sum
+    tie_sum += n_zeros * (n_zeros**2 - 1)
     # Check
     np.testing.assert_allclose(ranksum_B, ranksum_B_manual)
     np.testing.assert_allclose(tie_sum, manual_tie_sum)
 
 
-def test_group_ranksum_accumulation():
+@pytest.mark.parametrize("format", ["dense", "sparse"])
+def test_group_ranksum_accumulation(format):
     rng = np.random.RandomState(0)
     arr = rng.rand(30)
+    arr[:5] = 0  # Add some zeros manually
     groups = rng.randint(0, 3, size=30)
-    idx = np.argsort(arr)
 
-    ranksums = np.zeros(3, dtype=np.float64)
-    tie_sum = _accumulate_group_ranksums_from_argsort(arr, idx, groups, ranksums)
-
-    # Manually compute ranks
+    # Manually compute ranks and tie sums on the whole array
     ranks = rankdata(arr, method="average")
     manual_ranksums = np.zeros(3, dtype=np.float64)
     for i in range(len(arr)):
         manual_ranksums[groups[i]] += ranks[i]
-
-    # Manually compute tie sum
     _, tie_counts = np.unique(arr, return_counts=True)
     manual_tie_sum = (tie_counts**3 - tie_counts).sum()
+
+    # Now compute them with illico utils
+    if format == "sparse":
+        n_zeros = (arr == 0).sum()
+        nz_per_group = np.array([((groups == g) & (arr == 0)).sum() for g in range(3)])
+        groups = groups[arr != 0]
+        arr = arr[arr != 0]
+    else:
+        n_zeros = 0
+        nz_per_group = np.zeros(3, dtype=np.float64)
+
+    idx = np.argsort(arr)
+    ranksums = np.zeros(3, dtype=np.float64)
+    tie_sum, zero_pos = _accumulate_group_ranksums_from_argsort(arr, idx, groups, ranksums, n_zeros)
+
+    # Add contributions of zeros to the ranksums
+    ranksums += nz_per_group * (zero_pos + (n_zeros + 1) / 2.0)
+    # Add contributions of zeros to the tie sum
+    tie_sum += n_zeros * (n_zeros**2 - 1)
 
     # Check
     np.testing.assert_allclose(ranksums, manual_ranksums)

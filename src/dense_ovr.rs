@@ -39,6 +39,7 @@ pub fn dense_ovr_kernel<D: SparseFloat>(
             grpc.encoded_groups,
             ranksums.column_mut(j),
             tie_sums.slice_mut(s![j]),
+            0,
         )?;
     }
 

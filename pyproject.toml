@@ -1,6 +1,6 @@
 [project]
 name = "illico"
-version = "0.5.0rc2"
+version = "0.5.1"
 description = "Fast asymptotic mannwhitney-u test"
 authors = [
     {name = "remydubois",email = "remydubois14@gmail.com"}

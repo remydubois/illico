@@ -44,7 +44,7 @@ def dense_ovo_mwu_kernel(
     n = n_ref + n_tgt
     mu = n_ref * n_tgt / 2.0
     for j in range(ncols):
-        ranksum, tie_sum = rank_sum_and_ties_from_sorted(sorted_ref_data[:, j], sorted_tgt_data[:, j])
+        ranksum, tie_sum, _ = rank_sum_and_ties_from_sorted(sorted_ref_data[:, j], sorted_tgt_data[:, j])
 
         # Compute U-stat
         U1 = ranksum - n_tgt * (n_tgt + 1) / 2.0

@@ -50,12 +50,13 @@ pub fn sparse_ovr_mwu_kernel<D: SparseFloat, I: SparseIndex>(
             .indices
             .slice(s![start..end])
             .mapv(|x| grpc.encoded_groups[x.to_usize()]);
-        accumulate_rank_and_tie_sums_from_argsort(
+        let zero_pos = accumulate_rank_and_tie_sums_from_argsort(
             col_nz_values,
             argsorted_idxs,
             nz_group_labels.view(),
             ranksum.column_mut(j),
             tiesum.slice_mut(s![j]),
+            n_zeros[j],
         )?;
 
         // Need to offset the ranks by the number of zeros per group
@@ -66,10 +67,9 @@ pub fn sparse_ovr_mwu_kernel<D: SparseFloat, I: SparseIndex>(
         // This is messy: why nz_per_group is column-unique while nnz_per_group is all columns
         let nz_per_group = &grpc.counts - &nnz_per_group.column(j);
         let mut rs = ranksum.column_mut(j);
-        rs += &(n_zeros[j] * &nnz_per_group.column(j)).mapv(|x| x as f64); // nnz and not nz !
 
         // Now need to add the contributions of zero to the ranksum of each group
-        rs += &((nz_per_group * (n_zeros[j] + 1)).mapv(|x| x as f64) / 2.);
+        rs += &((nz_per_group * (n_zeros[j] + 1 + 2 * zero_pos)).mapv(|x| x as f64) / 2.);
         let mut ts = tiesum.slice_mut(s![j]);
         ts += (n_zeros[j].pow(3) - n_zeros[j]) as f64;
 

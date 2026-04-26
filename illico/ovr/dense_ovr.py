@@ -53,7 +53,7 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
     ranksums = np.zeros(shape=(grpc.counts.size, chunk.shape[1]), dtype=np.float64)
     for j in range(chunk.shape[1]):
         idxs = np.argsort(chunk[:, j])
-        col_tie_sum = _accumulate_group_ranksums_from_argsort(chunk[:, j], idxs, grpc.encoded_groups, ranksums[:, j])
+        col_tie_sum, _ = _accumulate_group_ranksums_from_argsort(chunk[:, j], idxs, grpc.encoded_groups, ranksums[:, j])
         tie_sum[j] = col_tie_sum
 
     # Compute U stats

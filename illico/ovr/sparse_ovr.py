@@ -66,19 +66,18 @@ def sparse_ovr_mwu_kernel(
         nz_idx = X.indices[start:end]
         """Step 1: compute ranksum of non-zero elements, per group"""
         _idxs = np.argsort(X.data[start:end])
-        tie_sum = _accumulate_group_ranksums_from_argsort(X.data[start:end], _idxs, groups[nz_idx], R1_nz[:, j])
+        tie_sum, zero_pos = _accumulate_group_ranksums_from_argsort(
+            X.data[start:end], _idxs, groups[nz_idx], R1_nz[:, j], zero_values_offset=int(n_zeros[j])
+        )
         n0 = n_zeros[j]
         """Step 2: offset non-zero elements ranks by the number of zeros that precedes them"""
         if nz_idx.size:
             _add_at_scalar(nnz_per_group[:, j], groups[nz_idx], 1.0)
         # Deduce number of zeros per group
         nz_per_group = group_counts - nnz_per_group[:, j]
-        # Offset the non-zero ranks by the amount of 0 that precedes them
-        # All ranks must be shifted, so the sum is shifted by that many elements.
-        R1_nz[:, j] += n0 * nnz_per_group[:, j]
         """ Step 3: Add ranksums of zero elements, per group"""
         # add zero contribution: number of zeros * avg rank
-        R1 = R1_nz[:, j] + nz_per_group * (n0 + 1) / 2.0
+        R1 = R1_nz[:, j] + nz_per_group * (n0 + 1 + 2 * zero_pos) / 2.0
         U[:, j] = R1 - n_tgt * (n_tgt + 1) / 2
         tie_sum += n0**3 - n0
 
