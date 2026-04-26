@@ -495,7 +495,7 @@ be processed, all but one workers will be idle waiting for one worker to process
 
 <dl class="py function" id="module-illico.utils.ranking">
 <dt class="sig sig-object py" id="illico.utils.ranking.rank_sum_and_ties_from_sorted">
-<span class="sig-prename descclassname"><span class="pre">illico.utils.ranking.</span></span><span class="sig-name descname"><span class="pre">rank_sum_and_ties_from_sorted</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">B</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.utils.ranking.rank_sum_and_ties_from_sorted" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">illico.utils.ranking.</span></span><span class="sig-name descname"><span class="pre">rank_sum_and_ties_from_sorted</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">B</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zero_values_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#illico.utils.ranking.rank_sum_and_ties_from_sorted" title="Link to this definition">¶</a></dt>
 <dd><p>Compute rank sums and tie sums from two 1-d sorted arrays.</p>
 <p>This routine is similar to the leetcode “merge two sorted arrays”, except it
 never returns to sorted array, instead it accumulate rank sums of the second array
@@ -505,7 +505,12 @@ wilcoxon rank sum test as it allows to sort controls only once.
 :param A: The first sorted array (controls)
 :type A: np.ndarray
 :param B: The second sorted array (perturbed)
-:type B: np.ndarray</p>
+:type B: np.ndarray
+:param zero_values_offset: If &gt; 0, it means that there are zeros not present in the input arrays but that
+:type zero_values_offset: int
+:param they should be accounted for. This is only used when the input adata is sparse:
+:param and ranksum is computed:
+:param on non zero values.:</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Ranks sum from the second array, and tie sums for the combined
@@ -518,6 +523,7 @@ arrays.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>A</strong> (<em>numpy.ndarray</em>)</p></li>
 <li><p><strong>B</strong> (<em>numpy.ndarray</em>)</p></li>
+<li><p><strong>zero_values_offset</strong> (<em>int</em>)</p></li>
 </ul>
 </dd>
 </dl>
