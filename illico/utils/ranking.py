@@ -7,7 +7,7 @@ from illico.utils.sparse.csc import CSCMatrix, _assert_is_csc
 @njit(nogil=True, cache=False, fastmath=True)
 def _accumulate_group_ranksums_from_argsort(
     arr: np.ndarray, idx: np.ndarray, groups: np.ndarray, ranksums: np.ndarray, zero_values_offset: int = 0
-) -> tuple[np.ndarray, int]:
+) -> tuple[float, int]:
     """From a given array of values, indices of sorted values (result of np.argsort) and groups, accumulate group rank
     sums in the placegolder `ranksums`.
 
@@ -21,7 +21,7 @@ def _accumulate_group_ranksums_from_argsort(
         on non zero values.
 
     Returns:
-        np.ndarray: tie sums
+        float: tie sums
         int: position of zeros in the sorted array (if zero_values_offset > 0)
 
     Author: Rémy Dubois
@@ -93,7 +93,7 @@ def rank_sum_and_ties_from_sorted(A: np.ndarray, B: np.ndarray, zero_values_offs
     k = 0  # number of items processed so far (0-based)
     zero_pos = -1  # Default setting
 
-    sum_ranks_B = 0
+    sum_ranks_B = 0.0
     tie_sum = 0.0
 
     # main sweep

@@ -30,7 +30,7 @@ def test_rank_sum_and_ties_from_sorted(format):
         n_zeros_A = (A == 0).sum()
         n_zeros_B = (B == 0).sum()
         n_zeros = n_zeros_A + n_zeros_B
-        A, B = A[A != 0], B[B != 0]  # Keep only positive values to have ties
+        A, B = A[A != 0], B[B != 0]  # Keep only non-null values to have ties
     else:
         n_zeros_A = n_zeros_B = n_zeros = 0
     A.sort()

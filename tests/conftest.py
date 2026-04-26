@@ -102,10 +102,12 @@ def rand_adata(request, tmp_path):
     groups = rng.randint(0, n_groups, size=n_cells)  # Add one ref group
 
     # Now cover all possible negative value scenarios: some with all negative values, some with a mix of both
-    # By defaults dense_counts only contains positive values
+    # By default dense_counts only contains positive values
     dense_counts[:, 0] *= -1.0  # all negative in the first column
     dense_counts[groups == 0, 1] *= -1.0  # First group all negative, rest all positives in the second column
     dense_counts[np.isin(groups, [0, 1]), 2] *= -1.0  # Two groups all negative, rest all positives in the third column
+    dense_counts[groups == 0, 3][::2] *= -1.0  # Ref is both pos and neg in the fourth column
+    dense_counts[groups == 1, 4][::2] *= -1.0  # Target is both pos and neg in the fifth column
 
     fmt, lazy = request.param
     if fmt == "dense":

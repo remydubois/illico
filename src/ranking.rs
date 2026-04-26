@@ -157,7 +157,7 @@ pub fn rank_sum_and_ties<D: SparseFloat>(
     while j < n_tgt {
         let v = tgt[j];
 
-        if (v.to_f64() > 0.) & (zero_values_offset > 0) {
+        if (v.to_f64() > 0.) && (zero_values_offset > 0) {
             zero_pos = k as isize;
             k += zero_values_offset;
             zero_values_offset = 0;
@@ -184,7 +184,7 @@ pub fn rank_sum_and_ties<D: SparseFloat>(
         k += count_tgt;
     }
 
-    if (zero_pos == -1) & (zero_values_offset > 0) {
+    if (zero_pos == -1) && (zero_values_offset > 0) {
         zero_pos = k as isize;
     }
 
@@ -250,7 +250,7 @@ pub fn accumulate_rank_and_tie_sums_from_argsort<D: SparseFloat>(
     while i < n_values {
         // Find tie block
         let mut j = i + 1;
-        if (zero_values_offset > 0) & (x[sorted_indices[i]].to_f64() > 0.) {
+        if (zero_values_offset > 0) && (x[sorted_indices[i]].to_f64() > 0.) {
             zero_pos = i as isize;
             rank += zero_values_offset;
             zero_values_offset = 0;
@@ -278,7 +278,7 @@ pub fn accumulate_rank_and_tie_sums_from_argsort<D: SparseFloat>(
         i = j;
     }
 
-    if (zero_pos == -1) & (zero_values_offset > 0) {
+    if (zero_pos == -1) && (zero_values_offset > 0) {
         zero_pos = n_values as isize;
     }
 
