@@ -6,7 +6,13 @@ import numpy as np
 from numba import njit
 
 from illico.utils.groups import GroupContainer
-from illico.utils.math import chunk_and_fortranize, compute_pval, dense_fold_change
+from illico.utils.math import (
+    _add_at_vec,
+    chunk_and_fortranize,
+    compute_pval,
+    fancy_indexing_axis0,
+    fold_change_from_summed_expr,
+)
 from illico.utils.ranking import _accumulate_group_ranksums_from_argsort
 from illico.utils.registry import KernelDataFormat, Test, nb_dispatcher_registry
 
@@ -46,14 +52,17 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
 
     """
     # Convert to F-order for faster column access and sorting later
-    chunk = chunk_and_fortranize(X, chunk_lb, chunk_ub, None)
+    chunk = chunk_and_fortranize(X, chunk_lb, chunk_ub, grpc.ovr_inclusion_indices)
 
     # Get ranks and tie sums
     tie_sum = np.empty(chunk.shape[1], dtype=np.float64)
     ranksums = np.zeros(shape=(grpc.counts.size, chunk.shape[1]), dtype=np.float64)
+    included_groups_indicator = grpc.encoded_groups[grpc.ovr_inclusion_indices]
     for j in range(chunk.shape[1]):
         idxs = np.argsort(chunk[:, j])
-        col_tie_sum, _ = _accumulate_group_ranksums_from_argsort(chunk[:, j], idxs, grpc.encoded_groups, ranksums[:, j])
+        col_tie_sum, _ = _accumulate_group_ranksums_from_argsort(
+            chunk[:, j], idxs, included_groups_indicator, ranksums[:, j]
+        )
         tie_sum[j] = col_tie_sum
 
     # Compute U stats
@@ -63,22 +72,39 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
     statistics = ranksums - n_tgt * (n_tgt + 1) / 2
     mu = n_ref * n_tgt / 2.0
     # Compute pvals
-    pvals = np.empty(shape=(grpc.counts.size, chunk.shape[1]), dtype=np.float64)
-    zscores = np.empty(shape=(grpc.counts.size, chunk.shape[1]), dtype=np.float64)
+    n_selected_groups = grpc.selected_group_ids.size
+    pvals = np.empty(shape=(n_selected_groups, chunk.shape[1]), dtype=np.float64)
+    zscores = np.empty(shape=(n_selected_groups, chunk.shape[1]), dtype=np.float64)
     for j in range(chunk.shape[1]):
-        for k in range(grpc.counts.size):
+        for k, grp_id in enumerate(grpc.selected_group_ids):
             pvals[k, j], zscores[k, j] = compute_pval(
-                n_ref=n_ref[k, 0],
-                n_tgt=n_tgt[k, 0],
+                n_ref=n_ref[grp_id, 0],
+                n_tgt=n_tgt[grp_id, 0],
                 n=n,
                 tie_sum=tie_sum[j] if tie_correct else 0.0,
-                U=statistics[k, j],
-                mu=mu[k, 0],
+                U=statistics[grp_id, j],
+                mu=mu[grp_id, 0],
                 contin_corr=0.5 if use_continuity else 0.0,
                 alternative=alternative,
             )
 
     # Get fold change
-    fold_change = dense_fold_change(chunk, grpc=grpc, is_log1p=is_log1p, exp_post_agg=exp_post_agg)
+    # Note: it would be a bit cumbersome to have dense_fold_change handle itself all the shennanigans
+    # groups and subsetting. I find clearer to have it here.
+    # TODO: actually idk, bc I ended up doing it in the sparse path.
+    group_agg_counts = np.zeros(shape=(grpc.counts.size, X.shape[1]), dtype=np.float64)
+    # Sum expressions per group
+    if is_log1p and not exp_post_agg:
+        _add_at_vec(group_agg_counts, grpc.encoded_groups[grpc.ovr_inclusion_indices], np.expm1(chunk))
+    else:
+        _add_at_vec(group_agg_counts, grpc.encoded_groups[grpc.ovr_inclusion_indices], chunk)
+    fold_change = fold_change_from_summed_expr(
+        group_agg_counts, grpc, exp_post_agg=exp_post_agg & is_log1p, sum_over_selected_groups_only=True
+    )
+
+    # Now filter on the groups to return, if needed
+    if n_selected_groups < grpc.counts.size:
+        fold_change = fancy_indexing_axis0(fold_change, grpc.selected_group_ids)
+        statistics = fancy_indexing_axis0(statistics, grpc.selected_group_ids)
 
     return pvals, statistics, zscores, fold_change

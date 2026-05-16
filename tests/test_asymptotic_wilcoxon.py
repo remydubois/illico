@@ -152,8 +152,10 @@ def test_fold_change_asymptotic_wilcoxon(eager_rand_adata, test, is_log1p, exp_p
 
 @pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
 @pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
+@pytest.mark.parametrize("exclude_from_ovr", [None, ["pert_2"]], ids=["no-exclusion", "exclude-2"])
+@pytest.mark.parametrize("groups", [None, ["pert_0", "pert_1"]], ids=["all-groups", "subset-groups"])
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
-def test_scanpy_format_output(eager_rand_adata, test, corr_method, use_rust):
+def test_scanpy_format_output(eager_rand_adata, test, groups, exclude_from_ovr, corr_method, use_rust):
     """Test that the output of `asymptotic_wilcoxon` with `return_as_scanpy=True` is compatible with Scanpy's output
     format, and that the values are close to those obtained with Scanpy's implementation.
 
@@ -177,16 +179,20 @@ def test_scanpy_format_output(eager_rand_adata, test, corr_method, use_rust):
         batch_size=16,
         alternative="two-sided",  # Scanpy only implments two-sided test
         use_rust=use_rust,
+        groups=groups,
+        exclude_from_ovr=exclude_from_ovr,
         return_as_scanpy=True,
         corr_method=corr_method,
     )
-
+    if exclude_from_ovr is not None and test == "ovr":
+        eager_rand_adata = eager_rand_adata[~eager_rand_adata.obs["pert"].isin(exclude_from_ovr)].copy()
     sc.tl.rank_genes_groups(
         eager_rand_adata,
         groupby="pert",
         method="wilcoxon",
         reference=reference if test == "ovo" else "rest",
         n_genes=eager_rand_adata.n_vars,
+        groups="all" if groups is None else groups,
         tie_correct=False,
         corr_method=corr_method,
     )
@@ -217,11 +223,13 @@ def test_scanpy_format_output(eager_rand_adata, test, corr_method, use_rust):
                 err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
             )
         else:
+            mask = np.ones_like(ref, dtype=bool)  # No mask for non-numeric values, compare all
             np.testing.assert_array_equal(
                 ref,
                 res,
                 err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
             )
+        print(f"Passed comparison for key '{k}' with {mask.sum()} valid values.")
 
 
 @pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
@@ -402,6 +410,7 @@ def call_routine(data, method, test, num_threads, use_rust):
             warnings.simplefilter("ignore")
             if method == "pdex":
                 import pdex
+
                 mode = "ref" if test == "ovo" else "all"
                 pdex(
                     data,

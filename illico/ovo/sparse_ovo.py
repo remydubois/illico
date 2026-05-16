@@ -4,7 +4,12 @@ import numpy as np
 from numba import njit
 
 from illico.utils.groups import GroupContainer
-from illico.utils.math import compute_pval, diff, fold_change_from_summed_expr
+from illico.utils.math import (
+    compute_pval,
+    diff,
+    fancy_indexing_axis0,
+    fold_change_from_summed_expr,
+)
 from illico.utils.ranking import (
     _sort_csc_columns_inplace,
     rank_sum_and_ties_from_sorted,
@@ -171,15 +176,16 @@ def csc_ovo_mwu_kernel_over_contiguous_col_chunk(
     agg_counts = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
 
     # Now go through all the groups one by one
-    pvalues = np.empty((n_groups, csc_X_ref.shape[1]), dtype=np.float64)
-    zscores = np.empty((n_groups, csc_X_ref.shape[1]), dtype=np.float64)
-    statistics = np.empty((n_groups, csc_X_ref.shape[1]), dtype=np.float64)
-    for group_id in range(group_indptr.size - 1):
+    n_selected_groups = grpc.selected_group_ids.size
+    pvalues = np.empty((n_selected_groups, csc_X_ref.shape[1]), dtype=np.float64)
+    zscores = np.empty((n_selected_groups, csc_X_ref.shape[1]), dtype=np.float64)
+    statistics = np.empty((n_selected_groups, csc_X_ref.shape[1]), dtype=np.float64)
+    for k, group_id in enumerate(grpc.selected_group_ids):
         if group_id == ref_group_id:
-            pvalues[group_id, :] = 1.0
-            zscores[group_id, :] = 0.0
-            statistics[group_id, :] = -1.0
-            agg_counts[ref_group_id, :] = csc_sum_axis0(csc_X_ref, expm1=is_log1p & (not exp_post_agg))
+            pvalues[k, :] = 1.0
+            zscores[k, :] = 0.0
+            statistics[k, :] = -1.0
+            agg_counts[k, :] = csc_sum_axis0(csc_X_ref, expm1=is_log1p & (not exp_post_agg))
             continue
 
         # Chunk
@@ -197,11 +203,13 @@ def csc_ovo_mwu_kernel_over_contiguous_col_chunk(
             tie_correct=tie_correct,
             alternative=alternative,
         )
-        pvalues[group_id, :] = pvalue
-        statistics[group_id, :] = statistic
-        zscores[group_id, :] = zscore
+        pvalues[k, :] = pvalue
+        statistics[k, :] = statistic
+        zscores[k, :] = zscore
 
     fold_change = fold_change_from_summed_expr(agg_counts, grpc, exp_post_agg=exp_post_agg & is_log1p)
+    if n_selected_groups < n_groups:
+        fold_change = fancy_indexing_axis0(fold_change, grpc.selected_group_ids)
 
     return pvalues, statistics, zscores, fold_change
 
@@ -264,19 +272,18 @@ def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
     # Sort
     _sort_csc_columns_inplace(csc_matrix=csc_X_ref)
 
-    # Initalize aggregated matrix to compute fold change later on
-    agg_counts = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
-
     # Now go through all the groups one by one
-    pvalues = np.empty((n_groups, csc_X_ref.shape[1]), dtype=np.float64)
-    zscores = np.empty((n_groups, csc_X_ref.shape[1]), dtype=np.float64)
-    statistics = np.empty((n_groups, csc_X_ref.shape[1]), dtype=np.float64)
-    for group_id in range(group_indptr.size - 1):
+    agg_counts = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
+    n_selected_groups = grpc.selected_group_ids.size
+    pvalues = np.empty((n_selected_groups, csc_X_ref.shape[1]), dtype=np.float64)
+    zscores = np.empty((n_selected_groups, csc_X_ref.shape[1]), dtype=np.float64)
+    statistics = np.empty((n_selected_groups, csc_X_ref.shape[1]), dtype=np.float64)
+    for k, group_id in enumerate(grpc.selected_group_ids):
         if group_id == ref_group_id:
-            pvalues[group_id, :] = 1.0
-            zscores[group_id, :] = 0.0
-            statistics[group_id, :] = -1.0
-            agg_counts[ref_group_id, :] = csc_sum_axis0(csc_X_ref, expm1=is_log1p & (not exp_post_agg))
+            pvalues[k, :] = 1.0
+            zscores[k, :] = 0.0
+            statistics[k, :] = -1.0
+            agg_counts[k, :] = csc_sum_axis0(csc_X_ref, expm1=is_log1p & (not exp_post_agg))
             continue
 
         # Chunk
@@ -294,10 +301,13 @@ def csr_ovo_mwu_kernel_over_contiguous_col_chunk(
             tie_correct=tie_correct,
             alternative=alternative,
         )
-        pvalues[group_id, :] = pvalue
-        statistics[group_id, :] = statistic
-        zscores[group_id, :] = zscore
+        pvalues[k, :] = pvalue
+        statistics[k, :] = statistic
+        zscores[k, :] = zscore
 
+    # Compute fold change for all groups, but return only the groups of interest
     fold_change = fold_change_from_summed_expr(agg_counts, grpc, exp_post_agg=exp_post_agg & is_log1p)
+    if n_selected_groups < n_groups:
+        fold_change = fancy_indexing_axis0(fold_change, grpc.selected_group_ids)
 
     return pvalues, statistics, zscores, fold_change

@@ -54,7 +54,17 @@ def _precompile(data_handler: DataHandler, reference: Any | None):
         out_sig = types.UniTuple(types.float64[::1], 3)
     else:
         GroupContainerType = types.NamedTuple(
-            [types.uint64[::1], types.uint64[::1], types.uint64[::1], types.uint64[::1], types.int64], GroupContainer
+            [
+                types.uint64[::1],
+                types.uint64[::1],
+                types.uint64[::1],
+                types.uint64[::1],
+                types.uint64[::1],
+                types.uint64[::1],
+                types.uint64[::1],
+                types.int64,
+            ],
+            GroupContainer,
         )
         # This input signature corresponds to: lower bound, upper bvound, group container, is_log1p, use_continuity
         input_sig = (

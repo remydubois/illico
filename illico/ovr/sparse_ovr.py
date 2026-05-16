@@ -4,27 +4,27 @@ import numpy as np
 from numba import njit
 
 from illico.utils.groups import GroupContainer
-from illico.utils.math import _add_at_scalar, compute_pval, diff
+from illico.utils.math import _add_at_scalar, compute_pval, diff, fancy_indexing_axis0
 from illico.utils.ranking import _accumulate_group_ranksums_from_argsort
 from illico.utils.registry import KernelDataFormat, Test, nb_dispatcher_registry
-from illico.utils.sparse.csc import (
+from illico.utils.sparse.csc import (  # csc_get_cols,
     CSCMatrix,
     _assert_is_csc,
     csc_fold_change,
-    csc_get_cols,
+    csc_get_contig_cols_into_csr,
 )
-from illico.utils.sparse.csr import (
+from illico.utils.sparse.csr import (  # csr_get_contig_cols_into_csc,
     CSRMatrix,
     _assert_is_csr,
-    csr_get_contig_cols_into_csc,
+    csr_get_rows_contig_cols_into_csc,
+    csr_get_rows_into_csc,
 )
 
 
 @njit(fastmath=True, nogil=True, cache=False)
 def sparse_ovr_mwu_kernel(
     X: CSCMatrix,
-    groups: np.ndarray,
-    group_counts: np.ndarray,
+    grpc: GroupContainer,
     use_continuity: bool = True,
     tie_correct: bool = True,
     alternative: Literal["two-sided", "less", "greater"] = "two-sided",
@@ -33,8 +33,7 @@ def sparse_ovr_mwu_kernel(
 
     Args:
         X (CSCMatrix): CSC matrix holding expression counts.
-        groups (np.ndarray): np.ndarray of shape (n_cells, ) holding encoded group labels.
-        group_counts (np.ndarray): Count of cells per group.
+        grpc (GroupContainer): GroupContainer
         use_continuity (bool, optional): Apply continuity factor or not. Defaults to True.
         tie_correct (bool, optional): Whether to apply tie correction when computing p-values. Defaults to True.
         alternative (Literal["two-sided", "less", "greater"]): Type of alternative hypothesis. Defaults to "two-sided".
@@ -49,49 +48,55 @@ def sparse_ovr_mwu_kernel(
     # Convert n_zeros to float64 as they will be used for tie sum later
     n_zeros = (X.shape[0] - diff(X.indptr)).astype(np.float64)
     # Allocate placeholders for U stats and pvals
-    U = np.empty((group_counts.size, n_cols), dtype=np.float64)
-    pvals = np.empty((group_counts.size, n_cols), dtype=np.float64)
-    zscores = np.empty((group_counts.size, n_cols), dtype=np.float64)
+    U = np.empty((grpc.counts.size, n_cols), dtype=np.float64)
+    # Those ones are returned at the end so they contain just the selected groups
+    pvals = np.empty((grpc.selected_group_ids.size, n_cols), dtype=np.float64)
+    zscores = np.empty((grpc.selected_group_ids.size, n_cols), dtype=np.float64)
 
     # Note that because this function does not involve inner parallelism, this could be allocated per-col, but I find it cleaner this way
-    nnz_per_group = np.zeros((group_counts.size, n_cols), dtype=np.float64)
-    R1_nz = np.zeros((group_counts.size, n_cols), dtype=np.float64)
+    nnz_per_group = np.zeros((grpc.counts.size, n_cols), dtype=np.float64)
+    R1_nz = np.zeros((grpc.counts.size, n_cols), dtype=np.float64)
     # Note that if we run this function over chunks of columns, this work is repeated in each func but this is cheap
-    n = group_counts.sum()
-    n_ref = n - group_counts
-    n_tgt = group_counts
+    n = grpc.counts[grpc.non_excluded_group_ids].sum()
+    n_ref = n - grpc.counts
+    n_tgt = grpc.counts
     mu = n_ref * n_tgt / 2.0
+    included_groups_indicator = grpc.encoded_groups[grpc.ovr_inclusion_indices]
     for j in range(n_cols):
         start, end = X.indptr[j], X.indptr[j + 1]
         nz_idx = X.indices[start:end]
         """Step 1: compute ranksum of non-zero elements, per group"""
         _idxs = np.argsort(X.data[start:end])
         tie_sum, zero_pos = _accumulate_group_ranksums_from_argsort(
-            X.data[start:end], _idxs, groups[nz_idx], R1_nz[:, j], zero_values_offset=int(n_zeros[j])
+            X.data[start:end], _idxs, included_groups_indicator[nz_idx], R1_nz[:, j], zero_values_offset=int(n_zeros[j])
         )
         n0 = n_zeros[j]
         """Step 2: offset non-zero elements ranks by the number of zeros that precedes them"""
         if nz_idx.size:
-            _add_at_scalar(nnz_per_group[:, j], groups[nz_idx], 1.0)
+            _add_at_scalar(nnz_per_group[:, j], included_groups_indicator[nz_idx], 1.0)
         # Deduce number of zeros per group
-        nz_per_group = group_counts - nnz_per_group[:, j]
+        nz_per_group = grpc.counts - nnz_per_group[:, j]
         """ Step 3: Add ranksums of zero elements, per group"""
         # add zero contribution: number of zeros * avg rank
         R1 = R1_nz[:, j] + nz_per_group * (n0 + 1 + 2 * zero_pos) / 2.0
         U[:, j] = R1 - n_tgt * (n_tgt + 1) / 2
         tie_sum += n0**3 - n0
 
-        for k in range(group_counts.size):
+        for k, grp_id in enumerate(grpc.selected_group_ids):
             pvals[k, j], zscores[k, j] = compute_pval(
-                n_ref=n_ref[k],
-                n_tgt=n_tgt[k],
+                n_ref=n_ref[grp_id],
+                n_tgt=n_tgt[grp_id],
                 n=n,
                 tie_sum=tie_sum if tie_correct else 0.0,
-                U=U[k, j],
-                mu=mu[k],
+                U=U[grp_id, j],
+                mu=mu[grp_id],
                 contin_corr=0.5 if use_continuity else 0.0,
                 alternative=alternative,
             )
+
+    # Filter U stats to return only selected groups, if relevant
+    if grpc.selected_group_ids.size < grpc.counts.size:
+        U = fancy_indexing_axis0(U, grpc.selected_group_ids)
 
     return pvals, U, zscores
 
@@ -136,7 +141,13 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     """
     _assert_is_csc(X)
 
-    csc_chunk = csc_get_cols(csc_matrix=X, indices=np.arange(chunk_lb, chunk_ub))
+    # Get the chunk
+    # TODO: fix dtype unification here
+    # if grpc.ovr_inclusion_indices.size < X.shape[0]:
+    csr_chunk = csc_get_contig_cols_into_csr(csc_matrix=X, chunk_lb=chunk_lb, chunk_ub=chunk_ub)
+    csc_chunk = csr_get_rows_into_csc(csr_matrix=csr_chunk, indices=grpc.ovr_inclusion_indices)
+    # else:
+    #     csc_chunk = csc_get_cols(csc_matrix=X, indices=np.arange(chunk_lb, chunk_ub))
 
     # TODO: un-jitting this function comes at close to no cost, and allows to do argsorting out of the njit function
     # on linux machines, it is 3 to 4 times faster than numba.np.argsort and sorting seems to be half the compute time of the whole function
@@ -146,14 +157,15 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     #     idxs[start:end] = np.argsort(csc_chunk.data[start:end])
     pvalues, statistics, zscores = sparse_ovr_mwu_kernel(
         X=csc_chunk,
-        groups=grpc.encoded_groups,
-        group_counts=grpc.counts,
+        grpc=grpc,
         use_continuity=use_continuity,
         tie_correct=tie_correct,
         alternative=alternative,
     )
 
     fold_change = csc_fold_change(X=csc_chunk, grpc=grpc, is_log1p=is_log1p, exp_post_agg=exp_post_agg)
+    if grpc.selected_group_ids.size < grpc.counts.size:
+        fold_change = fancy_indexing_axis0(fold_change, grpc.selected_group_ids)
     return pvalues, statistics, zscores, fold_change
 
 
@@ -197,17 +209,22 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
     """
     _assert_is_csr(X)
 
-    csc_chunk = csr_get_contig_cols_into_csc(csr_matrix=X, chunk_lb=chunk_lb, chunk_ub=chunk_ub)
+    # csc_chunk = csr_get_contig_cols_into_csc(csr_matrix=X, chunk_lb=chunk_lb, chunk_ub=chunk_ub)
+    csc_chunk = csr_get_rows_contig_cols_into_csc(
+        csr_matrix=X, chunk_lb=chunk_lb, chunk_ub=chunk_ub, indices=grpc.ovr_inclusion_indices
+    )
 
     # TODO: same remark as csc regarding sorting
     pvalues, statistics, zscores = sparse_ovr_mwu_kernel(
         X=csc_chunk,
-        groups=grpc.encoded_groups,
-        group_counts=grpc.counts,
+        grpc=grpc,
         use_continuity=use_continuity,
         tie_correct=tie_correct,
         alternative=alternative,
     )
     fold_change = csc_fold_change(X=csc_chunk, grpc=grpc, is_log1p=is_log1p, exp_post_agg=exp_post_agg)
+
+    if grpc.selected_group_ids.size < grpc.counts.size:
+        fold_change = fancy_indexing_axis0(fold_change, grpc.selected_group_ids)
 
     return pvalues, statistics, zscores, fold_change

@@ -203,9 +203,12 @@ def csc_fold_change(X: CSCMatrix, grpc: GroupContainer, is_log1p: bool, exp_post
     Author: Rémy Dubois
 
     """
+    # TODO
+    # assert X.shape[0] == grpc.selected_cell_indices.size, "Number of rows in X must match number of selected cells in GroupContainer."
     _assert_is_csc(X)
     group_agg_counts = np.zeros(shape=(grpc.counts.size, X.shape[1]), dtype=np.float64)
     # Sum expressions per group
+    group_ids = grpc.encoded_groups[grpc.ovr_inclusion_indices]
     for j in range(X.shape[1]):
         start = X.indptr[j]
         end = X.indptr[j + 1]
@@ -214,9 +217,11 @@ def csc_fold_change(X: CSCMatrix, grpc: GroupContainer, is_log1p: bool, exp_post
             row_data = np.expm1(X.data[start:end])
         else:
             row_data = X.data[start:end]
-        group_id = grpc.encoded_groups[row_indices]
+        group_id = group_ids[row_indices]
         _add_at_vec(group_agg_counts[:, j], group_id, row_data)
-    fold_change = fold_change_from_summed_expr(group_agg_counts, grpc, exp_post_agg=exp_post_agg & is_log1p)
+    fold_change = fold_change_from_summed_expr(
+        group_agg_counts, grpc, exp_post_agg=exp_post_agg & is_log1p, sum_over_selected_groups_only=True
+    )
     return fold_change
 
 

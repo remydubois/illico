@@ -4,7 +4,12 @@ import numpy as np
 from numba import njit
 
 from illico.utils.groups import GroupContainer
-from illico.utils.math import chunk_and_fortranize, compute_pval, dense_fold_change
+from illico.utils.math import (
+    chunk_and_fortranize,
+    compute_pval,
+    dense_fold_change,
+    fancy_indexing_axis0,
+)
 from illico.utils.ranking import (
     _sort_along_axis_inplace,
     rank_sum_and_ties_from_sorted,
@@ -118,21 +123,22 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
     ref_chunk = chunk_and_fortranize(X, chunk_lb, chunk_ub, ref_indices)
     _sort_along_axis_inplace(ref_chunk, axis=0)
 
-    pvalues = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
-    zscores = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
-    statistics = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
-    for group_id in range(n_groups):
+    n_selected_groups = grpc.selected_group_ids.size
+    pvalues = np.empty((n_selected_groups, chunk_ub - chunk_lb), dtype=np.float64)
+    zscores = np.empty((n_selected_groups, chunk_ub - chunk_lb), dtype=np.float64)
+    statistics = np.empty((n_selected_groups, chunk_ub - chunk_lb), dtype=np.float64)
+    for k, group_id in enumerate(grpc.selected_group_ids):
         if group_id == grpc.encoded_ref_group:
-            pvalues[group_id, :] = 1.0
-            zscores[group_id, :] = 0.0
-            statistics[group_id, :] = -1.0
+            pvalues[k, :] = 1.0
+            zscores[k, :] = 0.0
+            statistics[k, :] = -1.0
             continue
         tgt_indices = grpc.indices[grpc.indptr[group_id] : grpc.indptr[group_id + 1]]
         # tgt_chunk = np.asfortranarray(chunk[tgt_indices, :])
         tgt_chunk = chunk_and_fortranize(X, chunk_lb, chunk_ub, tgt_indices)
         _sort_along_axis_inplace(tgt_chunk, axis=0)
 
-        pvalues[group_id], statistics[group_id], zscores[group_id] = dense_ovo_mwu_kernel(
+        pvalues[k], statistics[k], zscores[k] = dense_ovo_mwu_kernel(
             sorted_ref_data=ref_chunk,
             sorted_tgt_data=tgt_chunk,
             use_continuity=use_continuity,
@@ -140,7 +146,9 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
             alternative=alternative,
         )
 
-    # Compute fold change
+    # Compute fold change on all groups, but return it only for the selected groups
     fc = dense_fold_change(chunk, grpc, is_log1p=is_log1p, exp_post_agg=exp_post_agg)
+    if n_selected_groups < n_groups:
+        fc = fancy_indexing_axis0(fc, grpc.selected_group_ids)
 
     return pvalues, statistics, zscores, fc

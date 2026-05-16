@@ -172,13 +172,20 @@ def _warn_log1p(X: np.ndarray | sc_sparse.spmatrix, is_log1p: bool, sample_size:
 
 
 @njit(nogil=True, fastmath=True, cache=False)
-def fold_change_from_summed_expr(group_agg_counts: np.ndarray, grpc: GroupContainer, exp_post_agg: bool) -> np.ndarray:
+def fold_change_from_summed_expr(
+    group_agg_counts: np.ndarray, grpc: GroupContainer, exp_post_agg: bool, sum_over_selected_groups_only: bool = False
+) -> np.ndarray:
     """Compute fold change from summed expression values, per group.
 
     Args:
         group_agg_counts (np.ndarray): Sum of expression values of shape (n_groups, n_genes)
         grpc (GroupContainer): GroupContainer holding group information
         exp_post_agg (bool): Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details.
+        sum_over_selected_groups_only (bool): Whether to sum over selected groups only when computing the reference mean.
+            This is relevant for one-versus-rest strategy when the user explicitly set a reference group. In this case, the
+            reference mean can be computed either by summing over all non-target groups, or by summing over selected non-target
+            groups only.
+            Defaults to False (i.e. sum over all non-target groups).
 
     Returns:
         np.ndarray: Fold change values of shape (n_groups, n_genes)
@@ -192,7 +199,13 @@ def fold_change_from_summed_expr(group_agg_counts: np.ndarray, grpc: GroupContai
     if grpc.encoded_ref_group == -1:
         # If one-versus-rest, the reference is all but the group
         ref_agg_counts = group_agg_counts.sum(axis=0)[np.newaxis, :] - group_agg_counts  # (n_groups, n_genes)
-        ref_counts = np.expand_dims(grpc.counts.sum() - grpc.counts, -1)  # (n_groups, 1)
+        if sum_over_selected_groups_only:
+            # TODO: could use counts[non_excluded_group_ids].sum()
+            total_cells = grpc.ovr_inclusion_indices.size  # all non-excluded cells, regardless of groups subset
+        else:
+            total_cells = grpc.counts.sum()
+
+        ref_counts = np.expand_dims(total_cells - grpc.counts, -1)  # (n_groups, 1)
         mu_ref = ref_agg_counts / ref_counts
     else:
         # Else, the reference is the reference group
@@ -222,6 +235,8 @@ def dense_fold_change(X: np.ndarray, grpc: GroupContainer, is_log1p: bool, exp_p
     Author: Rémy Dubois
 
     """
+    # TODO:
+    # assert X.shape[0] == grpc.selected_cell_indices.size
     group_agg_counts = np.zeros(shape=(grpc.counts.size, X.shape[1]), dtype=np.float64)
     # Sum expressions per group
     if is_log1p and not exp_post_agg:
@@ -337,3 +352,14 @@ def compute_batch_bounds(n_genes: int, batch_size: Literal["auto"] | int, n_thre
         raise ValueError(f"Invalid batch_size value: {batch_size}. Must be 'auto' or an integer.")
 
     return bounds_iterator, batch_size
+
+
+@njit(nogil=True, fastmath=True, cache=False)
+def fancy_indexing_axis0(X: np.ndarray, indices: np.ndarray) -> np.ndarray:
+    """Equivalent of X[indices, :] which Numba does not support natively."""
+    # TODO: could be just a reordering of the rows and trimming the last rows to avoid reallocating
+    result = np.empty((indices.size, X.shape[1]), dtype=X.dtype)
+    for i in range(indices.size):
+        for j in range(X.shape[1]):
+            result[i, j] = X[indices[i], j]
+    return result
