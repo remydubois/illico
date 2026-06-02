@@ -125,7 +125,7 @@ pub fn dense_ovo_over_contiguous_col_chunk<D: SparseFloat>(
     let mut u_stats = Array2::<f64>::zeros((n_groups, n_cols));
     let mut zscores = Array2::<f64>::zeros((n_groups, n_cols));
 
-    for i in 0..n_groups {
+    for i in 0..grpc.n_selected_groups {
         if i as isize == grpc.encoded_ref_group {
             p_values.row_mut(i).fill(1.);
             u_stats.row_mut(i).fill(-1.);

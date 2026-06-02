@@ -107,7 +107,8 @@ pub fn csr_ovr_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: Spar
     exp_post_agg: bool,
     alternative: String,
 ) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f64>), String> {
-    let csc_chunk = x.contig_col_chunk_into_csc(chunk_lb, chunk_ub)?;
+    let csc_chunk =
+        x.index_rows_contig_cols_into_csc(chunk_lb, chunk_ub, grpc.included_cell_indices)?;
 
     let (p_values, u_stats, zscores) =
         sparse_ovr_mwu_kernel(&csc_chunk, &grpc, use_continuity, tie_correct, alternative)?;
@@ -127,7 +128,8 @@ pub fn csc_ovr_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: Spar
     exp_post_agg: bool,
     alternative: String,
 ) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f64>), String> {
-    let csc_chunk = x.contig_col_chunk_into_csc(chunk_lb, chunk_ub)?;
+    let csr_chunk = x.contig_cols_into_csr(chunk_lb, chunk_ub)?;
+    let csc_chunk = csr_chunk.index_rows_into_csc(grpc.included_cell_indices)?;
 
     let (p_values, u_stats, zscores) =
         sparse_ovr_mwu_kernel(&csc_chunk, &grpc, use_continuity, tie_correct, alternative)?;

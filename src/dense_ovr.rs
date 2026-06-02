@@ -21,7 +21,7 @@ pub fn dense_ovr_kernel<D: SparseFloat>(
     exp_post_agg: bool,
     alternative: String,
 ) -> Result<(Array2<f64>, Array2<f64>, Array2<f64>, Array2<f64>), String> {
-    let chunk = chunk_and_fortranize(&x, chunk_lb, chunk_ub, None)?;
+    let chunk = chunk_and_fortranize(&x, chunk_lb, chunk_ub, Some(grpc.included_cell_indices))?;
     // Now compute stats and pvalues
     let n_groups = grpc.counts.len();
     let mut p_values = Array2::zeros((n_groups, chunk_ub - chunk_lb));

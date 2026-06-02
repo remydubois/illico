@@ -32,22 +32,9 @@ html_theme = "furo"
 
 html_static_path = ["_static"]
 
-# Mock imports that may not be installed in the build environment so autodoc can
-# import the package even when heavy scientific deps are missing.
-autodoc_mock_imports = [
-    "anndata",
-    "joblib",
-    "loguru",
-    "numba",
-    "h5py",
-    "numpy",
-    "scipy",
-    "pandas",
-    "sklearn",
-    "statsmodels",
-    "tqdm",
-    "illico.rust_backend",
-]
+# The docs workflow installs the project dependencies, and mocking scientific
+# packages breaks imports for modules that use runtime type unions such as
+# `scipy.sparse.csr_matrix | scipy.sparse.csr_array`.
 
 # Autodoc settings
 autodoc_member_order = "bysource"

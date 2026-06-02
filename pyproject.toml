@@ -1,6 +1,6 @@
 [project]
 name = "illico"
-version = "0.5.1"
+version = "0.6.0"
 description = "Fast asymptotic mannwhitney-u test"
 authors = [
     {name = "remydubois",email = "remydubois14@gmail.com"}
@@ -43,6 +43,8 @@ dev = [
     "pdex (>=0.2.0)",
     "ipdb (>=0.13.13,<0.14.0)",
     "tomli (>=2.4.1,<3.0.0)",
+    "ipykernel (>=7.2.0,<8.0.0)",
+    "maturin (>=1.13.3,<2.0.0)",
 ]
 doc = [
     "Sphinx>=5.0",

@@ -118,7 +118,7 @@ pub fn csc_ovo_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: Spar
     let mut pvalues = Array2::zeros((n_groups, control_chunk.shape.1));
     let mut u_stats = Array2::zeros((n_groups, control_chunk.shape.1));
     let mut zscores = Array2::zeros((n_groups, control_chunk.shape.1));
-    for group_idx in 0..n_groups {
+    for group_idx in 0..grpc.n_selected_groups {
         if group_idx == encoded_ref_group {
             pvalues.row_mut(group_idx).fill(1.);
             u_stats.row_mut(group_idx).fill(-1.);
@@ -195,7 +195,7 @@ pub fn csr_ovo_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: Spar
     let mut pvalues = Array2::zeros((n_groups, control_chunk.shape.1));
     let mut u_stats = Array2::zeros((n_groups, control_chunk.shape.1));
     let mut zscores = Array2::zeros((n_groups, control_chunk.shape.1));
-    for group_idx in 0..n_groups {
+    for group_idx in 0..grpc.n_selected_groups {
         if group_idx == encoded_ref_group {
             pvalues.row_mut(group_idx).fill(1.);
             u_stats.row_mut(group_idx).fill(-1.);

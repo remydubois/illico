@@ -152,19 +152,20 @@ def test_fold_change_asymptotic_wilcoxon(eager_rand_adata, test, is_log1p, exp_p
 
 @pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
 @pytest.mark.parametrize("corr_method", ["benjamini-hochberg", "bonferroni"])
-@pytest.mark.parametrize("test", ["ovo", "ovr"])
-def test_scanpy_format_output(eager_rand_adata, test, corr_method, use_rust):
+@pytest.mark.parametrize(
+    "exclude_from_ovr",
+    [None, ["pert_2"], ["pert_2", "pert_4"], ["pert_2", "pert_5"]],
+    ids=["exclude-none", "exclude-2", "exclude-2+4", "exclude-2+5"],
+)
+@pytest.mark.parametrize("groups", [None, ["pert_0", "pert_1"]], ids=["all-groups", "subset-groups"])
+@pytest.mark.parametrize("reference", [None, "pert_0", "pert_1", "pert_2"], ids=["ovr", "ov0", "ov1", "ov2"])
+def test_scanpy_format_output(eager_rand_adata, reference, groups, exclude_from_ovr, corr_method, use_rust):
     """Test that the output of `asymptotic_wilcoxon` with `return_as_scanpy=True` is compatible with Scanpy's output
     format, and that the values are close to those obtained with Scanpy's implementation.
 
     Note: because Scanpy only implements a subset of all the possible setups, this test is kept separately from `test_asymptotic_wilcoxon`, and only sweep the parameters that are relevant to Scanpy's implementation.
 
     """
-    if test == "ovo":
-        reference = eager_rand_adata.obs.pert.iloc[0]
-    else:
-        reference = None
-
     asy_results = asymptotic_wilcoxon(
         adata=eager_rand_adata,
         group_keys="pert",
@@ -177,16 +178,20 @@ def test_scanpy_format_output(eager_rand_adata, test, corr_method, use_rust):
         batch_size=16,
         alternative="two-sided",  # Scanpy only implments two-sided test
         use_rust=use_rust,
+        groups=groups,
+        exclude_from_ovr=exclude_from_ovr,
         return_as_scanpy=True,
         corr_method=corr_method,
     )
-
+    if exclude_from_ovr is not None and reference is None:
+        eager_rand_adata = eager_rand_adata[~eager_rand_adata.obs["pert"].isin(exclude_from_ovr)].copy()
     sc.tl.rank_genes_groups(
         eager_rand_adata,
         groupby="pert",
         method="wilcoxon",
-        reference=reference if test == "ovo" else "rest",
+        reference=reference or "rest",
         n_genes=eager_rand_adata.n_vars,
+        groups="all" if groups is None else groups,
         tie_correct=False,
         corr_method=corr_method,
     )
@@ -217,11 +222,13 @@ def test_scanpy_format_output(eager_rand_adata, test, corr_method, use_rust):
                 err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
             )
         else:
+            mask = np.ones_like(ref, dtype=bool)  # No mask for non-numeric values, compare all
             np.testing.assert_array_equal(
                 ref,
                 res,
                 err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
             )
+        print(f"Passed comparison for key '{k}' with {mask.sum()} valid values.")
 
 
 @pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
@@ -402,6 +409,7 @@ def call_routine(data, method, test, num_threads, use_rust):
             warnings.simplefilter("ignore")
             if method == "pdex":
                 import pdex
+
                 mode = "ref" if test == "ovo" else "all"
                 pdex(
                     data,
@@ -468,7 +476,10 @@ def test_speed_benchmark(adata, method, test, num_threads, use_rust, benchmark, 
     group_params = [p for i, p in enumerate(params) if i in [0, 1, 4]]
     benchmark.group = "-".join(group_params)
     _ = benchmark.pedantic(
-        call_routine(adata, method, test, num_threads, use_rust), iterations=1, warmup_rounds=0, rounds=1
+        call_routine(adata, method, test, num_threads, use_rust),
+        iterations=1,
+        warmup_rounds=0,
+        rounds=5 if method == "illico" else 1,
     )
 
 
