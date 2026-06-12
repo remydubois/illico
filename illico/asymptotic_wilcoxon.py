@@ -1,3 +1,4 @@
+import threading
 from typing import Literal
 
 import anndata as ad
@@ -19,6 +20,7 @@ from illico.utils.ranking import (
     check_indices_sorted_per_parcel,
 )
 from illico.utils.registry import (
+    DaskArrayDataHandler,
     DataHandler,
     KernelDataFormat,
     Test,
@@ -30,6 +32,8 @@ from illico.utils.scanpy import format_illico_results_for_scanpy
 from illico.utils.sparse.csr import csr_sum_along_cols, csr_to_csc
 
 __all__ = ["asymptotic_wilcoxon"]
+
+LOADER_SEMAPHORE = threading.Semaphore(1)
 
 
 @delayed
@@ -57,6 +61,15 @@ def all_purpose_operator(
     the purpose of using a lazy format in the first place. For this specific scenario, a dedicated operator
     `ovo_lazy_csr_operator` has been implemented.
 
+    Note: the semaphore is only needed with DaskArrays to avoid oversubscription: if multiple threads call .compute() simultaneously,
+    the resulting footprint will be huge defeating the inital goal of using Dask. On the other hand, we don't want a sequential
+    setup were .compute and dispatcher() are called one after the other. The semaphore allows to have a concurrent setup equivalent to
+    having a thread loading .compute() in the background and queuing them in a queue of size 1, while other threads take the chunk as soon
+    as it's ready. Experiments showed that in the Dask setup, running 2 or 8 threads with the semaphore is the same runtime. Also, the time
+    saved by using 2 threads (compared to 1) is exactly the cumulated processing time (dispatcher run time), confirming that at any given
+    point in time, there is always a thread running .compute, and a thread running dispatcher, with zero idle time while ensuring limited footprint.
+    This simple semaphore reduced RAM footprint of a factor 2-3, for a small runtime increase (oversubscription is under-optimal anyways).
+
     """
     if group_container.encoded_ref_group == -1:
         test = Test.OVR
@@ -75,7 +88,12 @@ def all_purpose_operator(
     # Fetch the data from disk if in backed mode
     # The reason to be of not applying X[:, lb:ub] in all cases (backed or not) is that if the data is whole in RAM, the CSR chunking is optimized, and
     # if the data is not in RAM, CSR chunking is not implemented
-    fetched_data, bounds = data_handler.fetch_cols(lb, ub)
+    if isinstance(data_handler, DaskArrayDataHandler):
+        with LOADER_SEMAPHORE:  # Ensure that only one worker loads data at a time to avoid OOMs
+            fetched_data, bounds = data_handler.fetch_cols(lb, ub)
+    else:
+        fetched_data, bounds = data_handler.fetch_cols(lb, ub)
+
     # Convert to numba-compatible format
     X = data_handler.to_nb(fetched_data)
     # Call the dispatcher
@@ -175,6 +193,8 @@ def ovo_lazy_csr_operator(
     pre- computed sorted control and mean expression for this group, and performs OVO tests between this group and the
     reference group for all genes at once. This way, only one chunk of rows is loaded in RAM at once, which is much more
     memory-efficient than loading chunks of columns for CSR matrices.
+
+    Note: This operator is not suited for Dask arrays as loading scattered rows from a Dask Array is quite inefficient.
 
     """
     assert data_handler.kernel_data_format() == KernelDataFormat.CSR, "This operator is specific for CSR datasets."
@@ -366,10 +386,11 @@ def asymptotic_wilcoxon(
         logger.info(f"Using layer '{layer}' for differential expression.")
         X = adata.layers[layer]
     else:
-        if adata.isbacked and adata.isview:
+        if adata.isbacked and adata.is_view:
             logger.warning(
                 "adata.X is a view on a backed AnnData. The view will be loaded in memory. "
-                "If you want to subset the Anndata, consider using the `groups` or `exclude_from_ovr` argument."
+                "If you want to subset a lazy-loaded Anndata, consider using the `groups` or "
+                "`exclude_from_ovr` argument, or read your adata with Dask."
             )
         X = adata.X
     data_handler = data_handler_registry.get(X)
@@ -400,11 +421,19 @@ def asymptotic_wilcoxon(
         group_subset=groups,
         exclude=exclude_from_ovr,
     )
+    # TODO: fix min & max
     logger.info(
-        f"Found {group_container.counts.size} unique groups (min size: {group_container.counts.min()} cells; "
+        f"Found {group_container.n_selected_groups} unique groups (min size: {group_container.counts.min()} cells; "
         f"max size: {group_container.counts.max()} cells), with reference group: {reference}"
     )
     _, n_genes_total = X.shape
+
+    if isinstance(data_handler, DaskArrayDataHandler):
+        if n_threads > 2:
+            logger.info(
+                "Number of threads is limited when using Dask to avoid oversubscription. "
+                "Never more than one concurrent thread will be loading data."
+            )
 
     # Allocate the results dataframes
     cols = pd.Series(adata.var_names, name="feature", dtype=str)
@@ -418,6 +447,9 @@ def asymptotic_wilcoxon(
         with tqdm(total=n_tests, smoothing=0.0, unit="it", unit_scale=True, unit_divisor=1000) as pbar:
             if (
                 data_handler.is_lazy
+                and not isinstance(
+                    data_handler, DaskArrayDataHandler
+                )  # Dask is not suited for scattered row access, regardless if dense or CSR
                 and data_handler.kernel_data_format() is KernelDataFormat.CSR
                 and reference is not None
             ):
