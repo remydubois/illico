@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Version 0.6.0rc2
+------------
+- Adds support for AnnData read as Dask arrays.
+
 Version 0.6.0rc1
 ------------
 - Adds support for `groups` and `exclude` arguments:
