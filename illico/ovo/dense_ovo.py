@@ -121,7 +121,7 @@ def dense_ovo_mwu_kernel_over_contiguous_col_chunk(
     pvalues = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
     zscores = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
     statistics = np.empty((n_groups, chunk_ub - chunk_lb), dtype=np.float64)
-    for group_id in range(n_groups):
+    for group_id in range(grpc.n_selected_groups):
         if group_id == grpc.encoded_ref_group:
             pvalues[group_id, :] = 1.0
             zscores[group_id, :] = 0.0

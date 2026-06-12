@@ -46,7 +46,7 @@ def dense_ovr_mwu_kernel_over_contiguous_col_chunk(
 
     """
     # Convert to F-order for faster column access and sorting later
-    chunk = chunk_and_fortranize(X, chunk_lb, chunk_ub, None)
+    chunk = chunk_and_fortranize(X, chunk_lb, chunk_ub, grpc.included_cell_indices)
 
     # Get ranks and tie sums
     tie_sum = np.empty(chunk.shape[1], dtype=np.float64)

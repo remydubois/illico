@@ -93,10 +93,12 @@ def all_purpose_operator(
     # Note: there might be a little speedup in passing results to the dispatchers and writing in it directly, it would
     # allow to not allocate chunks of results. However, this is would be very non-Rusty as the same Python-managed memory block would be shared across several threads.
     # The copy should be GIL-free
-    results[:, lb:ub, 0] = pvalues
-    results[:, lb:ub, 1] = statistics
-    results[:, lb:ub, 2] = zscores
-    results[:, lb:ub, 3] = fold_change  # Technically Rust returns f32, but numpy handles casting here
+    results[:, lb:ub, 0] = pvalues[: group_container.n_selected_groups, :]
+    results[:, lb:ub, 1] = statistics[: group_container.n_selected_groups, :]
+    results[:, lb:ub, 2] = zscores[: group_container.n_selected_groups, :]
+    results[:, lb:ub, 3] = fold_change[
+        : group_container.n_selected_groups, :
+    ]  # Technically Rust returns f32, but numpy handles casting here
     return (lb, ub)
 
 
@@ -218,6 +220,8 @@ def asymptotic_wilcoxon(
     tie_correct: bool = True,
     exp_post_agg: bool = False,
     layer: str | None = None,
+    groups: list[str] | None = None,
+    exclude_from_ovr: list[str] | None = None,
     precompile: bool = True,
     use_rust: bool = True,
     return_as_scanpy: bool = False,
@@ -264,6 +268,16 @@ def asymptotic_wilcoxon(
         Note that `scanpy.rank_genes_groups` assumes the data to be log1p, and exponentiates post aggregation by default.
     layer : str or None, default=None
         Layer in `adata.layers` to use for the data. If `None`, uses `adata.X`.
+    groups : list of values or None, default=None
+        Subset of groups to test. If `None`, tests all groups. This arguments serves the same purpose as scanpy's `groups` argument in `rank_genes_groups`.
+        It is used to filter which groups to compare against the reference in the OVO scenario, or which groups to compare against the rest in the OVR scenario.
+        Note that in the OVR scenario, each comparison still happens against the entirety of the other groups, not just the ones listed in this argument.
+        Note that in the OVO scenario, the reference group is automatically added.
+        Order of the values in this list has no impact on the end results, duplicates will be trimmed away.
+    exclude_from_ovr : list of values or None, default=None
+        Subset of groups to exclude from the rest group in the OVR scenario (when reference=None). This argument is ignored in the OVO scenario.
+        This can be useful if, for instance, one of the groups is corrupted and contains meaningless data, and we don't want it to be part of the comparisons in the OVR scenario.
+        Order of the values in this list has no impact on the end results, duplicates will be trimmed away.
     precompile : bool, default=True
         Whether to precompile necessary functions for performance. It is recommended to set this to `True`.
     use_rust : bool, default=True
@@ -352,6 +366,11 @@ def asymptotic_wilcoxon(
         logger.info(f"Using layer '{layer}' for differential expression.")
         X = adata.layers[layer]
     else:
+        if adata.isbacked and adata.isview:
+            logger.warning(
+                "adata.X is a view on a backed AnnData. The view will be loaded in memory. "
+                "If you want to subset the Anndata, consider using the `groups` or `exclude_from_ovr` argument."
+            )
         X = adata.X
     data_handler = data_handler_registry.get(X)
 
@@ -376,7 +395,10 @@ def asymptotic_wilcoxon(
 
     # Process the groups information
     unique_raw_groups, group_container = encode_and_count_groups(
-        groups=adata.obs[group_keys].values, ref_group=reference
+        groups=adata.obs[group_keys].values,
+        ref_group=reference,
+        group_subset=groups,
+        exclude=exclude_from_ovr,
     )
     logger.info(
         f"Found {group_container.counts.size} unique groups (min size: {group_container.counts.min()} cells; "
@@ -386,11 +408,11 @@ def asymptotic_wilcoxon(
 
     # Allocate the results dataframes
     cols = pd.Series(adata.var_names, name="feature", dtype=str)
-    rows = pd.Series(unique_raw_groups, name="pert", dtype=str)
+    rows = pd.Series(unique_raw_groups[: group_container.n_selected_groups], name="pert", dtype=str)
     results = np.empty((len(rows), len(cols), 4), dtype=np.float64)
 
     # Go through all the possible combinations
-    n_tests = n_genes_total * group_container.counts.size
+    n_tests = n_genes_total * group_container.n_selected_groups
     logger.trace(f"Performing a total of {n_tests:,d} tests.")
     with Parallel(n_threads, prefer="threads", return_as="generator_unordered") as pool:
         with tqdm(total=n_tests, smoothing=0.0, unit="it", unit_scale=True, unit_divisor=1000) as pbar:
@@ -413,7 +435,7 @@ def asymptotic_wilcoxon(
                 )
 
                 # Process all perturbations one by one
-                for _ in pool(ovo_lazy_csr_operator(data_handler, group_container, grp_id, X_ctrl,  mu_ctrl, is_log1p, use_continuity, alternative, tie_correct, exp_post_agg, use_rust, results) for grp_id in range(group_container.counts.size)): # fmt: skip
+                for _ in pool(ovo_lazy_csr_operator(data_handler, group_container, grp_id, X_ctrl,  mu_ctrl, is_log1p, use_continuity, alternative, tie_correct, exp_post_agg, use_rust, results) for grp_id in range(group_container.n_selected_groups)): # fmt: skip
                     pbar.update(adata.n_vars)
             else:
                 # Compute the batch bounds for each thread
@@ -427,7 +449,7 @@ def asymptotic_wilcoxon(
 
                 # Process chunks of columns one by one
                 for lb, ub in pool(all_purpose_operator(data_handler, lb, ub, group_container, is_log1p, use_continuity, alternative, tie_correct, exp_post_agg, use_rust, results) for lb, ub in iterator):  # fmt: skip
-                    pbar.update(group_container.counts.size * (ub - lb))
+                    pbar.update(group_container.n_selected_groups * (ub - lb))
 
     if not return_as_scanpy:
         if n_genes is not None:
@@ -444,7 +466,7 @@ def asymptotic_wilcoxon(
         # Return a dict formatted for Scanpy's rank_genes_groups results
         results = format_illico_results_for_scanpy(
             adata=adata,
-            unique_groups=unique_raw_groups,
+            unique_groups=unique_raw_groups[: group_container.n_selected_groups],
             reference=reference,
             group_keys=group_keys,
             layer=layer,

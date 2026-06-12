@@ -11,12 +11,13 @@ from illico.utils.sparse.csc import (
     CSCMatrix,
     _assert_is_csc,
     csc_fold_change,
-    csc_get_cols,
+    csc_get_contig_cols_into_csr,
 )
 from illico.utils.sparse.csr import (
     CSRMatrix,
     _assert_is_csr,
-    csr_get_contig_cols_into_csc,
+    csr_get_rows_contig_cols_into_csc,
+    csr_get_rows_into_csc,
 )
 
 
@@ -136,7 +137,8 @@ def csc_ovr_mwu_kernel_over_contiguous_col_chunk(
     """
     _assert_is_csc(X)
 
-    csc_chunk = csc_get_cols(csc_matrix=X, indices=np.arange(chunk_lb, chunk_ub))
+    csr_chunk = csc_get_contig_cols_into_csr(csc_matrix=X, chunk_lb=chunk_lb, chunk_ub=chunk_ub)
+    csc_chunk = csr_get_rows_into_csc(csr_matrix=csr_chunk, indices=grpc.included_cell_indices)
 
     # TODO: un-jitting this function comes at close to no cost, and allows to do argsorting out of the njit function
     # on linux machines, it is 3 to 4 times faster than numba.np.argsort and sorting seems to be half the compute time of the whole function
@@ -197,7 +199,9 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
     """
     _assert_is_csr(X)
 
-    csc_chunk = csr_get_contig_cols_into_csc(csr_matrix=X, chunk_lb=chunk_lb, chunk_ub=chunk_ub)
+    csc_chunk = csr_get_rows_contig_cols_into_csc(
+        csr_matrix=X, chunk_lb=chunk_lb, chunk_ub=chunk_ub, indices=grpc.included_cell_indices
+    )
 
     # TODO: same remark as csc regarding sorting
     pvalues, statistics, zscores = sparse_ovr_mwu_kernel(
