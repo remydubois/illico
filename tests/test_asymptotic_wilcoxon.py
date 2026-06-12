@@ -18,7 +18,7 @@ from scipy.stats import mannwhitneyu
 
 from illico.asymptotic_wilcoxon import asymptotic_wilcoxon
 from illico.utils.compile import _precompile
-from illico.utils.registry import data_handler_registry, nb_dispatcher_registry
+from illico.utils.registry import KernelDataFormat, data_handler_registry
 
 set_num_threads(1)  # Ensure single-threaded by default for testing consistency
 
@@ -159,15 +159,19 @@ def test_fold_change_asymptotic_wilcoxon(eager_rand_adata, test, is_log1p, exp_p
 )
 @pytest.mark.parametrize("groups", [None, ["pert_0", "pert_1"]], ids=["all-groups", "subset-groups"])
 @pytest.mark.parametrize("reference", [None, "pert_0", "pert_1", "pert_2"], ids=["ovr", "ov0", "ov1", "ov2"])
-def test_scanpy_format_output(eager_rand_adata, reference, groups, exclude_from_ovr, corr_method, use_rust):
+def test_scanpy_format_output(rand_adata, reference, groups, exclude_from_ovr, corr_method, use_rust):
     """Test that the output of `asymptotic_wilcoxon` with `return_as_scanpy=True` is compatible with Scanpy's output
     format, and that the values are close to those obtained with Scanpy's implementation.
 
     Note: because Scanpy only implements a subset of all the possible setups, this test is kept separately from `test_asymptotic_wilcoxon`, and only sweep the parameters that are relevant to Scanpy's implementation.
 
     """
+    _handler = data_handler_registry.get(rand_adata.X)
+    if rand_adata.isbacked and reference is None and _handler.kernel_data_format() == KernelDataFormat.CSR:
+        pytest.skip("OVR test on lazy CSR is rejected.")
+
     asy_results = asymptotic_wilcoxon(
-        adata=eager_rand_adata,
+        adata=rand_adata,
         group_keys="pert",
         is_log1p=True,  # Scanpy assumes log1p
         exp_post_agg=True,  # Post-aggregation exponentiation is needed to match Scanpy's fold change output
@@ -183,19 +187,22 @@ def test_scanpy_format_output(eager_rand_adata, reference, groups, exclude_from_
         return_as_scanpy=True,
         corr_method=corr_method,
     )
+    # Scanpy's can run on fully loaded AnnData
     if exclude_from_ovr is not None and reference is None:
-        eager_rand_adata = eager_rand_adata[~eager_rand_adata.obs["pert"].isin(exclude_from_ovr)].copy()
+        rand_adata = rand_adata[~rand_adata.obs["pert"].isin(exclude_from_ovr)].to_memory().copy()
+    else:
+        rand_adata = rand_adata.to_memory().copy()
     sc.tl.rank_genes_groups(
-        eager_rand_adata,
+        rand_adata,
         groupby="pert",
         method="wilcoxon",
         reference=reference or "rest",
-        n_genes=eager_rand_adata.n_vars,
+        n_genes=rand_adata.n_vars,
         groups="all" if groups is None else groups,
         tie_correct=False,
         corr_method=corr_method,
     )
-    scanpy_results = eager_rand_adata.uns["rank_genes_groups"]
+    scanpy_results = rand_adata.uns["rank_genes_groups"]
     assert set(asy_results.keys()) == set(scanpy_results.keys()), "Output keys do not match Scanpy's output format."
 
     for k, ref in scanpy_results.items():

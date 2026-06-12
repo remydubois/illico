@@ -366,6 +366,11 @@ def asymptotic_wilcoxon(
         logger.info(f"Using layer '{layer}' for differential expression.")
         X = adata.layers[layer]
     else:
+        if adata.isbacked and adata.isview:
+            logger.warning(
+                "adata.X is a view on a backed AnnData. The view will be loaded in memory. "
+                "If you want to subset the Anndata, consider using the `groups` or `exclude_from_ovr` argument."
+            )
         X = adata.X
     data_handler = data_handler_registry.get(X)
 
@@ -407,7 +412,7 @@ def asymptotic_wilcoxon(
     results = np.empty((len(rows), len(cols), 4), dtype=np.float64)
 
     # Go through all the possible combinations
-    n_tests = n_genes_total * group_container.counts.size
+    n_tests = n_genes_total * group_container.n_selected_groups
     logger.trace(f"Performing a total of {n_tests:,d} tests.")
     with Parallel(n_threads, prefer="threads", return_as="generator_unordered") as pool:
         with tqdm(total=n_tests, smoothing=0.0, unit="it", unit_scale=True, unit_divisor=1000) as pbar:
@@ -430,7 +435,7 @@ def asymptotic_wilcoxon(
                 )
 
                 # Process all perturbations one by one
-                for _ in pool(ovo_lazy_csr_operator(data_handler, group_container, grp_id, X_ctrl,  mu_ctrl, is_log1p, use_continuity, alternative, tie_correct, exp_post_agg, use_rust, results) for grp_id in range(group_container.counts.size)): # fmt: skip
+                for _ in pool(ovo_lazy_csr_operator(data_handler, group_container, grp_id, X_ctrl,  mu_ctrl, is_log1p, use_continuity, alternative, tie_correct, exp_post_agg, use_rust, results) for grp_id in range(group_container.n_selected_groups)): # fmt: skip
                     pbar.update(adata.n_vars)
             else:
                 # Compute the batch bounds for each thread
@@ -444,7 +449,7 @@ def asymptotic_wilcoxon(
 
                 # Process chunks of columns one by one
                 for lb, ub in pool(all_purpose_operator(data_handler, lb, ub, group_container, is_log1p, use_continuity, alternative, tie_correct, exp_post_agg, use_rust, results) for lb, ub in iterator):  # fmt: skip
-                    pbar.update(group_container.counts.size * (ub - lb))
+                    pbar.update(group_container.n_selected_groups * (ub - lb))
 
     if not return_as_scanpy:
         if n_genes is not None:
