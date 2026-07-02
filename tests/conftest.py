@@ -1,3 +1,4 @@
+from importlib.util import find_spec
 import os
 import urllib.request
 from pathlib import Path
@@ -21,20 +22,22 @@ CELL_LINE_URLS = {
     "hepg2": "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE264667&format=file&file=GSE264667%5Fhepg2%5Fraw%5Fsinglecell%5F01%2Eh5ad",
 }
 
-
 @pytest.fixture(
     params=[
-        (cell_line, fmt, fraction)
+        (cell_line, fmt, fraction, use_dask)
         for cell_line in ["k562", "rpe1", "jurkat", "hepg2"]
         for fmt in ["dense", "csr", "csc"]
         for fraction in [0.0, 0.2, 1.0]
+        for use_dask in [True, False]
     ],
     scope="function",
-    ids=lambda p: f"{p[0]}-{p[1]}-{p[2]:.0%}",
+    ids=lambda p: f"{p[0]}-{p[1]}-{p[2]:.0%}{'-dask' if p[3] else ''}",
 )
 def adata(request):
     """Fixture to download, convert and cache cell line dataset with subsampling."""
-    cell_line, fmt, fraction = request.param
+    cell_line, fmt, fraction, use_dask = request.param
+    if not find_spec("dask") and use_dask:
+        pytest.skip("dask is not installed")
     # if fraction.values[0] < 1.0:
     #     request.node.add_marker("debug")
 
@@ -57,7 +60,9 @@ def adata(request):
             adata = ad.read_h5ad(raw_path, as_sparse="X", as_sparse_fmt=sparse.csc_matrix)
         else:
             adata = ad.read_h5ad(raw_path)
-
+        if use_dask:
+            import dask.array as da
+            adata.X = da.from_array(adata.X, meta=type(adata.X)((2, 2)), dtype=adata.dtype)
         if fraction == 0.0:
             col_idxs = np.random.RandomState(0).choice(adata.n_vars, size=1, replace=False)
             adata = adata[:, col_idxs].copy()
@@ -75,10 +80,12 @@ def adata(request):
 # TODO: params on log1p and normalization ? A lot of tests would result
 @pytest.fixture(
     scope="function",
-    params=[(fmt, lazy) for fmt in ["dense", "csc", "csr"] for lazy in [False, True]],
-    ids=lambda p: f"{p[0]}-{'lazy' if p[1] else 'eager'}",
+    params=[(fmt, lazy) for fmt in ["dense", "csc", "csr"] for lazy in [False, "backed", "dask"]],
+    ids=lambda p: f"{p[0]}-{p[1] if p[1] else 'eager'}",
 )
 def rand_adata(request, tmp_path):
+    if not find_spec("dask") and lazy == "dask":
+        pytest.skip("dask is not installed")
     n_cells = 10_000
     n_genes = 15
     n_groups = 5
@@ -128,6 +135,9 @@ def rand_adata(request, tmp_path):
         adata_path = tmp_path / f"rand_adata_{fmt}_lazy.h5ad"
         adata.write_h5ad(adata_path)
         adata = ad.read_h5ad(adata_path, backed="r")
+    elif lazy == "dask":
+        import dask.array as da
+        adata.X = da.from_array(adata.X, meta=type(adata.X)((2, 2)), dtype=adata.dtype)
     return adata
 
 

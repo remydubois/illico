@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any
+from importlib.util import find_spec
+from typing import TYPE_CHECKING, Any
 
 import anndata as ad
-import dask.array as da
 import h5py
 import numpy as np
 from numba import types
@@ -11,6 +11,9 @@ from scipy import sparse as py_sparse
 
 from illico.utils.sparse.csc import CSCMatrix
 from illico.utils.sparse.csr import CSRMatrix
+
+if TYPE_CHECKING:
+    import dask.array as da
 
 
 class Test(Enum):
@@ -295,9 +298,12 @@ class CSRDaskArrayDataHandler(DaskArrayDataHandler, CSRDataHandler):
     def fetch_rows(self, indices: np.ndarray) -> tuple:
         return self.data[indices, :].compute()
 
+is_dask_installed = find_spec("dask") is not None
 
 # Because all dask arrays are of type da.Array, we need to inspect the meta attribute to determine the underlying array type and dispatch to the correct handler
 def _dask_handler_factory(x: da.Array) -> DataHandler:
+    if not is_dask_installed:
+        raise ImportError("Install dask via the extra `\"illico[dask]\"` to be able to use `dask.Array` inside `illico`")
     meta = x._meta
     if isinstance(meta, np.ndarray):
         return DenseDaskArrayDataHandler(x)
@@ -308,6 +314,6 @@ def _dask_handler_factory(x: da.Array) -> DataHandler:
     else:
         raise TypeError(f"Unsupported dask array backing type: {type(meta)}")
 
-
-data_handler_registry[da.Array] = _dask_handler_factory
-data_handler_registry[ad._core.views.DaskArrayView] = _dask_handler_factory
+if is_dask_installed:
+    data_handler_registry[da.Array] = _dask_handler_factory
+    data_handler_registry[ad._core.views.DaskArrayView] = _dask_handler_factory

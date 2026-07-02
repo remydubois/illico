@@ -16,6 +16,8 @@ illico is compatible with python 3.11 and onward:
 pip install illico -U
 ```
 
+A `dask` extra is available if you wish to use `dask`.
+
 ## Getting started
 The full documentation is available [here](https://remydubois.github.io/illico/). A simple starter could be:
 
