@@ -84,6 +84,8 @@ def adata(request):
     ids=lambda p: f"{p[0]}-{p[1] if p[1] else 'eager'}",
 )
 def rand_adata(request, tmp_path):
+    fmt, lazy = request.param
+
     if not find_spec("dask") and lazy == "dask":
         pytest.skip("dask is not installed")
     n_cells = 10_000
@@ -116,7 +118,6 @@ def rand_adata(request, tmp_path):
     dense_counts[groups == 0, 3][::2] *= -1.0  # Ref is both pos and neg in the fourth column
     dense_counts[groups == 1, 4][::2] *= -1.0  # Target is both pos and neg in the fifth column
 
-    fmt, lazy = request.param
     if fmt == "dense":
         data_matrix = dense_counts
     elif fmt == "csc":
