@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import anndata as ad
 import h5py
@@ -11,9 +11,6 @@ from scipy import sparse as py_sparse
 
 from illico.utils.sparse.csc import CSCMatrix
 from illico.utils.sparse.csr import CSRMatrix
-
-if TYPE_CHECKING:
-    import dask.array as da
 
 
 class Test(Enum):
@@ -302,6 +299,7 @@ is_dask_installed = find_spec("dask") is not None
 
 
 if is_dask_installed:
+    import dask.array as da
     # Because all dask arrays are of type da.Array, we need to inspect the meta attribute to determine the underlying array type and dispatch to the correct handler
     def _dask_handler_factory(x: da.Array) -> DataHandler:
         if not is_dask_installed:
