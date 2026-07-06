@@ -16,6 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
+        dev-extra: ["dev", "dev-no-dask"]
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
@@ -27,7 +28,7 @@ jobs:
         python -m pip install --upgrade poetry
         python -m pip install --upgrade tox
         python -m pip install flake8
-        python -m poetry install --with dev
+        python -m poetry install --with ${{ matrix.dev-extra }}
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names

@@ -1,5 +1,6 @@
 import os
 import urllib.request
+from importlib.util import find_spec
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Literal
@@ -80,6 +81,10 @@ def adata(request):
     ids=lambda p: f"{p[0]}-{'lazy' if p[1] is True else ('dask' if p[1] == 'dask' else 'eager')}",
 )
 def rand_adata(request, tmp_path):
+    fmt, lazy = request.param
+
+    if not find_spec("dask") and lazy == "dask":
+        pytest.skip("dask is not installed")
     n_cells = 10_000
     n_genes = 15
     n_groups = 5
@@ -110,7 +115,6 @@ def rand_adata(request, tmp_path):
     dense_counts[groups == 0, 3][::2] *= -1.0  # Ref is both pos and neg in the fourth column
     dense_counts[groups == 1, 4][::2] *= -1.0  # Target is both pos and neg in the fifth column
 
-    fmt, lazy = request.param
     if fmt == "dense":
         data_matrix = dense_counts
     elif fmt == "csc":
@@ -121,6 +125,8 @@ def rand_adata(request, tmp_path):
         raise ValueError(f"Unknown data format: {fmt}")
 
     if lazy == "dask":
+        import dask.array as da
+
         data_matrix = da.from_array(data_matrix)
 
     adata = ad.AnnData(

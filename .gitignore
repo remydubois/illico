@@ -23,3 +23,4 @@ docs/_build
 .DS_Store
 *.so
 logs/
+poetry.toml

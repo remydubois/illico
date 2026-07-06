@@ -8,6 +8,7 @@ Version 0.6.0
     - `groups` is the same as `scanpy`'s `groups` argument, allowing to specify a subset of groups to test: only p-values of those groups will be computed. For the OVR test, there is no significant effect on execution time as ranks need to be computed for every cell anyways. For the OVO test: the smaller this subset is, the faster the test will be, as less groups are compared to the control.
     - `exclude` allows to specify a subset of groups to exclude from testing. Only applicable to the OVR test. The bigger this exclusion group, the faster the test, as there are less values to rank.
 - Lowered anndata lower bound to 0.10.8.
+- Made Dask an optional dependency
 
 Version 0.5.1
 ------------

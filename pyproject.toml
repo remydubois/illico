@@ -15,8 +15,9 @@ dependencies = [
     "tqdm (>=4.67.1,<5.0.0)",
     "joblib (>=1.5.3,<2.0.0)",
     "loguru (>=0.7.3,<0.8.0)",
-    "dask (>=2026.6.0,<2027.0.0)",
 ]
+[project.optional-dependencies]
+dask = [ "dask (>=2026.6.0)" ]
 
 
 # [build-system]
@@ -31,7 +32,7 @@ features = ["pyo3/extension-module"]
 module-name = "illico.rust_backend"
 
 [dependency-groups]
-dev = [
+dev-no-dask = [
     "pytest (>=8.4.2,<9.0.0)",
     "pytest-benchmark (>=5.1.0,<6.0.0)",
     "pytest-benchmark[histogram] (>=5.2.3,<6.0.0)",
@@ -47,6 +48,7 @@ dev = [
     "ipykernel (>=7.2.0,<8.0.0)",
     "maturin (>=1.13.3,<2.0.0)",
 ]
+dev = [{ include-group = "dev-no-dask" }, "dask (>=2026.6.0)"]
 doc = [
     "Sphinx>=5.0",
     "furo",
