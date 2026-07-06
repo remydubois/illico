@@ -33,14 +33,14 @@ files = [
 
 [[package]]
 name = "anndata"
-version = "0.12.10"
+version = "0.12.18"
 description = "Annotated data."
 optional = false
 python-versions = ">=3.11"
 groups = ["main", "dev"]
 files = [
-    {file = "anndata-0.12.10-py3-none-any.whl", hash = "sha256:e3d940d8e34373dc250f998c1011c1da52721f980de9d83a0599daa2baa286e5"},
-    {file = "anndata-0.12.10.tar.gz", hash = "sha256:73a73c99ca50400eb9dc7f2fdd400cf677ea4bb9ef1f7c04691c0fc557e43d7f"},
+    {file = "anndata-0.12.18-py3-none-any.whl", hash = "sha256:23b97a2f449fa2b900f9bbbe1712d36d6f9d6d680feb21144e1c72802af1f014"},
+    {file = "anndata-0.12.18.tar.gz", hash = "sha256:8c14e1814a4119ae92cdfb5d2d1365e0044829e9eaed8f03522cb0eaddd0ccc5"},
 ]
 
 [package.dependencies]
@@ -52,6 +52,7 @@ numpy = ">=1.26"
 packaging = ">=24.2"
 pandas = ">=2.1.0,<2.1.2 || >2.1.2,<3"
 scipy = ">=1.12,<1.17.0 || >1.17.0"
+scverse-misc = ">=0.0.3"
 zarr = ">=2.18.7,<3.0.dev0 || >=3.1.dev0"
 
 [package.extras]
@@ -60,7 +61,7 @@ cu12 = ["cupy-cuda12x"]
 dask = ["dask[array] (>=2023.5.1,<2024.8.dev0 || >=2024.10.dev0,<2025.2.dev0 || >=2025.9.dev0)"]
 dev = ["towncrier (>=24.8.0)"]
 dev-doc = ["towncrier (>=24.8.0)"]
-doc = ["awkward (>=2.3)", "dask[array] (>=2023.5.1,<2024.8.dev0 || >=2024.10.dev0,<2025.2.dev0 || >=2025.9.dev0)", "ipython", "myst-nb", "myst-parser", "scanpydoc[theme,typehints] (>=0.15.3)", "sphinx (>=8.2.1,<9)", "sphinx-autodoc-typehints (>=2.2.0)", "sphinx-book-theme (>=1.1.0)", "sphinx-copybutton", "sphinx-design (>=0.5.0)", "sphinx-issues (>=5.0.1)", "sphinx-toolbox (>=3.8.0)", "sphinxext-opengraph", "towncrier (>=24.8.0)"]
+doc = ["awkward (>=2.6.3)", "dask[array] (>=2023.5.1,<2024.8.dev0 || >=2024.10.dev0,<2025.2.dev0 || >=2025.9.dev0)", "ipython", "myst-nb", "myst-parser", "scanpydoc[theme,typehints] (>=0.17.1)", "scverse-misc[sphinx]", "sphinx (>=9.1)", "sphinx-autodoc-typehints (>=3.6.2)", "sphinx-book-theme (>=1.1.0)", "sphinx-copybutton", "sphinx-design", "sphinx-issues (>=5.0.1)", "sphinxext-opengraph", "towncrier (>=24.8.0)"]
 gpu = ["cupy"]
 lazy = ["aiohttp", "dask[array] (>=2023.5.1,<2024.8.dev0 || >=2024.10.dev0,<2025.2.dev0 || >=2025.9.dev0)", "requests", "xarray (>=2025.6.1)"]
 test = ["aiohttp", "awkward (>=2.3.2)", "boltons", "dask[array] (>=2023.5.1,<2024.8.dev0 || >=2024.10.dev0,<2025.2.dev0 || >=2025.9.dev0)", "dask[distributed]", "filelock", "joblib", "loompy (>=3.0.5)", "matplotlib", "openpyxl", "pooch", "pyarrow", "pytest", "pytest-cov", "pytest-memray", "pytest-mock", "pytest-randomly", "pytest-xdist[psutil]", "requests", "scanpy (>=1.10)", "scikit-learn", "xarray (>=2025.6.1)"]
@@ -3473,6 +3474,46 @@ doc = ["intersphinx_registry", "jupyterlite-pyodide-kernel", "jupyterlite-sphinx
 test = ["Cython", "array-api-strict (>=2.3.1)", "asv", "gmpy2", "hypothesis (>=6.30)", "meson", "mpmath", "ninja ; sys_platform != \"emscripten\"", "pooch", "pytest (>=8.0.0)", "pytest-cov", "pytest-timeout", "pytest-xdist", "scikit-umfpack", "threadpoolctl"]
 
 [[package]]
+name = "scverse-misc"
+version = "0.0.3"
+description = "Miscellaneous utility code used by scverse packages"
+optional = false
+python-versions = ">=3.10"
+groups = ["main", "dev"]
+markers = "python_version == \"3.11\""
+files = [
+    {file = "scverse_misc-0.0.3-py3-none-any.whl", hash = "sha256:295702368db8f5fe946b5296135990492b3fc891a45bd6dd27798775db4c61c6"},
+    {file = "scverse_misc-0.0.3.tar.gz", hash = "sha256:18c46eeeac8ccef8f435e41a8ee86173b3d7ef6ea1167fde97a17553f70d3210"},
+]
+
+[package.dependencies]
+session-info2 = "*"
+typing-extensions = {version = "*", markers = "python_version < \"3.13\""}
+
+[[package]]
+name = "scverse-misc"
+version = "0.1.1"
+description = "Miscellaneous utility code used by scverse packages"
+optional = false
+python-versions = ">=3.12"
+groups = ["main", "dev"]
+markers = "python_version >= \"3.12\""
+files = [
+    {file = "scverse_misc-0.1.1-py3-none-any.whl", hash = "sha256:d402e470a6921c110ab44a63f2e606204d6f6ef25626a3cb2d7b567832148369"},
+    {file = "scverse_misc-0.1.1.tar.gz", hash = "sha256:5001572763a88d962f7e40309d1e47a62ae3c358aec93e377af998e4c7e6dd97"},
+]
+
+[package.dependencies]
+session-info2 = "*"
+typing-extensions = {version = "*", markers = "python_version < \"3.13\""}
+
+[package.extras]
+datasets = ["anndata", "pooch", "pyyaml", "tqdm"]
+settings = ["pydantic-settings", "python-dotenv"]
+spatialdata = ["spatialdata"]
+sphinx = ["pydocstring-rs (>=0.1.13)", "sphinx (>=9)"]
+
+[[package]]
 name = "seaborn"
 version = "0.13.2"
 description = "Statistical data visualization"
@@ -3500,7 +3541,7 @@ version = "0.4"
 description = "Print versions of imported packages."
 optional = false
 python-versions = ">=3.10"
-groups = ["dev"]
+groups = ["main", "dev"]
 files = [
     {file = "session_info2-0.4-py3-none-any.whl", hash = "sha256:1c06604853acd43d8cdcc9e815efbdf5534d728234e8374dea1eef29496bb1df"},
     {file = "session_info2-0.4.tar.gz", hash = "sha256:bb01bf7c320301d6cbcfad36b85cca7befe537ffd60269be38ae9e1a956f4aa4"},
@@ -4173,4 +4214,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "06efa96354f19152146d365a3376c54b76dd884270b882301c6d4431e96a7812"
+content-hash = "e0468063794294b98b16fd224c2c397e4a5546e6adfb66d86a4cfb3768e7328a"

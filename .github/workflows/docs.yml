@@ -13,6 +13,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
       - name: Install Poetry
         run: python -m pip install --upgrade pip && pip install poetry
       - name: Install project dependencies (including docs)

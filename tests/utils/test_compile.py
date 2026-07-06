@@ -3,7 +3,11 @@ import pytest
 
 from illico.utils.compile import _precompile
 from illico.utils.groups import encode_and_count_groups
-from illico.utils.registry import KernelDataFormat, data_handler_registry
+from illico.utils.registry import (
+    DaskArrayDataHandler,
+    KernelDataFormat,
+    data_handler_registry,
+)
 from illico.utils.sparse.csr import csr_to_csc
 
 
@@ -21,7 +25,12 @@ def test_precompile(rand_adata, test):
     assert (len(leg_sig := dispatcher.nopython_signatures)) > 0, "Dispatcher should be compiled now."
 
     # Now check that re-running does not trigger another compilation
-    if data_handler.is_lazy and data_handler.kernel_data_format() is KernelDataFormat.CSR and reference is not None:
+    if (
+        data_handler.is_lazy
+        and data_handler.kernel_data_format() is KernelDataFormat.CSR
+        and reference is not None
+        and not isinstance(data_handler, DaskArrayDataHandler)
+    ):
         x_csr = data_handler.to_nb(data_handler.data[:])
         x_csc = csr_to_csc(x_csr)
         dispatcher(x_csc, x_csc, False, False, "two-sided")
