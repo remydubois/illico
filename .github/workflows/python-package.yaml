@@ -28,7 +28,7 @@ jobs:
         python -m pip install --upgrade poetry
         python -m pip install --upgrade tox
         python -m pip install flake8
-        python -m poetry install --with ${{ matrix.dev-extra }}
+        python -m poetry install --only main,${{ matrix.dev-extra }}
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
