@@ -10,6 +10,7 @@ from numba import types
 from illico.ovo.sparse_ovo import single_group_sparse_ovo_mwu_kernel
 from illico.utils.groups import GroupContainer
 from illico.utils.registry import (
+    DaskArrayDataHandler,
     DataHandler,
     KernelDataFormat,
     Test,
@@ -43,7 +44,12 @@ def _precompile(data_handler: DataHandler, reference: Any | None):
         test_type = Test.OVR
     else:
         test_type = Test.OVO
-    if data_handler.is_lazy and data_handler.kernel_data_format() is KernelDataFormat.CSR and test_type is Test.OVO:
+    if (
+        data_handler.is_lazy
+        and data_handler.kernel_data_format() is KernelDataFormat.CSR
+        and test_type is Test.OVO
+        and not isinstance(data_handler, DaskArrayDataHandler)
+    ):
         # This is the special lazy CSR OVO scenario
         dispatcher = single_group_sparse_ovo_mwu_kernel
         # The input to this dispatcher is CSC, not CSR, because data is converted in process_group

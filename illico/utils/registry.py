@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from enum import Enum
+from importlib.util import find_spec
 from typing import Any
 
 import anndata as ad
-import dask.array as da
 import h5py
 import numpy as np
 from numba import types
@@ -261,10 +261,6 @@ class H5pyBackedCSRDataHandler(CSRDataHandler):
 
 
 class DaskArrayDataHandler(DataHandler):
-    def input_signature(self) -> tuple:
-        # Because this will be loaded by chunk, input type is necessarily contiguous
-        input_type = getattr(types, str(self.data.dtype.type))[:, ::1]
-        return input_type
 
     def fetch_cols(self, lb: int, ub: int) -> tuple:
         return self.data[:, lb:ub].compute(), (0, ub - lb)
@@ -281,33 +277,47 @@ class DaskArrayDataHandler(DataHandler):
 
 
 class DenseDaskArrayDataHandler(DaskArrayDataHandler, DenseDataHandler):
-    # Inherits everything from DaskArrayDataHandler and DenseDataHandler, no need to override anything
-    pass
+    def input_signature(self) -> tuple:
+        # Because this will be loaded by chunk, input type is necessarily contiguous
+        input_type = getattr(types, str(self.data.dtype))[:, ::1]
+        return input_type
 
 
 class CSCDaskArrayDataHandler(DaskArrayDataHandler, CSCDataHandler):
-    # Inherits everything from DaskArrayDataHandler and CSCDataHandler, no need to override anything
-    pass
+    def input_signature(self) -> tuple:
+        data_type = getattr(types, str(self.data._meta.data.dtype))[::1]
+        indices_type = getattr(types, str(self.data._meta.indices.dtype))[::1]
+        indptr_type = getattr(types, str(self.data._meta.indptr.dtype))[::1]
+        return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSCMatrix)
 
 
 class CSRDaskArrayDataHandler(DaskArrayDataHandler, CSRDataHandler):
-    # Inherits almost everything from DaskArrayDataHandler and CSRDataHandler
-    def fetch_rows(self, indices: np.ndarray) -> tuple:
-        return self.data[indices, :].compute()
+    def input_signature(self) -> tuple:
+        data_type = getattr(types, str(self.data._meta.data.dtype))[::1]
+        indices_type = getattr(types, str(self.data._meta.indices.dtype))[::1]
+        indptr_type = getattr(types, str(self.data._meta.indptr.dtype))[::1]
+        return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSRMatrix)
+
+is_dask_installed = find_spec("dask") is not None
 
 
-# Because all dask arrays are of type da.Array, we need to inspect the meta attribute to determine the underlying array type and dispatch to the correct handler
-def _dask_handler_factory(x: da.Array) -> DataHandler:
-    meta = x._meta
-    if isinstance(meta, np.ndarray):
-        return DenseDaskArrayDataHandler(x)
-    elif isinstance(meta, (py_sparse.csr_matrix, py_sparse.csr_array)):
-        return CSRDaskArrayDataHandler(x)
-    elif isinstance(meta, (py_sparse.csc_matrix, py_sparse.csc_array)):
-        return CSCDaskArrayDataHandler(x)
-    else:
-        raise TypeError(f"Unsupported dask array backing type: {type(meta)}")
+if is_dask_installed:
+    import dask.array as da
 
-
-data_handler_registry[da.Array] = _dask_handler_factory
-data_handler_registry[ad._core.views.DaskArrayView] = _dask_handler_factory
+    # Because all dask arrays are of type da.Array, we need to inspect the meta attribute to determine the underlying array type and dispatch to the correct handler
+    def _dask_handler_factory(x: da.Array) -> DataHandler:
+        if not is_dask_installed:
+            raise ImportError(
+                'Install dask via the extra `"illico[dask]"` to be able to use `dask.Array` inside `illico`'
+            )
+        meta = x._meta
+        if isinstance(meta, np.ndarray):
+            return DenseDaskArrayDataHandler(x)
+        elif isinstance(meta, (py_sparse.csr_matrix, py_sparse.csr_array)):
+            return CSRDaskArrayDataHandler(x)
+        elif isinstance(meta, (py_sparse.csc_matrix, py_sparse.csc_array)):
+            return CSCDaskArrayDataHandler(x)
+        else:
+            raise TypeError(f"Unsupported dask array backing type: {type(meta)}")
+    data_handler_registry[da.Array] = _dask_handler_factory
+    data_handler_registry[ad._core.views.DaskArrayView] = _dask_handler_factory
