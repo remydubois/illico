@@ -4,10 +4,10 @@ import math
 import os
 import re
 import warnings
+from importlib.util import find_spec
 from pathlib import Path
 
 import anndata as ad
-import dask.array as da
 import memray
 import numpy as np
 import pandas as pd
@@ -27,7 +27,16 @@ ATOL = 0.0
 RTOL = 1.0e-12
 
 
-def _to_dense(x: np.ndarray | da.Array) -> np.ndarray:
+def _is_dask_array(x) -> bool:
+    """Return whether ``x`` is a dask array, without requiring dask to be installed."""
+    if find_spec("dask") is None:
+        return False
+    import dask.array as da
+
+    return isinstance(x, da.Array)
+
+
+def _to_dense(x) -> np.ndarray:
     """Convert any array-like (ndarray, Dask, DaskArrayView, or scipy sparse) to a dense numpy array."""
     if isinstance(x, np.ndarray):
         return x
@@ -196,7 +205,7 @@ def test_scanpy_format_output(rand_adata, reference, groups, exclude_from_ovr, c
     else:
         rand_adata = rand_adata.to_memory().copy()
     # Materialize Dask arrays — Scanpy does not support them
-    if isinstance(rand_adata.X, da.Array):
+    if _is_dask_array(rand_adata.X):
         rand_adata.X = rand_adata.X.compute()
     sc.tl.rank_genes_groups(
         rand_adata,

@@ -51,11 +51,11 @@ def csr_count_nonzeros(csr_matrix: CSRMatrix, axis: int | None = None) -> np.nda
 
     """
     if axis is None:
-        nnz = np.empty((1,), dtype=np.int32)
+        nnz = np.empty((1,), dtype=csr_matrix.indptr.dtype)
         nnz[0] = csr_matrix.data.size
         return nnz
     elif axis == 0:
-        nnz = np.zeros(csr_matrix.shape[1], dtype=np.int32)
+        nnz = np.zeros(csr_matrix.shape[1], dtype=csr_matrix.indptr.dtype)
         _add_at_scalar(nnz, csr_matrix.indices, 1)
         return nnz
     elif axis == 1:
