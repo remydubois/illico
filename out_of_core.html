@@ -172,7 +172,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -234,7 +234,7 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
@@ -246,8 +246,9 @@
 <li><p>h5-dense (np.ndarray) disk-backed dataset are natively supported</p></li>
 <li><p>h5-CSC (sparse along the columns) disk-backed datasets are natively supported</p></li>
 <li><p>h5-CSR (sparse along the rows) disk-backed datasets are natively supported <strong>only for OVO (perturbed vs controls) test</strong>. If you want to perform OVR (each group vs the rest) tests, you are better off loading it entirely in memory, as OVR test requires each column to be entirely in RAM at once, and CSR format does not allow to load columns from disk without loading the entire <code class="docutils literal notranslate"><span class="pre">.indices</span></code> in RAM (without telling you).</p></li>
+<li><p>Dask-backed datasets are supported in the same scenarii as h5 datasets.</p></li>
 </ul>
-<p>If your data is backed through Dask or another backend, please open an issue as it should require little rework for it to be supported.</p>
+<p>If your data is backed through another backend, please open an issue.</p>
 <p>Summary:</p>
 <div class="table-wrapper colwidths-auto docutils container">
 <table class="docutils align-default">
@@ -302,6 +303,42 @@
 <td><p>✅</p></td>
 <td><p>-</p></td>
 </tr>
+<tr class="row-odd"><td><p>OVO (reference=”non-targeting”)</p></td>
+<td><p>Dense</p></td>
+<td><p>Lazy (Dask)</p></td>
+<td><p>✅</p></td>
+<td><p>-</p></td>
+</tr>
+<tr class="row-even"><td><p>OVO (reference=”non-targeting”)</p></td>
+<td><p>CSR</p></td>
+<td><p>Lazy (Dask)</p></td>
+<td><p>✅</p></td>
+<td><p>-</p></td>
+</tr>
+<tr class="row-odd"><td><p>OVO (reference=”non-targeting”)</p></td>
+<td><p>CSC</p></td>
+<td><p>Lazy (Dask)</p></td>
+<td><p>✅</p></td>
+<td><p>-</p></td>
+</tr>
+<tr class="row-even"><td><p>OVR (reference=None)</p></td>
+<td><p>Dense</p></td>
+<td><p>Lazy (Dask)</p></td>
+<td><p>✅</p></td>
+<td><p>-</p></td>
+</tr>
+<tr class="row-odd"><td><p>OVR (reference=None)</p></td>
+<td><p>CSR</p></td>
+<td><p>Lazy (Dask)</p></td>
+<td><p>✅</p></td>
+<td><p>Setting <code class="docutils literal notranslate"><span class="pre">illico</span></code>’s batch size to 512 or 1024 will greatly reduce compute time for limited extra footprint.</p></td>
+</tr>
+<tr class="row-even"><td><p>OVR (reference=None)</p></td>
+<td><p>CSC</p></td>
+<td><p>Lazy (Dask)</p></td>
+<td><p>✅</p></td>
+<td><p>-</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -312,6 +349,15 @@
 <li><p>The “Specific parallelization scheme mentioned for the OVO lazy CSR use case simply relies on the fact that due to the nature of the OVR test, we can run it group by group, and thus only load one group at a time in RAM, which is not the case for OVR where we need to load all groups at once.</p></li>
 <li><p>Note also that illico is expected to scale less well on lazy datasets, as most of the time the data loading part (such as the one of h5 datasets) is GIL-blocking.</p></li>
 </ol>
+<section id="note-on-dask-support">
+<h2>Note on Dask support<a class="headerlink" href="#note-on-dask-support" title="Link to this heading">¶</a></h2>
+<p>Dask support was added in <code class="docutils literal notranslate"><span class="pre">v0.6.0</span></code> and, although fully functional, it is still in early stages. Notably, efficiently parallelizing the tests on dask-backed datasets is not trivial, as many possibilities and design choices exist to do so. For in-RAM datasets, tests are parallelized over threads by splitting the dataset in vertical chunks (i.e. groups of genes). For dask-backed datasets, the dask scheduler parallelizes the data loading, but could also be used to parallelize the tests: in this case, the resulting memory footprint would be quite high. In order to not defeat the initial goal of lazy loading (maintaining a small RAM footprint), the design choices made on this side were <strong>conservative</strong>. Consequently, the parallelization scheme in this scenario is thread-based:</p>
+<ul class="simple">
+<li><p>One thread loads the chunk in RAM (with a <code class="docutils literal notranslate"><span class="pre">.compute()</span></code> call)</p></li>
+<li><p>One thread processes this chunk</p></li>
+</ul>
+<p>Those two operations are ran in parallel as the chunk processing is non GIL-blocking. The fact that only one <code class="docutils literal notranslate"><span class="pre">.compute()</span></code> is called at a time allows to maintain low RAM footprint. The data loading is protected with a Semaphore to avoid multiple concurrent <code class="docutils literal notranslate"><span class="pre">.compute()</span></code> calls. Using two threads allows an efficient overlapping of loading &amp; processing, making the most of the machine’s resources. For more details and benchmarks on this question, please refer to the <a class="reference external" href="https://github.com/remydubois/illico/issues/21#issuecomment-4693686202">this issue</a>.</p>
+</section>
 </section>
 
         </article>
@@ -357,8 +403,27 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">What if my adata does not fit in memory?</a><ul>
+<li><a class="reference internal" href="#note-on-dask-support">Note on Dask support</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
