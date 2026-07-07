@@ -1,6 +1,6 @@
 [project]
 name = "illico"
-version = "0.6.0rc2"
+version = "0.6.0"
 description = "Fast asymptotic mannwhitney-u test"
 authors = [
     {name = "remydubois",email = "remydubois14@gmail.com"}
@@ -8,7 +8,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
 dependencies = [
-    "anndata (>=0.11)",
+    "anndata (>=0.10.8)",
     "numba (>=0.60)",
     "pandas (>=2.2.2)",
     "scipy (>=1.13,<2.0.0)",

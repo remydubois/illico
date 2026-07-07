@@ -7,6 +7,7 @@ import warnings
 from pathlib import Path
 
 import anndata as ad
+import dask.array as da
 import memray
 import numpy as np
 import pandas as pd
@@ -24,6 +25,16 @@ set_num_threads(1)  # Ensure single-threaded by default for testing consistency
 
 ATOL = 0.0
 RTOL = 1.0e-12
+
+
+def _to_dense(x: np.ndarray | da.Array) -> np.ndarray:
+    """Convert any array-like (ndarray, Dask, DaskArrayView, or scipy sparse) to a dense numpy array."""
+    if isinstance(x, np.ndarray):
+        return x
+    if hasattr(x, "compute"):  # da.Array or AnnData's DaskArrayView
+        x = x.compute()
+        return x.toarray() if hasattr(x, "toarray") else x
+    return x.toarray()
 
 
 def scanpy_mannwhitneyu(adata, groupby_key, reference):
@@ -61,9 +72,7 @@ def scanpy_mannwhitneyu(adata, groupby_key, reference):
 
 def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternative, exp_post_agg=False, is_log1p=False):
     if reference is not None:
-        ref_counts = adata[adata.obs[groupby_key].eq(reference)].X
-        if not isinstance(ref_counts, np.ndarray):
-            ref_counts = ref_counts.toarray()
+        ref_counts = _to_dense(adata[adata.obs[groupby_key].eq(reference)].X)
 
     # Loop over perturbations
     results = []
@@ -71,15 +80,9 @@ def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternativ
         if pert == reference:
             continue
         mask = adata.obs[groupby_key].eq(pert).values
-        grp_counts = adata.X[mask]  # Grab the perturbed counts
+        grp_counts = _to_dense(adata.X[mask])  # Grab the perturbed counts
         if reference is None:
-            ref_counts = adata.X[~mask]  # Grab the perturbed counts
-
-        # densify
-        if not isinstance(grp_counts, np.ndarray):
-            grp_counts = grp_counts.toarray()
-        if not isinstance(ref_counts, np.ndarray):
-            ref_counts = ref_counts.toarray()
+            ref_counts = _to_dense(adata.X[~mask])  # Grab the perturbed counts
 
         # Compute FC
         if is_log1p and not exp_post_agg:
@@ -192,6 +195,9 @@ def test_scanpy_format_output(rand_adata, reference, groups, exclude_from_ovr, c
         rand_adata = rand_adata[~rand_adata.obs["pert"].isin(exclude_from_ovr)].to_memory().copy()
     else:
         rand_adata = rand_adata.to_memory().copy()
+    # Materialize Dask arrays — Scanpy does not support them
+    if isinstance(rand_adata.X, da.Array):
+        rand_adata.X = rand_adata.X.compute()
     sc.tl.rank_genes_groups(
         rand_adata,
         groupby="pert",
@@ -324,12 +330,10 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alte
         # Test that the original adata is not modified, some sorting happen in-place so just making sure
         pd.testing.assert_frame_equal(rand_adata.obs, cached.obs)
         pd.testing.assert_frame_equal(rand_adata.var, cached.var)
-        if isinstance(rand_adata.X, np.ndarray):
-            np.testing.assert_array_equal(rand_adata.X, cached.X)
-        else:
-            np.testing.assert_array_equal(rand_adata.X.toarray(), cached.X.toarray())
+        np.testing.assert_array_equal(_to_dense(rand_adata.X), _to_dense(cached.X))
 
 
+# TODO: this footprint test should also test Dask-read AnnData
 # Do not sweep all the possible test params, alternative and all
 @pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
 @pytest.mark.parametrize("backed", [True, False], ids=["lazy", "eager"])

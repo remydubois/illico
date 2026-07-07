@@ -160,7 +160,7 @@ def encode_and_count_groups(
     )
 
     return unique_groups, GroupContainer(
-        n_selected_groups=n_selected_groups,
+        n_selected_groups=np.uint64(n_selected_groups),
         encoded_groups=encoded_groups,
         counts=group_counts.astype(np.uint64),
         indices=group_indices.astype(np.uint64),

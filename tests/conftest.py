@@ -1,11 +1,13 @@
 from importlib.util import find_spec
 import os
 import urllib.request
+from importlib.util import find_spec
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Literal
 
 import anndata as ad
+import dask.array as da
 import numpy as np
 import pandas as pd
 import pytest
@@ -80,8 +82,8 @@ def adata(request):
 # TODO: params on log1p and normalization ? A lot of tests would result
 @pytest.fixture(
     scope="function",
-    params=[(fmt, lazy) for fmt in ["dense", "csc", "csr"] for lazy in [False, "backed", "dask"]],
-    ids=lambda p: f"{p[0]}-{p[1] if p[1] else 'eager'}",
+    params=[(fmt, lazy) for fmt in ["dense", "csc", "csr"] for lazy in [False, True, "dask"]],
+    ids=lambda p: f"{p[0]}-{'lazy' if p[1] is True else ('dask' if p[1] == 'dask' else 'eager')}",
 )
 def rand_adata(request, tmp_path):
     fmt, lazy = request.param
@@ -127,6 +129,11 @@ def rand_adata(request, tmp_path):
     else:
         raise ValueError(f"Unknown data format: {fmt}")
 
+    if lazy == "dask":
+        import dask.array as da
+
+        data_matrix = da.from_array(data_matrix)
+
     adata = ad.AnnData(
         data_matrix,
         obs=pd.DataFrame({"pert": [f"pert_{g}" for g in groups]}),
@@ -144,7 +151,7 @@ def rand_adata(request, tmp_path):
 
 @pytest.fixture(scope="function")
 def eager_rand_adata(rand_adata):
-    if rand_adata.isbacked:
+    if rand_adata.isbacked or isinstance(rand_adata.X, da.Array):
         pytest.skip("This fixture returns only in-RAM dataset.")
     return rand_adata
 
