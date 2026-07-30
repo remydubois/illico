@@ -4,10 +4,10 @@ Approximate speed benchmarks (done on a 8-CPUs, 1 GPU machine) ran on k562-essen
 
 |               Test               | Format | illico | scanpy | pdex | rapids-singlecell (GPU) |
 |----------------------------------|--------|--------|--------|------|------------------ |
-| OVO (reference="non-targeting")  | Dense  |  ~20s  | ~1h    | ~20min  | ~25min |
-| OVO (reference="non-targeting")  | Sparse |  ~15s  | ~1h30min  | ~8min  | ~1h10min |
-| OVR (reference=None)             | Dense  |  ~10s  | >10h   |  >10h   | ~1min |
-| OVR (reference=None)             | Sparse |  ~10s  | >10h   |  >10h   | ~1min |
+| OVO (reference="non-targeting")  | Dense  |  ~20s  | ~1h    | ~20min  | ~20s |
+| OVO (reference="non-targeting")  | Sparse |  ~15s  | ~1h30min  | ~8min  | ~6s |
+| OVR (reference=None)             | Dense  |  ~10s  | >10h   |  >10h   | ~6s |
+| OVR (reference=None)             | Sparse |  ~10s  | >10h   |  >10h   | ~5s |
 
 ## Installation
 illico is compatible with python 3.11 and onward:
