@@ -61,10 +61,7 @@ def adata(request):
             adata = ad.read_h5ad(raw_path, as_sparse="X", as_sparse_fmt=sparse.csc_matrix)
         else:
             adata = ad.read_h5ad(raw_path)
-        if use_dask:
-            import dask.array as da
 
-            adata.X = da.from_array(adata.X, meta=type(adata.X)((2, 2)), dtype=adata.dtype)
         if fraction == 0.0:
             col_idxs = np.random.RandomState(0).choice(adata.n_vars, size=1, replace=False)
             adata = adata[:, col_idxs].copy()
