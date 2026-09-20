@@ -8,7 +8,6 @@ from importlib.util import find_spec
 from pathlib import Path
 
 import anndata as ad
-import dask.array as da
 import memray
 import numpy as np
 import pandas as pd
@@ -25,7 +24,7 @@ from illico.utils.registry import KernelDataFormat, data_handler_registry
 set_num_threads(1)  # Ensure single-threaded by default for testing consistency
 
 
-def _to_dense(x: np.ndarray | da.Array) -> np.ndarray:
+def _to_dense(x: np.ndarray | da.Array) -> np.ndarray:  # type: ignore
     """Convert any array-like (ndarray, Dask, DaskArrayView, or scipy sparse) to a dense numpy array."""
     if isinstance(x, np.ndarray):
         return x
@@ -196,7 +195,7 @@ def test_scanpy_format_output(rand_adata, reference, groups, exclude_from_ovr, c
     else:
         rand_adata = rand_adata.to_memory().copy()
     # Materialize Dask arrays — Scanpy does not support them
-    if isinstance(rand_adata.X, da.Array):
+    if isinstance(rand_adata.X, da.Array):  # type: ignore
         rand_adata.X = rand_adata.X.compute()
     sc.tl.rank_genes_groups(
         rand_adata,
