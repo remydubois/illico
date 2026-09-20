@@ -6,7 +6,8 @@ from tempfile import NamedTemporaryFile
 from typing import Literal
 
 import anndata as ad
-import dask.array as da
+
+# import dask.array as da
 import numpy as np
 import pandas as pd
 import pytest
@@ -162,8 +163,13 @@ def rand_adata(request, tmp_path):
 
 @pytest.fixture(scope="function")
 def eager_rand_adata(rand_adata):
-    if rand_adata.isbacked or isinstance(rand_adata.X, da.Array):
+    if rand_adata.isbacked:
         pytest.skip("This fixture returns only in-RAM dataset.")
+    if find_spec("dask"):
+        import dask.array as da
+
+        if isinstance(rand_adata.X, da.Array):
+            pytest.skip("This fixture returns only in-RAM dataset.")
     return rand_adata
 
 
