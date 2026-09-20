@@ -10,7 +10,10 @@ from numba import set_num_threads
 from scipy import sparse
 from tqdm.auto import tqdm
 
-from illico.ovo import single_group_sparse_ovo_mwu_kernel
+from illico.ovo.sparse_ovo import (
+    _single_group_sparse_ovo_mwu_kernel,
+    compute_sparse_unique_values_and_offsets,
+)
 from illico.utils.compile import _precompile
 from illico.utils.groups import GroupContainer, encode_and_count_groups
 from illico.utils.math import compute_batch_bounds
@@ -158,9 +161,16 @@ def preprocess_group(
     start = grpc.indptr[group_id]
     end = grpc.indptr[group_id + 1]
     indices = grpc.indices[start:end]
-    X = data_handler.fetch_rows(indices)
+    if isinstance(data_handler, DaskArrayDataHandler):
+        with LOADER_SEMAPHORE:  # Ensure that only one worker loads data at a time to avoid OOMs
+            X = data_handler.fetch_rows(
+                indices
+            )  # Fetch rows only happens on lazy data, so it does not return bounds unlike fetch_cols
+    else:
+        X = data_handler.fetch_rows(indices)
     X = data_handler.to_nb(X)
     # Compute mean expression for fold change computation
+    # TODO: maybe this would be faster to run on the CSC ?
     mu = csr_sum_along_cols(X, expm1=is_log1p & (not exp_post_agg)) / X.shape[0]
     # Convert it to CSC
     X = csr_to_csc(X, include_indices=False)
@@ -176,6 +186,10 @@ def ovo_lazy_csr_operator(
     group_id: int,
     X_control: np.ndarray,
     mu_control: np.ndarray,
+    n_zeros_ref: np.ndarray,
+    n_uniques_ref: np.ndarray,
+    ref_block_offsets: np.ndarray,
+    tie_sums_ref: np.ndarray,
     is_log1p: bool,
     use_continuity: bool,
     alternative: str,
@@ -203,27 +217,32 @@ def ovo_lazy_csr_operator(
     if use_rust:
         raise ValueError("There is no Rust kernel for the lazy CSR format yet.")
 
-    # Grab the adapted kernel, Numba only for now
-    dispatcher = single_group_sparse_ovo_mwu_kernel
-
     # Preprocess this group's cells
     X_tgt, mu_tgt = preprocess_group(data_handler, grpc, group_id, is_log1p, exp_post_agg)
 
-    # Call the dispatcher
-    pvalues, statistics, zscores = dispatcher(X_control, X_tgt, use_continuity, tie_correct, alternative)
+    # Call the dispatcher, Numba only for now
+    _single_group_sparse_ovo_mwu_kernel(
+        X_control,
+        X_tgt,
+        n_zeros_ref,
+        n_uniques_ref,
+        ref_block_offsets,
+        tie_sums_ref,
+        use_continuity,
+        tie_correct,
+        alternative,
+        results[group_id, :, 0],
+        results[group_id, :, 2],
+        results[group_id, :, 1],
+    )
 
     # Compute fold change separately as it does not require to load the whole dataset in RAM at once
-    fc = np.full(X_tgt.shape[1], fill_value=np.inf)
-    mask = (mu_control != 0) & np.isfinite(mu_control)
     if is_log1p and exp_post_agg:
-        fc[mask] = np.expm1(mu_tgt[mask]) / np.expm1(mu_control[mask])
+        fc = (np.expm1(mu_tgt) + 1.0e-9) / (np.expm1(mu_control) + 1.0e-9)
     else:
-        fc[mask] = mu_tgt[mask] / mu_control[mask]
+        fc = (mu_tgt + 1.0e-9) / (mu_control + 1.0e-9)
 
     # Assign results to the shared array
-    results[group_id, :, 0] = pvalues
-    results[group_id, :, 1] = statistics
-    results[group_id, :, 2] = zscores
     results[group_id, :, 3] = fc
     return group_id
 
@@ -447,9 +466,6 @@ def asymptotic_wilcoxon(
         with tqdm(total=n_tests, smoothing=0.0, unit="it", unit_scale=True, unit_divisor=1000) as pbar:
             if (
                 data_handler.is_lazy
-                and not isinstance(
-                    data_handler, DaskArrayDataHandler
-                )  # Dask is not suited for scattered row access, regardless if dense or CSR
                 and data_handler.kernel_data_format() is KernelDataFormat.CSR
                 and reference is not None
             ):
@@ -465,9 +481,12 @@ def asymptotic_wilcoxon(
                 X_ctrl, mu_ctrl = preprocess_group(
                     data_handler, group_container, group_container.encoded_ref_group, is_log1p, exp_post_agg
                 )
+                # Compute blocks in control
+                ctrl_offsets, ctrl_n_uniques, ctrl_tie_sums = compute_sparse_unique_values_and_offsets(X_ctrl)
+                ctrl_n_zeros = X_ctrl.shape[0] - np.diff(X_ctrl.indptr)
 
                 # Process all perturbations one by one
-                for _ in pool(ovo_lazy_csr_operator(data_handler, group_container, grp_id, X_ctrl,  mu_ctrl, is_log1p, use_continuity, alternative, tie_correct, exp_post_agg, use_rust, results) for grp_id in range(group_container.n_selected_groups)): # fmt: skip
+                for _ in pool(ovo_lazy_csr_operator(data_handler, group_container, grp_id, X_ctrl,  mu_ctrl, ctrl_n_zeros, ctrl_n_uniques, ctrl_offsets, ctrl_tie_sums, is_log1p, use_continuity, alternative, tie_correct, exp_post_agg, use_rust, results) for grp_id in range(group_container.n_selected_groups)): # fmt: skip
                     pbar.update(adata.n_vars)
             else:
                 # Compute the batch bounds for each thread

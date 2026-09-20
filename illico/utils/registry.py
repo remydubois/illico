@@ -298,6 +298,10 @@ class CSRDaskArrayDataHandler(DaskArrayDataHandler, CSRDataHandler):
         indptr_type = getattr(types, str(self.data._meta.indptr.dtype))[::1]
         return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSRMatrix)
 
+    def fetch_rows(self, indices: np.ndarray) -> py_sparse.csr_matrix:
+        return self.data[indices, :].compute()
+
+
 is_dask_installed = find_spec("dask") is not None
 
 
@@ -319,5 +323,6 @@ if is_dask_installed:
             return CSCDaskArrayDataHandler(x)
         else:
             raise TypeError(f"Unsupported dask array backing type: {type(meta)}")
+
     data_handler_registry[da.Array] = _dask_handler_factory
     data_handler_registry[ad._core.views.DaskArrayView] = _dask_handler_factory

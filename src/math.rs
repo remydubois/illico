@@ -24,28 +24,24 @@ pub fn chunk_and_fortranize<D: SparseFloat>(
 
     match indices {
         Some(indices) => {
-            let nrows = x.dim().0;
+            let n_available_rows = x.dim().0;
 
             if let Some(idxmax) = indices.iter().max() {
-                if idxmax >= &nrows {
+                if idxmax >= &n_available_rows {
                     return Err(format!(
                         "Indices are out of bounds: {} is bigger than {}",
                         { idxmax },
-                        { nrows }
+                        { n_available_rows }
                     ));
                 }
             }
 
             let nrows = indices.dim();
             let mut output = Array2::zeros((nrows, ncols).f());
-            let indices = indices
-                .as_slice()
-                .ok_or_else(|| format!("Group indices must be mem-contiguous"))?;
-            for (j, col_idx) in (chunk_lb..chunk_ub).enumerate() {
-                let mut col = output.column_mut(j);
-                // TODO: avoid as_slice which is not super clean. Wont crash tho as group indices are mem contiguous.
-                col.assign(&x.column(col_idx).select(Axis(0), indices));
-                // output[[i, j]] = x[[*row_idx, col_idx]]
+            for (i, &row_idx) in indices.iter().enumerate() {
+                for (j, col_idx) in (chunk_lb..chunk_ub).enumerate() {
+                    output[[i, j]] = x[[row_idx, col_idx]];
+                }
             }
             return Ok(output);
         }

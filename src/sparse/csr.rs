@@ -1,5 +1,6 @@
 use crate::groups::GroupContainer;
 use crate::math::fold_change_from_summed_expr;
+use crate::ranking::searchsorted_left;
 use crate::sparse::types::{CSRMatrix, OwnedCSCMatrix, OwnedCSRMatrix};
 use crate::sparse::types::{SparseFloat, SparseIndex};
 use ndarray::{Array1, Array2, ArrayView1, s};
@@ -108,11 +109,6 @@ pub fn csr_fold_change<D: SparseFloat, I: SparseIndex>(
 //         .map(|idx| idx + 1)
 //         .unwrap_or_else(|idx| idx)
 // }
-
-fn searchsorted_left<I: SparseIndex>(sorted_array: &[I], value: usize) -> usize {
-    let value = I::from(value).unwrap();
-    sorted_array.partition_point(|&x| x < value)
-}
 
 #[pyfunction]
 pub fn searchsorted_left_rust(

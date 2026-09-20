@@ -110,7 +110,8 @@ impl<D: SparseFloat, I: SparseIndex> OwnedCSCMatrix<D, I> {
             let col = col_view
                 .as_slice_mut()
                 .ok_or_else(|| format!("CSC matrix data should be col-contig"))?;
-            col.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            // col.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            col.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
         }
         Ok(())
     }

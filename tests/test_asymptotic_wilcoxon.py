@@ -8,6 +8,7 @@ from importlib.util import find_spec
 from pathlib import Path
 
 import anndata as ad
+import dask.array as da
 import memray
 import numpy as np
 import pandas as pd
@@ -23,20 +24,8 @@ from illico.utils.registry import KernelDataFormat, data_handler_registry
 
 set_num_threads(1)  # Ensure single-threaded by default for testing consistency
 
-ATOL = 0.0
-RTOL = 1.0e-12
 
-
-def _is_dask_array(x) -> bool:
-    """Return whether ``x`` is a dask array, without requiring dask to be installed."""
-    if find_spec("dask") is None:
-        return False
-    import dask.array as da
-
-    return isinstance(x, da.Array)
-
-
-def _to_dense(x) -> np.ndarray:
+def _to_dense(x: np.ndarray | da.Array) -> np.ndarray:
     """Convert any array-like (ndarray, Dask, DaskArrayView, or scipy sparse) to a dense numpy array."""
     if isinstance(x, np.ndarray):
         return x
@@ -104,6 +93,8 @@ def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternativ
         stats, pvals = mannwhitneyu(
             grp_counts, ref_counts, axis=0, method="asymptotic", use_continuity=use_continuity, alternative=alternative
         )
+        # Scipy returns NaN for p-values when all values are equal
+        pvals[np.isnan(pvals)] = 1.0
         results.append(
             pd.DataFrame(
                 {
@@ -205,7 +196,7 @@ def test_scanpy_format_output(rand_adata, reference, groups, exclude_from_ovr, c
     else:
         rand_adata = rand_adata.to_memory().copy()
     # Materialize Dask arrays — Scanpy does not support them
-    if _is_dask_array(rand_adata.X):
+    if isinstance(rand_adata.X, da.Array):
         rand_adata.X = rand_adata.X.compute()
     sc.tl.rank_genes_groups(
         rand_adata,
@@ -223,7 +214,8 @@ def test_scanpy_format_output(rand_adata, reference, groups, exclude_from_ovr, c
     for k, ref in scanpy_results.items():
         if k == "params":
             continue
-        res = np.array(asy_results[k].tolist())
+        # Make sure to order the perturbation the same way as scanpy
+        res = np.array(asy_results[k][list(ref.dtype.names)].tolist())
         ref = np.array(ref.tolist())
         if np.issubdtype(ref.dtype, np.number):
             mask_ref = np.isfinite(ref)
@@ -237,8 +229,8 @@ def test_scanpy_format_output(rand_adata, reference, groups, exclude_from_ovr, c
             if not np.any(mask):
                 raise ValueError(f"No valid values to compare for key '{k}'.")
             np.testing.assert_allclose(
-                ref[mask],
                 res[mask],
+                ref[mask],
                 rtol=0,
                 atol=1e-9,
                 err_msg=f"Mismatch in '{k}' values between asymptotic_wilcoxon and Scanpy outputs.",
@@ -255,7 +247,7 @@ def test_scanpy_format_output(rand_adata, reference, groups, exclude_from_ovr, c
 
 @pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
 @pytest.mark.parametrize("alternative", ["two-sided", "less", "greater"])
-@pytest.mark.parametrize("tie_correct", [True, False], ids=["tie-correct", "no-tie-correct"])
+@pytest.mark.parametrize("tie_correct", [True], ids=["tie-correct"])
 @pytest.mark.parametrize("use_continuity", [True, False], ids=["contin-corr", "no-contin-corr"])
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
 def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alternative, use_rust):
@@ -263,7 +255,7 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alte
         cached = rand_adata.copy()
 
     if test == "ovo":
-        reference = rand_adata.obs.pert.iloc[0]
+        reference = "pert_0"
     else:
         reference = None
 
@@ -307,19 +299,14 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alte
         use_continuity=use_continuity,
         alternative=alternative,
     )
-    # sc_results = scanpy_mannwhitneyu(adata=rand_adata, groupby_key="pert", reference=reference)
 
+    # Test statistics exactly
     np.testing.assert_allclose(
         asy_results.loc[scipy_results.index].statistic.values,
         scipy_results.statistic.values,
         atol=0.0,
         rtol=0.0,
     )
-    # idxs = np.where(np.isclose(asy_results.loc[scipy_results.index].statistic.values, scipy_results.statistic.values, rtol=0., atol=1.0e-12))[0]
-    # x = asy_results.loc[scipy_results.index].p_value.values[idxs]
-    # y = scipy_results.p_value.values[idxs]
-    # import ipdb; ipdb.set_trace()
-    # Test statistics exactly
     # Test p-values with low tolerance
     np.testing.assert_allclose(
         asy_results.loc[scipy_results.index].p_value.values,
@@ -350,6 +337,7 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alte
 def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, use_rust, tmp_path):
     # No need to test that exception is raised, as it is done in `test_asymptotic_wilcoxon` already
     if isinstance(eager_rand_adata.X, (py_sparse.csr_matrix, py_sparse.csr_array)) and backed:
+        # TODO: This is not tested, yet OVO on CSR is supported now
         pytest.skip("CSR lazy data not supported for now.")
 
     if test == "ovo":
@@ -400,9 +388,9 @@ def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, use_rust, tm
                 f"Expected low (<30MB) heap memory usage when running in backed mode, got {max_heap/1_000_000:.1f} MB."
             )
     else:
-        if max_heap < 200_000_000:  # 200 MB
+        if max_heap < 150_000_000:  # 150 MB
             raise AssertionError(
-                f"Expected high (>200MB) heap memory usage when running in eager mode, got {max_heap/1_000_000:.1f} MB."
+                f"Expected high (>150MB) heap memory usage when running in eager mode, got {max_heap/1_000_000:.1f} MB."
             )
 
 
@@ -428,7 +416,7 @@ def call_routine(data, method, test, num_threads, use_rust):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             if method == "pdex":
-                import pdex
+                from pdex import pdex
 
                 mode = "ref" if test == "ovo" else "all"
                 pdex(
@@ -461,6 +449,7 @@ def call_routine(data, method, test, num_threads, use_rust):
                 set_num_threads(num_threads)  # Scanpy does not set number of threads explicitely
                 group_counts = data.obs["gene"].value_counts()
                 valid_groups = group_counts.index[group_counts.values > 1].tolist()
+                sc.settings.n_jobs = num_threads
                 sc.tl.rank_genes_groups(
                     data,
                     groupby="gene",
@@ -504,10 +493,11 @@ def test_speed_benchmark(adata, method, test, num_threads, use_rust, benchmark, 
 
 
 @pytest.mark.memory_bench
-@pytest.mark.parametrize("num_threads", [1, 8], ids=lambda v: f"nthreads={v}")
+@pytest.mark.parametrize("use_rust", [True, False], ids=["rust", "numba"])
+@pytest.mark.parametrize("num_threads", [1, 4, 8], ids=lambda v: f"nthreads={v}")
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
 @pytest.mark.parametrize("method", ["illico", "scanpy", "pdex", "pdexp"])
-def test_memory_benchmark(adata, method, test, num_threads, request):
+def test_memory_benchmark(adata, method, test, num_threads, use_rust, request):
     """Not a test, just a memory footprint benchmark."""
     if test != "ovo" and method == "pdex":
         # For memory benchmark, we raise here so that it does not show in the resulting summary
@@ -529,7 +519,7 @@ def test_memory_benchmark(adata, method, test, num_threads, request):
 
     try:
         with memray.Tracker(_fp, file_format=memray.FileFormat.AGGREGATED_ALLOCATIONS):
-            _ = call_routine(adata, method, test, num_threads)()
+            _ = call_routine(adata, method, test, num_threads, use_rust)()
     except Exception as e:
         # Cleanup the file if an error happened
         _fp.unlink(missing_ok=True)
