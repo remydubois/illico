@@ -10,7 +10,8 @@ from tqdm import trange
 
 
 def adjust_pvalues(
-    pvals: np.ndarray, method: Literal["benjamini-hochberg", "bonferroni"] = "benjamini-hochberg"
+    pvals: np.ndarray,
+    method: Literal["benjamini-hochberg", "bonferroni"] = "benjamini-hochberg",
 ) -> np.ndarray:
     """Adjust p-values row-wise (pert-wise) for multiple testing."""
     assert pvals.ndim == 2
@@ -85,27 +86,31 @@ def format_illico_results_for_scanpy(
     # Adjust p-values
     pvals_adj = adjust_pvalues(values[:, :, 0], method=corr_method)
     # Format output
-    output = dict(
-        params=dict(
-            groupby=group_keys,
-            reference=reference,
-            method="wilcoxon",
-            use_raw=False,
-            layer=layer,
-            corr_method=corr_method,
+    output = {
+        "params": {
+            "groupby": group_keys,
+            "reference": reference,
+            "method": "wilcoxon",
+            "use_raw": False,
+            "layer": layer,
+            "corr_method": corr_method,
+        },
+        "names": np.rec.fromarrays(adata.var_names.values[indices], dtype=[(g, "O") for g in unique_groups]),
+        "scores": np.rec.fromarrays(
+            np.take_along_axis(values[:, :, 2], indices, axis=1),
+            dtype=[(g, "float32") for g in unique_groups],
         ),
-        names=np.rec.fromarrays(adata.var_names.values[indices], dtype=[(g, "O") for g in unique_groups]),
-        scores=np.rec.fromarrays(
-            np.take_along_axis(values[:, :, 2], indices, axis=1), dtype=[(g, "float32") for g in unique_groups]
+        "pvals": np.rec.fromarrays(
+            np.take_along_axis(values[:, :, 0], indices, axis=1),
+            dtype=[(g, "float64") for g in unique_groups],
         ),
-        pvals=np.rec.fromarrays(
-            np.take_along_axis(values[:, :, 0], indices, axis=1), dtype=[(g, "float64") for g in unique_groups]
+        "pvals_adj": np.rec.fromarrays(
+            np.take_along_axis(pvals_adj, indices, axis=1),
+            dtype=[(g, "float64") for g in unique_groups],
         ),
-        pvals_adj=np.rec.fromarrays(
-            np.take_along_axis(pvals_adj, indices, axis=1), dtype=[(g, "float64") for g in unique_groups]
+        "logfoldchanges": np.rec.fromarrays(
+            np.take_along_axis(np.log2(values[:, :, 3]), indices, axis=1),
+            dtype=[(g, "float32") for g in unique_groups],
         ),
-        logfoldchanges=np.rec.fromarrays(
-            np.take_along_axis(np.log2(values[:, :, 3]), indices, axis=1), dtype=[(g, "float32") for g in unique_groups]
-        ),
-    )
+    }
     return output

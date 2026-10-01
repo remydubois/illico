@@ -2,7 +2,6 @@ use crate::groups::GroupContainer;
 use crate::math::fold_change_from_summed_expr;
 use crate::sparse::types::{CSCMatrix, OwnedCSCMatrix, OwnedCSRMatrix, SparseFloat, SparseIndex};
 use ndarray::{Array1, Array2, s};
-use pyo3::prelude::*;
 
 // impl<'a> CSCMatrix<'a> {
 //     pub fn count_nonzeros(&'a self, axis: usize) -> Result<Array1<usize>, String> {
@@ -110,44 +109,10 @@ impl<D: SparseFloat, I: SparseIndex> OwnedCSCMatrix<D, I> {
             let col = col_view
                 .as_slice_mut()
                 .ok_or_else(|| format!("CSC matrix data should be col-contig"))?;
-            col.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            // col.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            col.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
         }
         Ok(())
-    }
-}
-
-impl<'py, D: SparseFloat, I: SparseIndex> CSCMatrix<'py, D, I> {
-    pub fn contig_col_chunk_into_csc(
-        &'py self,
-        chunk_lb: usize,
-        chunk_ub: usize,
-    ) -> Result<OwnedCSCMatrix<D, I>, String> {
-        // Compute indptr of new matrix
-        // let mut indptr = self.indptr.slice(s![chunk_lb..chunk_ub + 1]).to_owned();
-        // indptr -= indptr[0];
-        let indptr = self
-            .indptr
-            .slice(s![chunk_lb..chunk_ub + 1])
-            .mapv(|x| (x - self.indptr[chunk_lb]).to_usize());
-
-        // TODO: make sure this is indeed chunk_ub here. What happens if chunk_ub==chunk_lb;
-        let chunk_pointer_start = self.indptr[chunk_lb].to_usize();
-        let chunk_pointer_end = self.indptr[chunk_ub].to_usize();
-
-        let new_data = self
-            .data
-            .slice(s![chunk_pointer_start..chunk_pointer_end])
-            .to_owned();
-        let new_indices = self
-            .indices
-            .slice(s![chunk_pointer_start..chunk_pointer_end])
-            .to_owned();
-        Ok(OwnedCSCMatrix {
-            data: new_data,
-            indices: new_indices,
-            indptr: indptr.mapv(|x| I::from(x).unwrap()),
-            shape: (self.shape.0, chunk_ub - chunk_lb),
-        })
     }
 }
 
@@ -189,7 +154,6 @@ pub fn csc_fold_change<D: SparseFloat, I: SparseIndex>(
             };
         }
     }
-    // println!("Summed expr: {:?}", summed_expr);
 
     let fc = fold_change_from_summed_expr(summed_expr, &grpc, exp_post_agg && is_log1p)?;
 

@@ -42,6 +42,6 @@ def test_precompile(rand_adata, test):
         dispatcher(X_nb, *bounds, grpc, False, True, True, False, "two-sided")
 
     # Assert no other signature was added
-    assert len(dispatcher.nopython_signatures) == len(
-        leg_sig
-    ), f"Dispatcher should not have recompiled: {chr(10).join(map(str, dispatcher.nopython_signatures))}"
+    assert len(dispatcher.nopython_signatures) == len(leg_sig), (
+        f"Dispatcher should not have recompiled: {chr(10).join(map(str, dispatcher.nopython_signatures))}"
+    )

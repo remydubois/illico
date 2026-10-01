@@ -1,5 +1,6 @@
 from collections import namedtuple
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 from loguru import logger
@@ -26,7 +27,10 @@ def isin_fast(labels: np.ndarray, values: Iterable[Any]) -> np.ndarray:
 
 
 def sanitize_group_args(
-    groups: np.ndarray, ref_group: Any, group_subset: Iterable[Any] | None = None, exclude: Iterable[Any] | None = None
+    groups: np.ndarray,
+    ref_group: Any,
+    group_subset: Iterable[Any] | None = None,
+    exclude: Iterable[Any] | None = None,
 ) -> tuple[np.ndarray, GroupContainer]:
     """Check the consistency of group-related arguments and sanitize them."""
     # Make all sanity checks much faster
@@ -42,12 +46,11 @@ def sanitize_group_args(
             exclude = None
         else:
             # Check that no excluded group is in the subset of groups to test, if specified
-            if group_subset is not None:
-                if (_m := np.isin(exclude, group_subset)).any():  # This is Ok fast bc both small
-                    excluded_in_subset = np.array(exclude)[_m]
-                    raise ValueError(
-                        f"Groups {excluded_in_subset} are listed in both `group_subset` and `exclude`. Please remove them from one of the two lists."
-                    )
+            if group_subset is not None and (_m := np.isin(exclude, group_subset)).any():
+                excluded_in_subset = np.array(exclude)[_m]
+                raise ValueError(
+                    f"Groups {excluded_in_subset} are listed in both `group_subset` and `exclude`. Please remove them from one of the two lists."
+                )
             # Check that no group listed in exclude is absent from the .obs group labels
             if not (_m := np.isin(exclude, unique_groups)).all():
                 missing_groups = np.array(exclude)[~_m]
@@ -82,7 +85,10 @@ def sanitize_group_args(
 
 
 def encode_and_count_groups(
-    groups: np.ndarray, ref_group: Any, group_subset: Iterable[Any] | None = None, exclude: Iterable[Any] | None = None
+    groups: np.ndarray,
+    ref_group: Any,
+    group_subset: Iterable[Any] | None = None,
+    exclude: Iterable[Any] | None = None,
 ) -> tuple[np.ndarray, GroupContainer]:
     """Build the GroupContainer holding all group-related information.
 
@@ -159,14 +165,17 @@ def encode_and_count_groups(
         np.isin(unique_groups, group_subset).sum().item() if group_subset is not None else unique_groups.size
     )
 
-    return unique_groups, GroupContainer(
-        n_selected_groups=np.uint64(n_selected_groups),
-        encoded_groups=encoded_groups,
-        counts=group_counts.astype(np.uint64),
-        indices=group_indices.astype(np.uint64),
-        included_cell_indices=included_cell_indices.astype(np.uint64),
-        indptr=group_indptr,
-        encoded_ref_group=(
-            -1 if ref_group is None else label_to_int[ref_group]
-        ),  # Weirdly enough, this must be -1 and not None, otherwise Numba fails to compile various functions, especially branching
+    return (
+        unique_groups,
+        GroupContainer(
+            n_selected_groups=np.uint64(n_selected_groups),
+            encoded_groups=encoded_groups,
+            counts=group_counts.astype(np.uint64),
+            indices=group_indices.astype(np.uint64),
+            included_cell_indices=included_cell_indices.astype(np.uint64),
+            indptr=group_indptr,
+            encoded_ref_group=(
+                -1 if ref_group is None else label_to_int[ref_group]
+            ),  # Weirdly enough, this must be -1 and not None, otherwise Numba fails to compile various functions, especially branching
+        ),
     )

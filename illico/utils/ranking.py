@@ -6,7 +6,11 @@ from illico.utils.sparse.csc import CSCMatrix, _assert_is_csc
 
 @njit(nogil=True, cache=False, fastmath=True)
 def _accumulate_group_ranksums_from_argsort(
-    arr: np.ndarray, idx: np.ndarray, groups: np.ndarray, ranksums: np.ndarray, zero_values_offset: int = 0
+    arr: np.ndarray,
+    idx: np.ndarray,
+    groups: np.ndarray,
+    ranksums: np.ndarray,
+    zero_values_offset: int = 0,
 ) -> tuple[float, int]:
     """From a given array of values, indices of sorted values (result of np.argsort) and groups, accumulate group rank
     sums in the placegolder `ranksums`.
@@ -313,3 +317,193 @@ def check_indices_sorted_per_parcel(
         indices_slice = indices[start:end]
         is_sorted[k] = check_if_sorted(indices_slice)
     return np.all(is_sorted)
+
+
+@njit(nogil=True, fastmath=True, parallel=False, cache=False)
+def unique_from_sorted(x: np.ndarray, uniques: np.ndarray, counts: np.ndarray):
+    """Compute unique values and counts from a sorted array.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Sorted input array.
+    uniques : np.ndarray
+        Preallocated array to store unique values.
+    counts : np.ndarray
+        Preallocated array to store counts of unique values.
+
+    Returns
+    -------
+    uniques : np.ndarray
+        Array of unique values.
+    counts : np.ndarray
+        Array of counts corresponding to unique values.
+    k : int
+        Number of unique values.
+
+    """
+    if x.size == 0:
+        return uniques[:0], counts[:0], 0
+    prev_val = x[0]
+    count = 0
+    k = 0
+    for val in x:
+        if val == prev_val:
+            count += 1
+        else:
+            uniques[k] = prev_val
+            counts[k] = count
+            k += 1
+            count = 1
+            prev_val = val
+
+    uniques[k] = prev_val
+    counts[k] = count
+    return uniques[: k + 1], counts[: k + 1], k + 1
+
+
+@njit(nogil=True, fastmath=True, parallel=False, cache=False, inline="always")
+def tie_sum_delta(a, b):
+    """Compute the tie sum delta for a block of values.
+
+    This func allows to increment the tie sum in an online fashion. Without it, one would need to store all counts
+    independantly and compute the tie sum at the end, which is not memory efficient.
+
+    """
+    return b * (3 * (a**2) + 3 * a * b + b**2 - 1)
+
+
+@njit(nogil=True, fastmath=True, parallel=False, cache=False)
+def left_binsearch(arr: np.ndarray, x: float, lo: int = 0, hi: int | None = None) -> int:
+    """Perform a left binary search on a sorted array.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Sorted input array.
+    x : float
+        Value to search for.
+
+    Returns
+    -------
+    int
+        Index of the first occurrence of x in arr, or the index where x would be inserted to maintain sorted order.
+
+    """
+    lo = max(lo, 0)
+    if hi is None:
+        hi = arr.size
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if arr[mid] < x:
+            lo = mid + 1
+        else:
+            hi = mid
+    return lo
+
+
+@njit(fastmath=True)
+def rank_sum_and_ties_from_binsearch(
+    ctrl_values: np.ndarray,
+    n_uniques: int,
+    offsets: np.ndarray,
+    prt_values: np.ndarray,
+    zero_values_offset: int = 0,
+):
+    """Compute rank sums and tie sums from a sorted control array and a perturbed array using binary search.
+
+    This function computes (perturbed) rank sum and
+
+    """
+    n_pert = prt_values.shape[0]
+
+    # Prepare variables for accumulation
+    tie_sum = 0.0
+    rank_sum = 0.0
+
+    # Prepare a variable to track the position of zeros in the sorted array
+    zero_pos = -1  # Default setting
+
+    # Guardrail #1: if no control values are present, fallback to the linear merge that actually only executes the final exhaust loop (not merge)
+    if n_uniques == 0:
+        rs, ts, zpos = rank_sum_and_ties_from_sorted(ctrl_values, prt_values, zero_values_offset)
+        return float(rs), ts, zpos
+    # Guardrail #2: if no perturbed values are present, by def the ranksum is zero, and the participation of perturbed values in the tie sum is also zero
+    if n_pert == 0:
+        if zero_values_offset > 0:
+            zero_index = 0 if ctrl_values[0] >= 0 else left_binsearch(ctrl_values, 0.0, 0, n_uniques)
+            zero_pos = offsets[zero_index]
+        else:
+            zero_pos = 0
+        return 0.0, 0, zero_pos
+
+    # Initialize variables for the block comparison
+    val = prt_values[0]
+    count = 0
+    lo = left_binsearch(ctrl_values, val, 0, n_uniques)
+    prev_lo = 0
+
+    # Iterate over the target array to compute rank sums and tie sums
+    for i in range(prt_values.shape[0]):
+        x = prt_values[i]
+
+        # Get position of this x in control values
+        # lo = left_binsearch(ctrl_values, x, lo, n_uniques)
+
+        # Record position of zeros in the sorted array if needed
+        if x > 0 and zero_pos < 0 and zero_values_offset > 0:
+            # Guard against the commmon case where no value is negative
+            if ctrl_values[0] < 0:
+                lo_zero = left_binsearch(ctrl_values, 0.0, 0, n_uniques)
+            else:
+                lo_zero = 0
+            zero_pos = offsets[lo_zero] + i
+
+        if x != val:  # If different, we are done with this value's block
+            lo = left_binsearch(ctrl_values, x, lo, n_uniques)
+            if (
+                prev_lo < n_uniques and ctrl_values[prev_lo] == val
+            ):  # If the value is present in controls, increment only of the delta
+                ctrl_cnt = offsets[prev_lo + 1] - offsets[prev_lo]
+                block_size = count + ctrl_cnt
+                tie_sum += tie_sum_delta(ctrl_cnt, count)
+            else:  # If the value is not present in controls
+                tie_sum += float(count) ** 3 - float(count)
+                block_size = count
+
+            first_rank = offsets[prev_lo] + (i - count)
+            # if the zero has been crossed, the first rank is offset
+            if zero_pos >= 0 and val > 0:
+                first_rank += zero_values_offset
+            rank_sum += count * (first_rank + (block_size + 1) / 2)
+
+            count = 1
+            val = x
+        else:
+            count += 1
+
+        prev_lo = lo
+
+    # finalize the last block
+    if prev_lo < n_uniques and ctrl_values[prev_lo] == val:
+        ctrl_cnt = offsets[prev_lo + 1] - offsets[prev_lo]
+        block_size = count + ctrl_cnt
+        tie_sum += tie_sum_delta(ctrl_cnt, count)
+    else:
+        block_size = count
+        tie_sum += float(count) ** 3 - float(count)
+    first_rank = offsets[prev_lo] + (i + 1 - count)
+    if zero_pos >= 0 and val > 0:
+        first_rank += zero_values_offset
+    rank_sum += count * (first_rank + 0.5 * (block_size + 1))
+
+    # if zero_pos is still not set, it means no perturbed value is positive
+    # but we still need to find the position of the first positive control value
+    if zero_pos == -1:
+        if zero_values_offset > 0:
+            zero_index_ctrl = 0 if ctrl_values[0] >= 0 else left_binsearch(ctrl_values, 0.0, 0, n_uniques)
+            zero_pos = n_pert + offsets[zero_index_ctrl]
+        else:
+            zero_pos = 0
+
+    return rank_sum, tie_sum, zero_pos

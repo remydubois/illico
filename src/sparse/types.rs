@@ -98,6 +98,7 @@ pub struct CSCMatrix<'a, D: SparseFloat = f32, I: SparseIndex = i32> {
 // }
 // new_sparse_matrix!(CSRMatrix, 0);
 
+#[allow(dead_code)]
 pub struct CSRMatrix<'py, D: SparseFloat = f32, I: SparseIndex = i32> {
     pub data: ArrayView1<'py, D>,
     pub indices: ArrayView1<'py, I>,

@@ -1,6 +1,6 @@
 {
     "machine_info": {
-        "node": "vcc-cpu-0",
+        "node": "NA",
         "processor": "x86_64",
         "machine": "x86_64",
         "python_compiler": "GCC 14.3.0",

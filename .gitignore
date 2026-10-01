@@ -24,3 +24,5 @@ docs/_build
 *.so
 logs/
 poetry.toml
+src_cpp/
+notebooks/*
