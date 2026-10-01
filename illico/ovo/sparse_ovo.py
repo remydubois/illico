@@ -76,7 +76,9 @@ def single_group_sparse_ovo_mwu_kernel(
 
         # Compute ranksum and tie sum for non zero values
         nz_ranksum, tie_sum, zpos = rank_sum_and_ties_from_sorted(
-            sorted_ref_data.data[lbr:ubr], sorted_tgt_data.data[lbt:ubt], zero_values_offset=n_zeros_combined
+            sorted_ref_data.data[lbr:ubr],
+            sorted_tgt_data.data[lbt:ubt],
+            zero_values_offset=n_zeros_combined,
         )
 
         # Compute ranksum

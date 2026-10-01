@@ -1,11 +1,10 @@
 import contextlib
-import gc
 import math
 import os
 import re
 import warnings
-from importlib.util import find_spec
 from pathlib import Path
+from typing import Any
 
 import anndata as ad
 import memray
@@ -24,7 +23,7 @@ from illico.utils.registry import KernelDataFormat, data_handler_registry
 set_num_threads(1)  # Ensure single-threaded by default for testing consistency
 
 
-def _to_dense(x: np.ndarray | da.Array) -> np.ndarray:  # type: ignore
+def _to_dense(x: np.ndarray | Any) -> np.ndarray:
     """Convert any array-like (ndarray, Dask, DaskArrayView, or scipy sparse) to a dense numpy array."""
     if isinstance(x, np.ndarray):
         return x
@@ -67,7 +66,15 @@ def scanpy_mannwhitneyu(adata, groupby_key, reference):
     return df.set_index(["target", "feature"])
 
 
-def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternative, exp_post_agg=False, is_log1p=False):
+def scipy_mannwhitneyu(
+    adata,
+    groupby_key,
+    reference,
+    use_continuity,
+    alternative,
+    exp_post_agg=False,
+    is_log1p=False,
+):
     if reference is not None:
         ref_counts = _to_dense(adata[adata.obs[groupby_key].eq(reference)].X)
 
@@ -90,7 +97,12 @@ def scipy_mannwhitneyu(adata, groupby_key, reference, use_continuity, alternativ
             fc = (np.mean(grp_counts, axis=0) + 1e-9) / (np.mean(ref_counts, axis=0) + 1e-9)
 
         stats, pvals = mannwhitneyu(
-            grp_counts, ref_counts, axis=0, method="asymptotic", use_continuity=use_continuity, alternative=alternative
+            grp_counts,
+            ref_counts,
+            axis=0,
+            method="asymptotic",
+            use_continuity=use_continuity,
+            alternative=alternative,
         )
         # Scipy returns NaN for p-values when all values are equal
         pvals[np.isnan(pvals)] = 1.0
@@ -195,7 +207,7 @@ def test_scanpy_format_output(rand_adata, reference, groups, exclude_from_ovr, c
     else:
         rand_adata = rand_adata.to_memory().copy()
     # Materialize Dask arrays — Scanpy does not support them
-    if isinstance(rand_adata.X, da.Array):  # type: ignore
+    if hasattr(rand_adata.X, "compute"):
         rand_adata.X = rand_adata.X.compute()
     sc.tl.rank_genes_groups(
         rand_adata,
@@ -288,7 +300,7 @@ def test_asymptotic_wilcoxon(rand_adata, test, use_continuity, tie_correct, alte
 
     if not tie_correct:
         # We skip at this point, so that we make sure that at least the code runs
-        pytest.skip(f"Skipping comparison with scipy when tie correction is disabled, as scipy does not support it.")
+        pytest.skip("Skipping comparison with scipy when tie correction is disabled, as scipy does not support it.")
 
     scipy_results = scipy_mannwhitneyu(
         adata=rand_adata,
@@ -349,7 +361,7 @@ def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, use_rust, tm
     _precompile(data_handler, reference)
 
     # Run this with one thread and small batch size, this simply makes sure we never load
-    adata_path = tmp_path / f"rand_adata_lazy.h5ad"
+    adata_path = tmp_path / "rand_adata_lazy.h5ad"
     # Make this anndata bigger, otherwise memory measurements are not significant
     bigger_eager_rand_adata = ad.concat([eager_rand_adata] * 300, axis=1)
     # Concatenation converts to CSR, so revert back to CSC
@@ -362,7 +374,10 @@ def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, use_rust, tm
     # In order to track proper memory usage, we include the read_h5ad call within the memray context
     # Consequently, memory allocated to adata will show as heap memory, unlike memory tests below which only
     # tracked algorithm allocations
-    with memray.Tracker(tmp_path / "memray-trace.bin", file_format=memray.FileFormat.AGGREGATED_ALLOCATIONS):
+    with memray.Tracker(
+        tmp_path / "memray-trace.bin",
+        file_format=memray.FileFormat.AGGREGATED_ALLOCATIONS,
+    ):
         adata = ad.read_h5ad(adata_path, backed="r" if backed else None)
         _ = asymptotic_wilcoxon(
             adata=adata,
@@ -380,16 +395,16 @@ def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, use_rust, tm
         for snapshot in reader.get_memory_snapshots():
             max_rss = max(max_rss, snapshot.rss)
             max_heap = max(max_heap, snapshot.heap)
-    print(f"Max RSS: {max_rss/1_000_000:.1f} MB, Max heap: {max_heap/1_000_000:.1f} MB")
+    print(f"Max RSS: {max_rss / 1_000_000:.1f} MB, Max heap: {max_heap / 1_000_000:.1f} MB")
     if backed:
         if max_heap > 30_000_000:  # 30 MB
             raise AssertionError(
-                f"Expected low (<30MB) heap memory usage when running in backed mode, got {max_heap/1_000_000:.1f} MB."
+                f"Expected low (<30MB) heap memory usage when running in backed mode, got {max_heap / 1_000_000:.1f} MB."
             )
     else:
         if max_heap < 150_000_000:  # 150 MB
             raise AssertionError(
-                f"Expected high (>150MB) heap memory usage when running in eager mode, got {max_heap/1_000_000:.1f} MB."
+                f"Expected high (>150MB) heap memory usage when running in eager mode, got {max_heap / 1_000_000:.1f} MB."
             )
 
 
@@ -478,9 +493,12 @@ def test_speed_benchmark(adata, method, test, num_threads, use_rust, benchmark, 
 
     # Compile
     if method == "illico":
-        _precompile(data_handler_registry.get(adata.X), reference="non-targeting" if test == "ovo" else None)
+        _precompile(
+            data_handler_registry.get(adata.X),
+            reference="non-targeting" if test == "ovo" else None,
+        )
 
-    params = re.match(".*\[(.*)\]", request.node.name).group(1).split("-")
+    params = re.match(r".*\[(.*)\]", request.node.name).group(1).split("-")
     group_params = [p for i, p in enumerate(params) if i in [0, 1, 4]]
     benchmark.group = "-".join(group_params)
     _ = benchmark.pedantic(
@@ -507,10 +525,12 @@ def test_memory_benchmark(adata, method, test, num_threads, use_rust, request):
     # if method == "illico":
     #     _precompile(adata.X, reference="non-targeting" if test == "ovo" else None)
 
-    test_params_string = re.match(".*\[(.*)\]", request.node.name).group(1)
+    test_params_string = re.match(r".*\[(.*)\]", request.node.name).group(1)
     outdir = Path(os.environ.get("MEMRAY_RESULTS_DIR") or Path(__file__).parents[1])
 
-    trace_filepath = lambda x: outdir / ".memray-trackings" / f"trace-{test_params_string}-{str(x).zfill(4)}.bin"
+    def trace_filepath(x):
+        return outdir / ".memray-trackings" / f"trace-{test_params_string}-{str(x).zfill(4)}.bin"
+
     run_increment = 0
     while (_fp := trace_filepath(run_increment)).exists():
         run_increment += 1
@@ -519,10 +539,10 @@ def test_memory_benchmark(adata, method, test, num_threads, use_rust, request):
     try:
         with memray.Tracker(_fp, file_format=memray.FileFormat.AGGREGATED_ALLOCATIONS):
             _ = call_routine(adata, method, test, num_threads, use_rust)()
-    except Exception as e:
+    except Exception:
         # Cleanup the file if an error happened
         _fp.unlink(missing_ok=True)
-        raise e
+        raise
 
 
 def test_asymptotic_wilcoxon_auto_batchsize(eager_rand_adata):
@@ -530,9 +550,7 @@ def test_asymptotic_wilcoxon_auto_batchsize(eager_rand_adata):
     reference = None
 
     target_n_cols = 1024  # 4 batches of 256 cols each
-    bigger_eager_rand_adata = ad.concat(
-        [eager_rand_adata] * int(math.ceil(target_n_cols / eager_rand_adata.n_vars)), axis=1
-    )
+    bigger_eager_rand_adata = ad.concat([eager_rand_adata] * math.ceil(target_n_cols / eager_rand_adata.n_vars), axis=1)
     bigger_eager_rand_adata.var_names_make_unique()
     bigger_eager_rand_adata.obs = eager_rand_adata.obs.copy()
     asy_results = asymptotic_wilcoxon(

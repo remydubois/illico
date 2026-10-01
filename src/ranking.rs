@@ -1,37 +1,5 @@
-use ndarray::{ArrayView1, ArrayViewMut0, ArrayViewMut1, ArrayViewMut2};
-use numpy::PyArray1;
-use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadwriteArray2};
-use pyo3::Python;
-use pyo3::exceptions::PyValueError;
-use pyo3::prelude::*;
-
 use crate::sparse::types::{SparseFloat, SparseIndex};
-
-// pub fn sort_along_axis_0(x: &ArrayView2<f64>) -> Array2<f64> {
-//     let (nrows, ncols) = x.dim();
-//     let mut output = Array2::zeros((nrows, ncols));
-
-//     for (col_idx, col) in x.columns().into_iter().enumerate() {
-//         let mut vec = col.to_vec();
-//         vec.sort_unstable_by(|a, b| a.total_cmp(b));
-//         // output.column_mut(col_idx) = vec
-//         for (row_idx, val) in vec.into_iter().enumerate() {
-//             output[[row_idx, col_idx]] = val;
-//         }
-//     }
-
-//     output
-// }
-
-// #[pyfunction]
-// pub fn sort_along_axis_0_rust<'py>(
-//     py: Python<'py>,
-//     x: Bound<'py, PyArray2<f64>>,
-// ) -> Bound<'py, PyArray2<f64>> {
-//     let x = unsafe { x.as_array() };
-//     let result = sort_along_axis_0(&x);
-//     PyArray2::from_array(py, &result).into()
-// }
+use ndarray::{ArrayView1, ArrayViewMut0, ArrayViewMut1, ArrayViewMut2};
 
 pub fn sort_along_axis_0_inplace<D: SparseFloat>(mut x: ArrayViewMut2<D>) -> Result<(), String> {
     for mut col in x.columns_mut() {
@@ -41,13 +9,6 @@ pub fn sort_along_axis_0_inplace<D: SparseFloat>(mut x: ArrayViewMut2<D>) -> Res
         col.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     }
     return Ok(());
-}
-
-#[pyfunction]
-pub fn sort_along_axis_0_inplace_rust(mut x: PyReadwriteArray2<f32>) -> PyResult<()> {
-    let x = x.as_array_mut();
-    sort_along_axis_0_inplace(x).map_err(PyValueError::new_err)?;
-    Ok(())
 }
 
 pub fn rank_sum_and_ties<D: SparseFloat>(
@@ -190,17 +151,6 @@ pub fn rank_sum_and_ties<D: SparseFloat>(
     return (rank_sum_tgt, tie_sum, zero_pos as usize);
 }
 
-#[pyfunction]
-pub fn rank_sum_and_ties_rust(
-    controls: PyReadonlyArray1<f32>,
-    target: PyReadonlyArray1<f32>,
-) -> (f64, f64) {
-    let controls = controls.as_array();
-    let target = target.as_array();
-    let (ranksum, tiesum, _) = rank_sum_and_ties(controls, target, 0);
-    return (ranksum, tiesum);
-}
-
 pub fn accumulate_rank_and_tie_sums_from_argsort<D: SparseFloat>(
     x: ArrayView1<D>,
     sorted_indices: Vec<usize>,
@@ -289,16 +239,6 @@ pub fn argsort<D: SparseFloat>(x: ArrayView1<D>) -> Vec<usize> {
     let mut indices: Vec<usize> = (0..x.len()).collect();
     indices.sort_by(|&i, &j| x[i].partial_cmp(&x[j]).unwrap_or(std::cmp::Ordering::Equal));
     indices
-}
-
-#[pyfunction]
-pub fn argsort_rust<'py>(
-    py: Python<'py>,
-    x: PyReadonlyArray1<f32>,
-) -> PyResult<Bound<'py, PyArray1<usize>>> {
-    let x = x.as_array(); // unwrap the Result of as_slice
-    let indices = argsort(x);
-    Ok(PyArray1::from_vec(py, indices))
 }
 
 pub fn unique_from_sorted<D: SparseFloat>(

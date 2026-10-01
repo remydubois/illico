@@ -124,7 +124,11 @@ def all_purpose_operator(
 
 
 def preprocess_group(
-    data_handler: DataHandler, grpc: GroupContainer, group_id: int, is_log1p: bool, exp_post_agg: bool
+    data_handler: DataHandler,
+    grpc: GroupContainer,
+    group_id: int,
+    is_log1p: bool,
+    exp_post_agg: bool,
 ) -> tuple[np.ndarray]:
     """Preprocess the group (chunk of rows) for the OVO test on (lazy) CSR data.
 
@@ -447,12 +451,11 @@ def asymptotic_wilcoxon(
     )
     _, n_genes_total = X.shape
 
-    if isinstance(data_handler, DaskArrayDataHandler):
-        if n_threads > 2:
-            logger.info(
-                "Number of threads is limited when using Dask to avoid oversubscription. "
-                "Never more than one concurrent thread will be loading data."
-            )
+    if isinstance(data_handler, DaskArrayDataHandler) and n_threads > 2:
+        logger.info(
+            "Number of threads is limited when using Dask to avoid oversubscription. "
+            "Never more than one concurrent thread will be loading data."
+        )
 
     # Allocate the results dataframes
     cols = pd.Series(adata.var_names, name="feature", dtype=str)
@@ -462,45 +465,45 @@ def asymptotic_wilcoxon(
     # Go through all the possible combinations
     n_tests = n_genes_total * group_container.n_selected_groups
     logger.trace(f"Performing a total of {n_tests:,d} tests.")
-    with Parallel(n_threads, prefer="threads", return_as="generator_unordered") as pool:
-        with tqdm(total=n_tests, smoothing=0.0, unit="it", unit_scale=True, unit_divisor=1000) as pbar:
-            if (
-                data_handler.is_lazy
-                and data_handler.kernel_data_format() is KernelDataFormat.CSR
-                and reference is not None
-            ):
-                if use_rust:
-                    use_rust = False
-                    logger.info("There is no Rust kernel for the lazy CSR format. Falling back to the Numba kernel.")
+    with (
+        Parallel(n_threads, prefer="threads", return_as="generator_unordered") as pool,
+        tqdm(total=n_tests, smoothing=0.0, unit="it", unit_scale=True, unit_divisor=1000) as pbar,
+    ):
+        if data_handler.is_lazy and data_handler.kernel_data_format() is KernelDataFormat.CSR and reference is not None:
+            if use_rust:
+                use_rust = False
+                logger.info("There is no Rust kernel for the lazy CSR format. Falling back to the Numba kernel.")
 
-                logger.trace(
-                    f"Performing OVO test on lazy-loaded CSR data. Processing data group by group with {n_threads} threads."
-                )
+            logger.trace(
+                f"Performing OVO test on lazy-loaded CSR data. Processing data group by group with {n_threads} threads."
+            )
 
-                # Preprocess control cells
-                X_ctrl, mu_ctrl = preprocess_group(
-                    data_handler, group_container, group_container.encoded_ref_group, is_log1p, exp_post_agg
-                )
-                # Compute blocks in control
-                ctrl_offsets, ctrl_n_uniques, ctrl_tie_sums = compute_sparse_unique_values_and_offsets(X_ctrl)
-                ctrl_n_zeros = X_ctrl.shape[0] - np.diff(X_ctrl.indptr)
+            # Preprocess control cells
+            X_ctrl, mu_ctrl = preprocess_group(
+                data_handler,
+                group_container,
+                group_container.encoded_ref_group,
+                is_log1p,
+                exp_post_agg,
+            )
+            # Compute blocks in control
+            ctrl_offsets, ctrl_n_uniques, ctrl_tie_sums = compute_sparse_unique_values_and_offsets(X_ctrl)
+            ctrl_n_zeros = X_ctrl.shape[0] - np.diff(X_ctrl.indptr)
 
-                # Process all perturbations one by one
-                for _ in pool(ovo_lazy_csr_operator(data_handler, group_container, grp_id, X_ctrl,  mu_ctrl, ctrl_n_zeros, ctrl_n_uniques, ctrl_offsets, ctrl_tie_sums, is_log1p, use_continuity, alternative, tie_correct, exp_post_agg, use_rust, results) for grp_id in range(group_container.n_selected_groups)): # fmt: skip
-                    pbar.update(adata.n_vars)
-            else:
-                # Compute the batch bounds for each thread
-                iterator, batch_size = compute_batch_bounds(n_genes_total, batch_size, n_threads)
-                logger.trace(
-                    f"Processing {n_genes_total} genes through {len(iterator)} batches with {n_threads} threads."
-                )
+            # Process all perturbations one by one
+            for _ in pool(ovo_lazy_csr_operator(data_handler, group_container, grp_id, X_ctrl,  mu_ctrl, ctrl_n_zeros, ctrl_n_uniques, ctrl_offsets, ctrl_tie_sums, is_log1p, use_continuity, alternative, tie_correct, exp_post_agg, use_rust, results) for grp_id in range(group_container.n_selected_groups)):  # fmt: skip
+                pbar.update(adata.n_vars)
+        else:
+            # Compute the batch bounds for each thread
+            iterator, batch_size = compute_batch_bounds(n_genes_total, batch_size, n_threads)
+            logger.trace(f"Processing {n_genes_total} genes through {len(iterator)} batches with {n_threads} threads.")
 
-                # Compute estimated mem footprint
-                _ = log_memory_usage(data_handler, group_container, batch_size, n_threads)
+            # Compute estimated mem footprint
+            _ = log_memory_usage(data_handler, group_container, batch_size, n_threads)
 
-                # Process chunks of columns one by one
-                for lb, ub in pool(all_purpose_operator(data_handler, lb, ub, group_container, is_log1p, use_continuity, alternative, tie_correct, exp_post_agg, use_rust, results) for lb, ub in iterator):  # fmt: skip
-                    pbar.update(group_container.n_selected_groups * (ub - lb))
+            # Process chunks of columns one by one
+            for lb, ub in pool(all_purpose_operator(data_handler, lb, ub, group_container, is_log1p, use_continuity, alternative, tie_correct, exp_post_agg, use_rust, results) for lb, ub in iterator):  # fmt: skip
+                pbar.update(group_container.n_selected_groups * (ub - lb))
 
     if not return_as_scanpy:
         if n_genes is not None:

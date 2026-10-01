@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from scipy import sparse as sc_sparse
 from scipy.stats import rankdata
 
 from illico.utils.ranking import (
@@ -86,7 +85,6 @@ def test_group_ranksum_accumulation(format):
 
 
 def test_sort_csc_columns_inplace():
-
     data = np.array([3, 1, 2, 5, 4], dtype=np.float64)
     indices = np.array([0, 2, 1, 0, 1], dtype=np.int64)
     indptr = np.array([0, 2, 3, 5], dtype=np.int64)  # 3 columns

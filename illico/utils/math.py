@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import math
 import warnings
-from typing import List, Literal, Tuple
+from itertools import pairwise
+from typing import Literal
 
 import numpy as np
 from numba import njit
@@ -12,7 +13,7 @@ from illico.utils.groups import GroupContainer
 
 
 @njit(fastmath=True, nogil=True, cache=False)
-def _add_at_scalar(a: np.ndarray, b: np.ndarray, c: float | int) -> None:
+def _add_at_scalar(a: np.ndarray, b: np.ndarray, c: float) -> None:
     """Equivalent on np.add.at with a scalar value to accumulate.
 
     Args:
@@ -28,7 +29,7 @@ def _add_at_scalar(a: np.ndarray, b: np.ndarray, c: float | int) -> None:
 
 
 @njit(fastmath=True, nogil=True, cache=False)
-def _add_at_vec(a: np.ndarray, b: np.ndarray, c: float | int) -> None:
+def _add_at_vec(a: np.ndarray, b: np.ndarray, c: float) -> None:
     """Equivalent of np.add.at with a vector holding values to accumulate.
 
     Args:
@@ -129,8 +130,7 @@ def sampled_max(data: np.ndarray, sample_size: int = 200_000) -> float:
     n = data.size
     step = max(1, n // sample_size)
     for i in range(0, n, step):
-        if data[i] > max_val:
-            max_val = data[i]
+        max_val = max(max_val, data[i])
     return max_val
 
 
@@ -153,7 +153,7 @@ def _warn_log1p(X: np.ndarray | sc_sparse.spmatrix, is_log1p: bool, sample_size:
     elif isinstance(X, np.ndarray):
         data = X.ravel()
     else:
-        raise ValueError(f"Unsupported data type: {type(X)}")
+        raise TypeError(f"Unsupported data type: {type(X)}")
     max_val = sampled_max(data, sample_size=sample_size)
     if is_log1p:
         if max_val > 15:
@@ -252,7 +252,7 @@ def compute_sparsity(X: np.ndarray | sc_sparse.spmatrix) -> float:
         n_elements = X.size
         n_nonzero = np.count_nonzero(X)
     else:
-        raise ValueError(f"Unsupported data type: {type(X)}")
+        raise TypeError(f"Unsupported data type: {type(X)}")
     sparsity = 1.0 - (n_nonzero / n_elements)
     return sparsity
 
@@ -282,17 +282,17 @@ def chunk_and_fortranize(X: np.ndarray, chunk_lb: int, chunk_ub: int, indices: n
     if indices is not None:
         chunk = np.empty((chunk_ub - chunk_lb, indices.size), dtype=X.dtype).T  # transpose it to get Fortran order
         for i in range(indices.size):
-            for j in range(0, chunk_ub - chunk_lb):
+            for j in range(chunk_ub - chunk_lb):
                 chunk[i, j] = X[indices[i], chunk_lb + j]
     else:
         chunk = np.empty((chunk_ub - chunk_lb, X.shape[0]), dtype=X.dtype).T  # transpose it to get Fortran order
         for i in range(X.shape[0]):
-            for j in range(0, chunk_ub - chunk_lb):
+            for j in range(chunk_ub - chunk_lb):
                 chunk[i, j] = X[i, chunk_lb + j]
     return chunk
 
 
-def compute_batch_bounds(n_genes: int, batch_size: Literal["auto"] | int, n_threads: int) -> List[Tuple[int, int]]:
+def compute_batch_bounds(n_genes: int, batch_size: Literal["auto"] | int, n_threads: int) -> list[tuple[int, int]]:
     """Computes ideal batch bounds for processing genes in batches. This function ensures no worker is starving. This
     could happen if we have 8 workers but 9 batches to allocate. In this case, because each batch takes the same time to
     be processed, all but one workers will be idle waiting for one worker to process the last batch.
@@ -316,7 +316,7 @@ def compute_batch_bounds(n_genes: int, batch_size: Literal["auto"] | int, n_thre
         bounds = list(range(0, n_genes + 1, batch_size))
         if bounds[-1] != n_genes:
             bounds.append(n_genes)
-        bounds_iterator = list(zip(bounds[:-1], bounds[1:]))
+        bounds_iterator = list(pairwise(bounds))
     elif batch_size == "auto":
         target_batch_size = 256
         min_batches = (n_genes + target_batch_size - 1) // target_batch_size

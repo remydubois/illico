@@ -1,12 +1,11 @@
 use libm::erfc;
-use pyo3::{exceptions::PyValueError, prelude::*}; // use libm to match numba and scipy
 
 pub fn compute_pvalue(
     n_ref: f64,
     n_tgt: f64,
     n: f64,
     tie_sum: f64,
-    U: f64,
+    u: f64,
     mu: f64,
     contin_corr: f64,
     alternative: &String,
@@ -17,17 +16,17 @@ pub fn compute_pvalue(
 
         match alternative.as_str() {
             "two-sided" => {
-                let delta = U - mu;
+                let delta = u - mu;
                 let z = (delta - delta.signum() * contin_corr) / sigma;
                 return Ok((erfc(z.abs() / (2.0 as f64).sqrt()), z));
             }
             "greater" => {
-                let delta = U - mu;
+                let delta = u - mu;
                 let z = (delta - contin_corr) / sigma;
                 return Ok((0.5 * erfc(z / (2.0 as f64).sqrt()), z));
             }
             "less" => {
-                let delta = U - mu;
+                let delta = u - mu;
                 let z = (delta + contin_corr) / sigma;
                 return Ok((0.5 * erfc(-z / (2.0 as f64).sqrt()), z));
             }
@@ -36,33 +35,4 @@ pub fn compute_pvalue(
     } else {
         return Ok((1.0, 0.));
     }
-}
-
-#[pyfunction]
-pub fn compute_pvalue_rust(
-    n_ref: usize,
-    n_tgt: usize,
-    n: usize,
-    tie_sum: f64,
-    U: f64,
-    mu: f64,
-    contin_corr: f64,
-    alternative: String,
-) -> PyResult<(f64, f64)> {
-    compute_pvalue(
-        n_ref as f64,
-        n_tgt as f64,
-        n as f64,
-        tie_sum,
-        U,
-        mu,
-        contin_corr,
-        &alternative,
-    )
-    .map_err(PyValueError::new_err)
-}
-
-#[pyfunction]
-pub fn erfc_rust(x: f64) -> f64 {
-    erfc(x / (2.0 as f64).sqrt())
 }

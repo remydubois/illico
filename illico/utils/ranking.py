@@ -6,7 +6,11 @@ from illico.utils.sparse.csc import CSCMatrix, _assert_is_csc
 
 @njit(nogil=True, cache=False, fastmath=True)
 def _accumulate_group_ranksums_from_argsort(
-    arr: np.ndarray, idx: np.ndarray, groups: np.ndarray, ranksums: np.ndarray, zero_values_offset: int = 0
+    arr: np.ndarray,
+    idx: np.ndarray,
+    groups: np.ndarray,
+    ranksums: np.ndarray,
+    zero_values_offset: int = 0,
 ) -> tuple[float, int]:
     """From a given array of values, indices of sorted values (result of np.argsort) and groups, accumulate group rank
     sums in the placegolder `ranksums`.
@@ -370,7 +374,7 @@ def tie_sum_delta(a, b):
 
 
 @njit(nogil=True, fastmath=True, parallel=False, cache=False)
-def left_binsearch(arr: np.ndarray, x: float, lo: int = 0, hi: int = None) -> int:
+def left_binsearch(arr: np.ndarray, x: float, lo: int = 0, hi: int | None = None) -> int:
     """Perform a left binary search on a sorted array.
 
     Parameters
@@ -386,8 +390,7 @@ def left_binsearch(arr: np.ndarray, x: float, lo: int = 0, hi: int = None) -> in
         Index of the first occurrence of x in arr, or the index where x would be inserted to maintain sorted order.
 
     """
-    if lo < 0:
-        lo = 0
+    lo = max(lo, 0)
     if hi is None:
         hi = arr.size
     while lo < hi:
@@ -401,7 +404,11 @@ def left_binsearch(arr: np.ndarray, x: float, lo: int = 0, hi: int = None) -> in
 
 @njit(fastmath=True)
 def rank_sum_and_ties_from_binsearch(
-    ctrl_values: np.ndarray, n_uniques: int, offsets: np.ndarray, prt_values: np.ndarray, zero_values_offset: int = 0
+    ctrl_values: np.ndarray,
+    n_uniques: int,
+    offsets: np.ndarray,
+    prt_values: np.ndarray,
+    zero_values_offset: int = 0,
 ):
     """Compute rank sums and tie sums from a sorted control array and a perturbed array using binary search.
 

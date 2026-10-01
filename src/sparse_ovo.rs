@@ -353,7 +353,6 @@ pub fn csc_ovo_mwu_kernel_over_contiguous_col_chunk<'py, D: SparseFloat, I: Spar
     Ok((pvalues, u_stats, zscores, fc))
 }
 
-type PyArr2f32<'py> = Bound<'py, PyArray2<f32>>;
 type PyArr2f64<'py> = Bound<'py, PyArray2<f64>>;
 
 // The extraction into PyArray + conversion to Array + compute has to be done in one single function, because dtypes are not known at compile time and pyfunctions dont accept generic traits.

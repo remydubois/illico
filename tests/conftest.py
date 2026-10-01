@@ -212,10 +212,10 @@ def download_if_missing(cell_line: Literal["k562", "rpe1"], dst: Path) -> Path:
                             break
                         f.write(chunk)
                         pbar.update(len(chunk))
-            except Exception as e:
+            except Exception:
                 # Clean up temp file on error
                 Path(tmp_file.name).unlink(missing_ok=True)
-                raise e
+                raise
             # Move temp file to final destination
             Path(tmp_file.name).rename(dst)
 
@@ -228,7 +228,14 @@ def rand_csr():
     n_cols = 200
     density = 0.1
     rng = np.random.RandomState(0)
-    data = sparse.random(n_rows, n_cols, density=density, format="csr", random_state=rng, dtype=np.float64)
+    data = sparse.random(
+        n_rows,
+        n_cols,
+        density=density,
+        format="csr",
+        random_state=rng,
+        dtype=np.float64,
+    )
     handler = data_handler_registry.get(data)
     return handler.to_nb(data)
 
@@ -239,7 +246,14 @@ def rand_csc():
     n_cols = 200
     density = 0.1
     rng = np.random.RandomState(0)
-    data = sparse.random(n_rows, n_cols, density=density, format="csc", random_state=rng, dtype=np.float64)
+    data = sparse.random(
+        n_rows,
+        n_cols,
+        density=density,
+        format="csc",
+        random_state=rng,
+        dtype=np.float64,
+    )
     handler = data_handler_registry.get(data)
     return handler.to_nb(data)
 

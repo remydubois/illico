@@ -69,7 +69,8 @@ blank = true
 profile = "black"
 
 [tool.ruff]
-extend-exclude = ["tests", "notebooks"]
+line-length = 120
+extend-exclude = ["notebooks", "*.md"]
 
 [tool.pytest.ini_options]
 markers = [

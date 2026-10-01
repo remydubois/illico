@@ -60,7 +60,9 @@ def _single_group_dense_ovo_mwu_kernel(
 
 
 @njit(nogil=True, fastmath=True, cache=False)
-def compute_unique_values_and_offsets(x: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def compute_unique_values_and_offsets(
+    x: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Compute unique values, offsets, and tie sums for sorted data.
 
     Args:

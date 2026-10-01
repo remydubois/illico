@@ -68,7 +68,11 @@ def sparse_ovr_mwu_kernel(
         """Step 1: compute ranksum of non-zero elements, per group"""
         _idxs = np.argsort(X.data[start:end])
         tie_sum, zero_pos = _accumulate_group_ranksums_from_argsort(
-            X.data[start:end], _idxs, groups[nz_idx], R1_nz[:, j], zero_values_offset=int(n_zeros[j])
+            X.data[start:end],
+            _idxs,
+            groups[nz_idx],
+            R1_nz[:, j],
+            zero_values_offset=int(n_zeros[j]),
         )
         n0 = n_zeros[j]
         """Step 2: offset non-zero elements ranks by the number of zeros that precedes them"""
@@ -200,7 +204,10 @@ def csr_ovr_mwu_kernel_over_contiguous_col_chunk(
     _assert_is_csr(X)
 
     csc_chunk = csr_get_rows_contig_cols_into_csc(
-        csr_matrix=X, chunk_lb=chunk_lb, chunk_ub=chunk_ub, indices=grpc.included_cell_indices
+        csr_matrix=X,
+        chunk_lb=chunk_lb,
+        chunk_ub=chunk_ub,
+        indices=grpc.included_cell_indices,
     )
 
     # TODO: same remark as csc regarding sorting

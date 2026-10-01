@@ -1,7 +1,6 @@
 import numpy as np
-import pytest
 
-from illico.utils.math import _add_at_scalar, _add_at_vec, _warn_log1p, diff
+from illico.utils.math import _add_at_scalar, _add_at_vec, diff
 
 
 def test_add_at_scalar():
