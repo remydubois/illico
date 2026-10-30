@@ -1,6 +1,6 @@
 [project]
 name = "illico"
-version = "0.6.0"
+version = "0.7.0"
 description = "Fast asymptotic mannwhitney-u test"
 authors = [
     {name = "remydubois",email = "remydubois14@gmail.com"}
@@ -69,7 +69,8 @@ blank = true
 profile = "black"
 
 [tool.ruff]
-extend-exclude = ["tests", "notebooks"]
+line-length = 120
+extend-exclude = ["notebooks", "*.md"]
 
 [tool.pytest.ini_options]
 markers = [

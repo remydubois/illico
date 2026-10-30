@@ -1,37 +1,5 @@
+use crate::sparse::types::{SparseFloat, SparseIndex};
 use ndarray::{ArrayView1, ArrayViewMut0, ArrayViewMut1, ArrayViewMut2};
-use numpy::PyArray1;
-use numpy::{PyArrayMethods, PyReadonlyArray1, PyReadwriteArray2};
-use pyo3::Python;
-use pyo3::exceptions::PyValueError;
-use pyo3::prelude::*;
-
-use crate::sparse::types::SparseFloat;
-
-// pub fn sort_along_axis_0(x: &ArrayView2<f64>) -> Array2<f64> {
-//     let (nrows, ncols) = x.dim();
-//     let mut output = Array2::zeros((nrows, ncols));
-
-//     for (col_idx, col) in x.columns().into_iter().enumerate() {
-//         let mut vec = col.to_vec();
-//         vec.sort_unstable_by(|a, b| a.total_cmp(b));
-//         // output.column_mut(col_idx) = vec
-//         for (row_idx, val) in vec.into_iter().enumerate() {
-//             output[[row_idx, col_idx]] = val;
-//         }
-//     }
-
-//     output
-// }
-
-// #[pyfunction]
-// pub fn sort_along_axis_0_rust<'py>(
-//     py: Python<'py>,
-//     x: Bound<'py, PyArray2<f64>>,
-// ) -> Bound<'py, PyArray2<f64>> {
-//     let x = unsafe { x.as_array() };
-//     let result = sort_along_axis_0(&x);
-//     PyArray2::from_array(py, &result).into()
-// }
 
 pub fn sort_along_axis_0_inplace<D: SparseFloat>(mut x: ArrayViewMut2<D>) -> Result<(), String> {
     for mut col in x.columns_mut() {
@@ -41,13 +9,6 @@ pub fn sort_along_axis_0_inplace<D: SparseFloat>(mut x: ArrayViewMut2<D>) -> Res
         col.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     }
     return Ok(());
-}
-
-#[pyfunction]
-pub fn sort_along_axis_0_inplace_rust(mut x: PyReadwriteArray2<f32>) -> PyResult<()> {
-    let x = x.as_array_mut();
-    sort_along_axis_0_inplace(x).map_err(PyValueError::new_err)?;
-    Ok(())
 }
 
 pub fn rank_sum_and_ties<D: SparseFloat>(
@@ -129,7 +90,6 @@ pub fn rank_sum_and_ties<D: SparseFloat>(
     // Drain remaining control elements
     while i < n_ctrl {
         let v = ctrl[i];
-
         if (v.to_f64() > 0.) & (zero_values_offset > 0) {
             zero_pos = k as isize;
             k += zero_values_offset;
@@ -189,17 +149,6 @@ pub fn rank_sum_and_ties<D: SparseFloat>(
     }
 
     return (rank_sum_tgt, tie_sum, zero_pos as usize);
-}
-
-#[pyfunction]
-pub fn rank_sum_and_ties_rust(
-    controls: PyReadonlyArray1<f32>,
-    target: PyReadonlyArray1<f32>,
-) -> (f64, f64) {
-    let controls = controls.as_array();
-    let target = target.as_array();
-    let (ranksum, tiesum, _) = rank_sum_and_ties(controls, target, 0);
-    return (ranksum, tiesum);
 }
 
 pub fn accumulate_rank_and_tie_sums_from_argsort<D: SparseFloat>(
@@ -292,12 +241,198 @@ pub fn argsort<D: SparseFloat>(x: ArrayView1<D>) -> Vec<usize> {
     indices
 }
 
-#[pyfunction]
-pub fn argsort_rust<'py>(
-    py: Python<'py>,
-    x: PyReadonlyArray1<f32>,
-) -> PyResult<Bound<'py, PyArray1<usize>>> {
-    let x = x.as_array(); // unwrap the Result of as_slice
-    let indices = argsort(x);
-    Ok(PyArray1::from_vec(py, indices))
+pub fn unique_from_sorted<D: SparseFloat>(
+    mut x: ArrayViewMut1<D>,
+    mut counts: ArrayViewMut1<usize>,
+) -> Result<usize, String> {
+    let n_vals = x.dim();
+    if n_vals == 0 {
+        return Ok(0);
+    };
+    let mut prev_val: D = x[0];
+    let mut count: usize = 0;
+    let mut k: usize = 0;
+    for i in 0..n_vals {
+        let val = x[i];
+        if val == prev_val {
+            count += 1;
+        } else {
+            x[k] = prev_val;
+            counts[k] = count;
+            k += 1;
+            count = 1;
+            prev_val = val;
+        }
+    }
+    // Finalize block
+    x[k] = prev_val;
+    counts[k] = count;
+    k += 1;
+
+    Ok(k) // Return number of unique values
+}
+
+#[inline]
+pub fn tie_sum_delta(a: usize, b: usize) -> Result<usize, String> {
+    let increment: usize = b * (3 * (a.pow(2)) + 3 * a * b + b.pow(2) - 1);
+    Ok(increment)
+}
+
+pub fn searchsorted_left<I: SparseIndex>(sorted_array: &[I], value: usize) -> usize {
+    let value = I::from(value).unwrap();
+    sorted_array.partition_point(|&x| x < value)
+}
+
+pub fn fsearchsorted_left<D: SparseFloat>(sorted_array: &[D], value: D) -> usize {
+    sorted_array.partition_point(|&x| x < value)
+}
+
+pub fn partial_left_binsearch<D: SparseFloat>(
+    arr: ArrayView1<D>,
+    x: D,
+    mut lo: usize,
+    high: Option<usize>,
+) -> Result<usize, String> {
+    let mut high_bound: usize = high.unwrap_or(arr.dim());
+    while lo < high_bound {
+        let mid = (lo + high_bound) / 2;
+        if arr[mid] < x {
+            lo = mid + 1;
+        } else {
+            high_bound = mid;
+        }
+    }
+    Ok(lo)
+}
+
+pub fn rank_sum_and_ties_from_binsearch<D: SparseFloat>(
+    ctrl_values: ArrayView1<D>,
+    n_uniques: usize,
+    offsets: ArrayView1<usize>,
+    pert_values: ArrayView1<D>,
+    zero_values_offset: usize,
+) -> Result<(f64, usize, usize), String> {
+    let n_ctrl = n_uniques;
+    let n_pert: usize = pert_values.dim();
+
+    // Fallback to the linear merge algorithm, which executes the exhaust loop, not a proper merge
+    if n_ctrl == 0 {
+        let (rs, ts, zpos) = rank_sum_and_ties(ctrl_values, pert_values, zero_values_offset);
+        return Ok((rs, ts as usize, zpos));
+    }
+
+    // Prepare accumulators
+    let mut tie_sum: usize = 0;
+    let mut rank_sum: f64 = 0.0;
+    let mut zero_pos: Option<usize> = None;
+    let zero_val = D::from(0.).unwrap();
+    // Prepare var to track position of zeros in the sorted array
+    let _ctrl_slice = ctrl_values
+        .as_slice()
+        .ok_or_else(|| "ctrl_values must be contiguous".to_string())?;
+
+    // In this case: ranksum is 0 by def, tie_sum is just the contribution of control values, and zpos is tracked normally
+    // Note: this algo was made simpler as all control values are unique by definition,
+    // but it's fundamentally the same as the exhaust loop done in the linear merge
+    if n_pert == 0 {
+        if zero_values_offset > 0 {
+            let zero_index = if ctrl_values[0] > zero_val {
+                0
+            } else {
+                fsearchsorted_left(_ctrl_slice, zero_val)
+            };
+            zero_pos = Some(offsets[zero_index]);
+        } else {
+            zero_pos = Some(0);
+        }
+        return Ok((0., tie_sum, zero_pos.unwrap()));
+    }
+    // Prepare vars for block comparison
+    let mut val = pert_values[0];
+    let mut count: usize = 0;
+    let mut lo: usize = partial_left_binsearch(ctrl_values, val, 0, Some(n_ctrl))?;
+    // let mut lo: usize;
+    let mut prev_lo: usize = lo;
+    let mut block_size: usize;
+
+    for i in 0..n_pert {
+        let x = pert_values[i];
+
+        // Get position of x in the sorted control values
+        // lo = partial_left_binsearch(ctrl_values, x, lo, Some(n_ctrl))?;
+        // lo = fsearchsorted_left(&ctrl_slice[lo..n_ctrl], x) + lo;
+
+        // Record position of the zeros in the sorted array if needed
+        if (x > zero_val) && (zero_pos.is_none()) && (zero_values_offset > 0) {
+            if ctrl_values[0] < zero_val {
+                let lo_zero = fsearchsorted_left(_ctrl_slice, zero_val);
+                zero_pos = Some(offsets[lo_zero] + i);
+            } else {
+                zero_pos = Some(offsets[0] + i);
+            }
+        }
+
+        // Now check block condition
+        if x != val {
+            lo = partial_left_binsearch(ctrl_values, x, lo, Some(n_ctrl))?;
+            // lo = fsearchsorted_left(&ctrl_slice[lo..n_ctrl], x) + lo;
+            if (prev_lo < n_ctrl) && (ctrl_values[prev_lo] == val) {
+                let ctrl_cnt = offsets[prev_lo + 1] - offsets[prev_lo];
+                block_size = count + ctrl_cnt;
+                tie_sum += tie_sum_delta(ctrl_cnt, count)?;
+            } else {
+                if count > 1 {
+                    tie_sum += count.pow(3) - count;
+                };
+                block_size = count;
+            }
+
+            let mut first_rank = offsets[prev_lo] + (i - count);
+            // If zero has been crossed, the first rank is offset
+            if (zero_pos.is_some()) && (val > zero_val) {
+                first_rank += zero_values_offset;
+            }
+            rank_sum += count as f64 * (first_rank as f64 + (block_size as f64 + 1.) / 2.);
+
+            // Reset the block vars
+            count = 1;
+            val = x;
+        } else {
+            count += 1;
+        }
+
+        prev_lo = lo;
+    }
+
+    // Finalize the last block
+    if (prev_lo < n_ctrl) && (ctrl_values[prev_lo] == val) {
+        let ctrl_cnt = offsets[prev_lo + 1] - offsets[prev_lo];
+        block_size = count + ctrl_cnt;
+        tie_sum += tie_sum_delta(ctrl_cnt, count)?;
+    } else {
+        if count > 1 {
+            tie_sum += count.pow(3) - count;
+        };
+        block_size = count;
+    }
+    let mut first_rank = offsets[prev_lo] + (n_pert - count);
+    // If zero has been crossed, the first rank is offset
+    if (zero_pos.is_some()) && (val > zero_val) {
+        first_rank += zero_values_offset;
+    }
+    rank_sum += count as f64 * (first_rank as f64 + (block_size as f64 + 1.) / 2.);
+
+    // Take care that if zero_pos has not been set yet (no positive value seen in the loop)
+    // then the zeros will sit at the end
+    if zero_pos.is_none() && zero_values_offset > 0 {
+        let zero_index = if ctrl_values[0] > zero_val {
+            0
+        } else {
+            fsearchsorted_left(_ctrl_slice, zero_val)
+        };
+        zero_pos = Some(n_pert + offsets[zero_index]);
+    }
+
+    // If zero_pos has been set nowhere, it's just that we are in the dense case where no value is omitted
+    Ok((rank_sum, tie_sum, zero_pos.unwrap_or(0)))
 }

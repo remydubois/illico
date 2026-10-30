@@ -1,10 +1,6 @@
-use crate::groups::{GroupContainer, GroupContainerNamedTuple};
+use crate::groups::GroupContainer;
 use crate::sparse::types::SparseFloat;
-use ndarray::{Array2, ArrayView1, ArrayView2, ArrayViewMut1, Axis, ShapeBuilder, Zip};
-use numpy::PyReadonlyArray2;
-use numpy::{PyArray2, PyArrayMethods, PyReadonlyArray1, PyReadwriteArray1};
-use pyo3::Python;
-use pyo3::{exceptions::PyValueError, prelude::*};
+use ndarray::{Array2, ArrayView1, ArrayView2, Axis, ShapeBuilder};
 
 pub fn chunk_and_fortranize<D: SparseFloat>(
     x: &ArrayView2<D>,
@@ -24,28 +20,24 @@ pub fn chunk_and_fortranize<D: SparseFloat>(
 
     match indices {
         Some(indices) => {
-            let nrows = x.dim().0;
+            let n_available_rows = x.dim().0;
 
             if let Some(idxmax) = indices.iter().max() {
-                if idxmax >= &nrows {
+                if idxmax >= &n_available_rows {
                     return Err(format!(
                         "Indices are out of bounds: {} is bigger than {}",
                         { idxmax },
-                        { nrows }
+                        { n_available_rows }
                     ));
                 }
             }
 
             let nrows = indices.dim();
             let mut output = Array2::zeros((nrows, ncols).f());
-            let indices = indices
-                .as_slice()
-                .ok_or_else(|| format!("Group indices must be mem-contiguous"))?;
-            for (j, col_idx) in (chunk_lb..chunk_ub).enumerate() {
-                let mut col = output.column_mut(j);
-                // TODO: avoid as_slice which is not super clean. Wont crash tho as group indices are mem contiguous.
-                col.assign(&x.column(col_idx).select(Axis(0), indices));
-                // output[[i, j]] = x[[*row_idx, col_idx]]
+            for (i, &row_idx) in indices.iter().enumerate() {
+                for (j, col_idx) in (chunk_lb..chunk_ub).enumerate() {
+                    output[[i, j]] = x[[row_idx, col_idx]];
+                }
             }
             return Ok(output);
         }
@@ -61,81 +53,51 @@ pub fn chunk_and_fortranize<D: SparseFloat>(
     }
 }
 
-#[pyfunction]
-pub fn chunk_and_fortranize_rust<'py>(
-    py: Python<'py>,
-    x: Bound<'py, PyArray2<f32>>,
-    chunk_lb: usize,
-    chunk_ub: usize,
-    indices: Option<PyReadonlyArray1<'py, usize>>,
-) -> PyResult<Bound<'py, PyArray2<f32>>> {
-    let x = unsafe { x.as_array() };
-    let option_indices = indices.as_ref().map(|indices| indices.as_array());
-    // let option_indices = indices.map(|idx| idx.as_array());
+// Should be used in csc_fold_change, csr_fold_change, and csr_sum_along_cols
+// pub fn add_at_vec(
+//     mut x: ArrayViewMut1<f32>,
+//     y: ArrayView1<f32>,
+//     indices: ArrayView1<usize>,
+// ) -> Result<(), String> {
+//     let n_indices = indices.len();
+//     let n_values = y.len();
+//     let max_idx = indices.iter().max();
+//     // This is purely educational, there is a more concise syntax for that
+//     match max_idx {
+//         Some(value) => {
+//             if *value >= x.len() {
+//                 return Err(format!(
+//                     "Out-of-bound error: {} is not smaller than {}",
+//                     { value },
+//                     { x.len() }
+//                 ));
+//             }
+//         }
+//         None => {
+//             if n_values > 0 {
+//                 return Err(format!("Indices is empty but not values."));
+//             }
+//         }
+//     }
 
-    let chunk = chunk_and_fortranize(&x, chunk_lb, chunk_ub, option_indices)
-        .map_err(PyValueError::new_err)?;
-    Ok(PyArray2::from_array(py, &chunk))
-}
-
-pub fn add_at_vec(
-    mut x: ArrayViewMut1<f32>,
-    y: ArrayView1<f32>,
-    indices: ArrayView1<usize>,
-) -> Result<(), String> {
-    let n_indices = indices.len();
-    let n_values = y.len();
-    let max_idx = indices.iter().max();
-    // This is purely educational, there is a more concise syntax for that
-    match max_idx {
-        Some(value) => {
-            if *value >= x.len() {
-                return Err(format!(
-                    "Out-of-bound error: {} is not smaller than {}",
-                    { value },
-                    { x.len() }
-                ));
-            }
-        }
-        None => {
-            if n_values > 0 {
-                return Err(format!("Indices is empty but not values."));
-            }
-        }
-    }
-
-    /*
-    An alternative and shorter syntax is:
-    if let Some(value) = indices.iter().max() {
-        if *value >= x.len() {return Err(format!("Out-of-bound error: {} is not smaller than {}", {value}, {x.len()}));}
-    } else {
-        if n_values > 0 {return Err(format!("Indices is empty but not values."));}
-    }
-     */
-
-    if n_indices != n_values {
-        return Err(format!(
-            "Values and indices have different sizes: {} and {}",
-            { n_values },
-            { n_indices }
-        ));
-    }
-    Zip::from(&y).and(&indices).for_each(|&v, &i| x[[i]] += v);
-    Ok(())
-}
-
-#[pyfunction]
-pub fn add_at_vec_rust(
-    mut x: PyReadwriteArray1<f32>,
-    y: PyReadonlyArray1<f32>,
-    indices: PyReadonlyArray1<usize>,
-) -> PyResult<()> {
-    let x = x.as_array_mut();
-    let y = y.as_array();
-    let indices = indices.as_array();
-    add_at_vec(x, y, indices).map_err(PyValueError::new_err)?;
-    Ok(())
-}
+//     /*
+//     An alternative and shorter syntax is:
+//     if let Some(value) = indices.iter().max() {
+//         if *value >= x.len() {return Err(format!("Out-of-bound error: {} is not smaller than {}", {value}, {x.len()}));}
+//     } else {
+//         if n_values > 0 {return Err(format!("Indices is empty but not values."));}
+//     }
+//      */
+//     if n_indices != n_values {
+//         return Err(format!(
+//             "Values and indices have different sizes: {} and {}",
+//             { n_values },
+//             { n_indices }
+//         ));
+//     }
+//     Zip::from(&y).and(&indices).for_each(|&v, &i| x[[i]] += v);
+//     Ok(())
+// }
 
 pub fn fold_change_from_summed_expr(
     summed_x: Array2<f64>,
@@ -174,19 +136,6 @@ pub fn fold_change_from_summed_expr(
             return Ok((&mu_tgt + 1e-9) / (&mu_ctrl + 1e-9));
         }
     }
-}
-
-#[pyfunction]
-pub fn fold_change_from_summed_expr_rust<'py>(
-    py: Python<'py>,
-    summed_x: PyReadonlyArray2<'py, f64>,
-    grpc: GroupContainerNamedTuple<'py>,
-    exp_post_agg: bool,
-) -> PyResult<Bound<'py, PyArray2<f64>>> {
-    let x = summed_x.as_array().to_owned();
-    let grpc = grpc.as_group_container();
-    let fc = fold_change_from_summed_expr(x, &grpc, exp_post_agg).map_err(PyValueError::new_err)?;
-    return Ok(PyArray2::from_array(py, &fc));
 }
 
 pub fn dense_fold_change<D: SparseFloat>(
@@ -237,19 +186,4 @@ pub fn dense_fold_change<D: SparseFloat>(
         fold_change_from_summed_expr(group_agg_counts, grpc, exp_post_agg && is_log1p)?;
 
     return Ok(fold_change);
-}
-
-#[pyfunction]
-pub fn dense_fold_change_rust<'py>(
-    py: Python<'py>,
-    x: PyReadonlyArray2<'py, f64>,
-    grpc: GroupContainerNamedTuple<'py>,
-    is_log1p: bool,
-    exp_post_agg: bool,
-) -> PyResult<Bound<'py, PyArray2<f64>>> {
-    let x = x.as_array();
-    let grpc = grpc.as_group_container();
-    let fc = dense_fold_change(x, &grpc, is_log1p, exp_post_agg).map_err(PyValueError::new_err)?;
-
-    Ok(PyArray2::from_array(py, &fc))
 }

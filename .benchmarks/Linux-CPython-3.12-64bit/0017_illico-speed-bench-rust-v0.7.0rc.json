@@ -1,0 +1,2391 @@
+{
+    "machine_info": {
+        "node": "NA",
+        "processor": "x86_64",
+        "machine": "x86_64",
+        "python_compiler": "GCC 14.3.0",
+        "python_implementation": "CPython",
+        "python_implementation_version": "3.12.13",
+        "python_version": "3.12.13",
+        "python_build": [
+            "main",
+            "Mar  5 2026 16:50:00"
+        ],
+        "release": "6.6.113+",
+        "system": "Linux",
+        "cpu": {
+            "python_version": "3.12.13.final.0 (64 bit)",
+            "cpuinfo_version": [
+                9,
+                0,
+                0
+            ],
+            "cpuinfo_version_string": "9.0.0",
+            "arch": "X86_64",
+            "bits": 64,
+            "count": 208,
+            "arch_string_raw": "x86_64",
+            "vendor_id_raw": "GenuineIntel",
+            "brand_raw": "Intel(R) Xeon(R) Platinum 8481C CPU @ 2.70GHz",
+            "hz_advertised_friendly": "2.7000 GHz",
+            "hz_actual_friendly": "2.7000 GHz",
+            "hz_advertised": [
+                2700000000,
+                0
+            ],
+            "hz_actual": [
+                2699998000,
+                0
+            ],
+            "stepping": 8,
+            "model": 143,
+            "family": 6,
+            "flags": [
+                "3dnowprefetch",
+                "abm",
+                "adx",
+                "aes",
+                "amx_bf16",
+                "amx_int8",
+                "amx_tile",
+                "apic",
+                "arat",
+                "arch_capabilities",
+                "avx",
+                "avx2",
+                "avx512_bf16",
+                "avx512_bitalg",
+                "avx512_fp16",
+                "avx512_vbmi2",
+                "avx512_vnni",
+                "avx512_vpopcntdq",
+                "avx512bitalg",
+                "avx512bw",
+                "avx512cd",
+                "avx512dq",
+                "avx512f",
+                "avx512ifma",
+                "avx512vbmi",
+                "avx512vbmi2",
+                "avx512vl",
+                "avx512vnni",
+                "avx512vpopcntdq",
+                "avx_vnni",
+                "bmi1",
+                "bmi2",
+                "cldemote",
+                "clflush",
+                "clflushopt",
+                "clwb",
+                "cmov",
+                "constant_tsc",
+                "cpuid",
+                "cx16",
+                "cx8",
+                "de",
+                "erms",
+                "f16c",
+                "fma",
+                "fpu",
+                "fsgsbase",
+                "fsrm",
+                "fxsr",
+                "gfni",
+                "ht",
+                "hypervisor",
+                "ibpb",
+                "ibrs",
+                "ibrs_enhanced",
+                "invpcid",
+                "lahf_lm",
+                "lm",
+                "mca",
+                "mce",
+                "md_clear",
+                "mmx",
+                "movbe",
+                "movdir64b",
+                "movdiri",
+                "msr",
+                "mtrr",
+                "nonstop_tsc",
+                "nopl",
+                "nx",
+                "osxsave",
+                "pae",
+                "pat",
+                "pcid",
+                "pclmulqdq",
+                "pdpe1gb",
+                "pge",
+                "pni",
+                "popcnt",
+                "pse",
+                "pse36",
+                "rdpid",
+                "rdrand",
+                "rdrnd",
+                "rdseed",
+                "rdtscp",
+                "rep_good",
+                "rtm",
+                "sep",
+                "serialize",
+                "sha",
+                "sha_ni",
+                "smap",
+                "smep",
+                "ss",
+                "ssbd",
+                "sse",
+                "sse2",
+                "sse4_1",
+                "sse4_2",
+                "ssse3",
+                "stibp",
+                "syscall",
+                "tsc",
+                "tsc_adjust",
+                "tsc_known_freq",
+                "tsxldtrk",
+                "umip",
+                "vaes",
+                "vme",
+                "vpclmulqdq",
+                "x2apic",
+                "xgetbv1",
+                "xsave",
+                "xsavec",
+                "xsaveopt",
+                "xsaves",
+                "xtopology"
+            ],
+            "l3_cache_size": 110100480,
+            "l2_cache_size": 218103808,
+            "l1_data_cache_size": "4.9 MiB",
+            "l1_instruction_cache_size": "3.3 MiB",
+            "l2_cache_line_size": 2048,
+            "l2_cache_associativity": 7
+        }
+    },
+    "commit_info": {
+        "id": "NA",
+        "time": "NA",
+        "author_time": "NA",
+        "dirty": true,
+        "project": "illico",
+        "branch": "feat/v0.7.0"
+    },
+    "benchmarks": [
+        {
+            "group": "k562-dense-illico",
+            "name": "test_speed_benchmark[k562-dense-100%-norm-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-dense-100%-norm-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "k562",
+                    "dense",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "k562-dense-100%-norm-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 16.23413477279246,
+                "max": 16.504135724157095,
+                "mean": 16.367359364405274,
+                "stddev": 0.11165927833342658,
+                "rounds": 5,
+                "median": 16.402779817581177,
+                "iqr": 0.18075067410245538,
+                "q1": 16.262813415378332,
+                "q3": 16.443564089480788,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 16.23413477279246,
+                "hd15iqr": 16.504135724157095,
+                "ops": 0.06109721047457041,
+                "total": 81.83679682202637,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "k562-dense-illico",
+            "name": "test_speed_benchmark[k562-dense-100%-norm-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-dense-100%-norm-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "k562",
+                    "dense",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "k562-dense-100%-norm-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 14.789810696616769,
+                "max": 15.132503101602197,
+                "mean": 14.97988787330687,
+                "stddev": 0.17158085049584712,
+                "rounds": 5,
+                "median": 15.072156028822064,
+                "iqr": 0.31883491575717926,
+                "q1": 14.795235344208777,
+                "q3": 15.114070259965956,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 14.789810696616769,
+                "hd15iqr": 15.132503101602197,
+                "ops": 0.06675617390847972,
+                "total": 74.89943936653435,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "k562-dense-illico",
+            "name": "test_speed_benchmark[k562-dense-100%-raw-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-dense-100%-raw-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "k562",
+                    "dense",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "k562-dense-100%-raw-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 5.176982721313834,
+                "max": 5.682861195877194,
+                "mean": 5.303078529238701,
+                "stddev": 0.21523649578293605,
+                "rounds": 5,
+                "median": 5.2069208193570375,
+                "iqr": 0.18937980709597468,
+                "q1": 5.1810260522179306,
+                "q3": 5.370405859313905,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 5.176982721313834,
+                "hd15iqr": 5.682861195877194,
+                "ops": 0.18856971370242145,
+                "total": 26.515392646193504,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "k562-dense-illico",
+            "name": "test_speed_benchmark[k562-dense-100%-raw-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-dense-100%-raw-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "k562",
+                    "dense",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "k562-dense-100%-raw-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 8.484094437211752,
+                "max": 8.627263503149152,
+                "mean": 8.558889589458705,
+                "stddev": 0.05604035119816177,
+                "rounds": 5,
+                "median": 8.569383792579174,
+                "iqr": 0.08525081910192966,
+                "q1": 8.513934163376689,
+                "q3": 8.599184982478619,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 8.484094437211752,
+                "hd15iqr": 8.627263503149152,
+                "ops": 0.11683758617842431,
+                "total": 42.79444794729352,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "k562-csr-illico",
+            "name": "test_speed_benchmark[k562-csr-100%-norm-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-csr-100%-norm-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "k562",
+                    "csr",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "k562-csr-100%-norm-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 15.657858846709132,
+                "max": 17.76763023249805,
+                "mean": 16.4514118462801,
+                "stddev": 0.8955277470544137,
+                "rounds": 5,
+                "median": 16.264908904209733,
+                "iqr": 1.4487143685109913,
+                "q1": 15.666326918639243,
+                "q3": 17.115041287150234,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 15.657858846709132,
+                "hd15iqr": 17.76763023249805,
+                "ops": 0.06078505658625977,
+                "total": 82.25705923140049,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "k562-csr-illico",
+            "name": "test_speed_benchmark[k562-csr-100%-norm-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-csr-100%-norm-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "k562",
+                    "csr",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "k562-csr-100%-norm-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 12.424118077382445,
+                "max": 14.014116860926151,
+                "mean": 12.780826960504054,
+                "stddev": 0.6905192988030184,
+                "rounds": 5,
+                "median": 12.494462553411722,
+                "iqr": 0.45402407832443714,
+                "q1": 12.44205631967634,
+                "q3": 12.896080398000777,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 12.424118077382445,
+                "hd15iqr": 14.014116860926151,
+                "ops": 0.07824219849703384,
+                "total": 63.904134802520275,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "k562-csr-illico",
+            "name": "test_speed_benchmark[k562-csr-100%-raw-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-csr-100%-raw-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "k562",
+                    "csr",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "k562-csr-100%-raw-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 5.411070995032787,
+                "max": 6.890203123912215,
+                "mean": 5.727724588289857,
+                "stddev": 0.6501862698557944,
+                "rounds": 5,
+                "median": 5.435642771422863,
+                "iqr": 0.39815218979492784,
+                "q1": 5.4267229391261935,
+                "q3": 5.824875128921121,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 5.411070995032787,
+                "hd15iqr": 6.890203123912215,
+                "ops": 0.1745894001336005,
+                "total": 28.638622941449285,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "k562-csr-illico",
+            "name": "test_speed_benchmark[k562-csr-100%-raw-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-csr-100%-raw-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "k562",
+                    "csr",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "k562-csr-100%-raw-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 6.329802872613072,
+                "max": 6.411891961470246,
+                "mean": 6.363132743537426,
+                "stddev": 0.032644220891993196,
+                "rounds": 5,
+                "median": 6.36321265809238,
+                "iqr": 0.04764623800292611,
+                "q1": 6.335422319825739,
+                "q3": 6.383068557828665,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 6.329802872613072,
+                "hd15iqr": 6.411891961470246,
+                "ops": 0.1571552944602056,
+                "total": 31.81566371768713,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "k562-csc-illico",
+            "name": "test_speed_benchmark[k562-csc-100%-norm-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-csc-100%-norm-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "k562",
+                    "csc",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "k562-csc-100%-norm-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 15.942924503237009,
+                "max": 16.922902228310704,
+                "mean": 16.412737763300537,
+                "stddev": 0.39958632264655497,
+                "rounds": 5,
+                "median": 16.341207103803754,
+                "iqr": 0.6586273144930601,
+                "q1": 16.100160302128643,
+                "q3": 16.758787616621703,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 15.942924503237009,
+                "hd15iqr": 16.922902228310704,
+                "ops": 0.060928287188992646,
+                "total": 82.06368881650269,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "k562-csc-illico",
+            "name": "test_speed_benchmark[k562-csc-100%-norm-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-csc-100%-norm-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "k562",
+                    "csc",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "k562-csc-100%-norm-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 12.596543861553073,
+                "max": 14.749785983934999,
+                "mean": 13.32697159908712,
+                "stddev": 0.9504687691911927,
+                "rounds": 5,
+                "median": 12.787414399906993,
+                "iqr": 1.4586052605882287,
+                "q1": 12.626906256657094,
+                "q3": 14.085511517245322,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 12.596543861553073,
+                "hd15iqr": 14.749785983934999,
+                "ops": 0.07503580183726802,
+                "total": 66.6348579954356,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "k562-csc-illico",
+            "name": "test_speed_benchmark[k562-csc-100%-raw-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-csc-100%-raw-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "k562",
+                    "csc",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "k562-csc-100%-raw-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 13.390124559402466,
+                "max": 14.303340494632721,
+                "mean": 13.938786803930999,
+                "stddev": 0.34064370971410485,
+                "rounds": 5,
+                "median": 13.953453086316586,
+                "iqr": 0.36100293323397636,
+                "q1": 13.798812619876117,
+                "q3": 14.159815553110093,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 13.390124559402466,
+                "hd15iqr": 14.303340494632721,
+                "ops": 0.0717422551952643,
+                "total": 69.69393401965499,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "k562-csc-illico",
+            "name": "test_speed_benchmark[k562-csc-100%-raw-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[k562-csc-100%-raw-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "k562",
+                    "csc",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "k562-csc-100%-raw-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 13.549830723553896,
+                "max": 14.432288113981485,
+                "mean": 14.206009932607412,
+                "stddev": 0.37113118081333635,
+                "rounds": 5,
+                "median": 14.349414326250553,
+                "iqr": 0.31293117068707943,
+                "q1": 14.103242956567556,
+                "q3": 14.416174127254635,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 14.287713700905442,
+                "hd15iqr": 14.432288113981485,
+                "ops": 0.07039274256064504,
+                "total": 71.03004966303706,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "rpe1-dense-illico",
+            "name": "test_speed_benchmark[rpe1-dense-100%-norm-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-dense-100%-norm-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "rpe1",
+                    "dense",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "rpe1-dense-100%-norm-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 13.801515027880669,
+                "max": 14.488798143342137,
+                "mean": 14.024384146556258,
+                "stddev": 0.2733257924938172,
+                "rounds": 5,
+                "median": 13.92490579560399,
+                "iqr": 0.2950106910429895,
+                "q1": 13.853796963114291,
+                "q3": 14.148807654157281,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 13.801515027880669,
+                "hd15iqr": 14.488798143342137,
+                "ops": 0.0713043788268987,
+                "total": 70.12192073278129,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "rpe1-dense-illico",
+            "name": "test_speed_benchmark[rpe1-dense-100%-norm-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-dense-100%-norm-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "rpe1",
+                    "dense",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "rpe1-dense-100%-norm-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 11.149179808795452,
+                "max": 11.554246313869953,
+                "mean": 11.37728801779449,
+                "stddev": 0.15125980062871136,
+                "rounds": 5,
+                "median": 11.402663776651025,
+                "iqr": 0.191231825388968,
+                "q1": 11.284943673759699,
+                "q3": 11.476175499148667,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 11.149179808795452,
+                "hd15iqr": 11.554246313869953,
+                "ops": 0.0878944084421493,
+                "total": 56.88644008897245,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "rpe1-dense-illico",
+            "name": "test_speed_benchmark[rpe1-dense-100%-raw-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-dense-100%-raw-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "rpe1",
+                    "dense",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "rpe1-dense-100%-raw-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 4.735999777913094,
+                "max": 5.118554415181279,
+                "mean": 4.946795561537146,
+                "stddev": 0.14322922756762907,
+                "rounds": 5,
+                "median": 4.9401859398931265,
+                "iqr": 0.18461401015520096,
+                "q1": 4.866726397071034,
+                "q3": 5.051340407226235,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 4.735999777913094,
+                "hd15iqr": 5.118554415181279,
+                "ops": 0.20215106679873873,
+                "total": 24.733977807685733,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "rpe1-dense-illico",
+            "name": "test_speed_benchmark[rpe1-dense-100%-raw-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-dense-100%-raw-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "rpe1",
+                    "dense",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "rpe1-dense-100%-raw-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 6.312949597835541,
+                "max": 7.135669281706214,
+                "mean": 6.739097840338945,
+                "stddev": 0.38937819646773425,
+                "rounds": 5,
+                "median": 6.7977813500911,
+                "iqr": 0.7503709332086146,
+                "q1": 6.349300257861614,
+                "q3": 7.099671191070229,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 6.312949597835541,
+                "hd15iqr": 7.135669281706214,
+                "ops": 0.14838781446593519,
+                "total": 33.69548920169473,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "rpe1-csr-illico",
+            "name": "test_speed_benchmark[rpe1-csr-100%-norm-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-csr-100%-norm-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "rpe1",
+                    "csr",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "rpe1-csr-100%-norm-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 12.969794986769557,
+                "max": 13.687093365937471,
+                "mean": 13.346071748062968,
+                "stddev": 0.27313473111627384,
+                "rounds": 5,
+                "median": 13.345417853444815,
+                "iqr": 0.39115206291899085,
+                "q1": 13.159554712940007,
+                "q3": 13.550706775858998,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 12.969794986769557,
+                "hd15iqr": 13.687093365937471,
+                "ops": 0.07492841480828534,
+                "total": 66.73035874031484,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "rpe1-csr-illico",
+            "name": "test_speed_benchmark[rpe1-csr-100%-norm-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-csr-100%-norm-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "rpe1",
+                    "csr",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "rpe1-csr-100%-norm-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 9.536128357052803,
+                "max": 11.112898150458932,
+                "mean": 10.143354396149515,
+                "stddev": 0.7505279218349366,
+                "rounds": 5,
+                "median": 9.715180236846209,
+                "iqr": 1.318202459719032,
+                "q1": 9.554239047225565,
+                "q3": 10.872441506944597,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 9.536128357052803,
+                "hd15iqr": 11.112898150458932,
+                "ops": 0.09858671608473096,
+                "total": 50.71677198074758,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "rpe1-csr-illico",
+            "name": "test_speed_benchmark[rpe1-csr-100%-raw-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-csr-100%-raw-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "rpe1",
+                    "csr",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "rpe1-csr-100%-raw-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 4.459781914949417,
+                "max": 5.451459765434265,
+                "mean": 4.673987757787108,
+                "stddev": 0.4350281470237149,
+                "rounds": 5,
+                "median": 4.474974861368537,
+                "iqr": 0.27607663068920374,
+                "q1": 4.4697627373971045,
+                "q3": 4.745839368086308,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 4.459781914949417,
+                "hd15iqr": 5.451459765434265,
+                "ops": 0.21395006829745064,
+                "total": 23.369938788935542,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "rpe1-csr-illico",
+            "name": "test_speed_benchmark[rpe1-csr-100%-raw-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-csr-100%-raw-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "rpe1",
+                    "csr",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "rpe1-csr-100%-raw-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 4.801142076030374,
+                "max": 4.9563913363963366,
+                "mean": 4.883428558334709,
+                "stddev": 0.06158539971623336,
+                "rounds": 5,
+                "median": 4.872980203479528,
+                "iqr": 0.0946536143310368,
+                "q1": 4.842350810300559,
+                "q3": 4.937004424631596,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 4.801142076030374,
+                "hd15iqr": 4.9563913363963366,
+                "ops": 0.20477416390033332,
+                "total": 24.41714279167354,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "rpe1-csc-illico",
+            "name": "test_speed_benchmark[rpe1-csc-100%-norm-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-csc-100%-norm-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "rpe1",
+                    "csc",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "rpe1-csc-100%-norm-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 13.387494822964072,
+                "max": 14.313215296715498,
+                "mean": 13.875474475696683,
+                "stddev": 0.37606647889549527,
+                "rounds": 5,
+                "median": 13.816576635465026,
+                "iqr": 0.6087307455018163,
+                "q1": 13.605755500961095,
+                "q3": 14.214486246462911,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 13.387494822964072,
+                "hd15iqr": 14.313215296715498,
+                "ops": 0.07206960754758553,
+                "total": 69.37737237848341,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "rpe1-csc-illico",
+            "name": "test_speed_benchmark[rpe1-csc-100%-norm-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-csc-100%-norm-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "rpe1",
+                    "csc",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "rpe1-csc-100%-norm-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 9.920573791489005,
+                "max": 10.912423910573125,
+                "mean": 10.604831268638373,
+                "stddev": 0.40144147021809595,
+                "rounds": 5,
+                "median": 10.680733747780323,
+                "iqr": 0.4341357471421361,
+                "q1": 10.453466174192727,
+                "q3": 10.887601921334863,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 9.920573791489005,
+                "hd15iqr": 10.912423910573125,
+                "ops": 0.09429664411137745,
+                "total": 53.02415634319186,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "rpe1-csc-illico",
+            "name": "test_speed_benchmark[rpe1-csc-100%-raw-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-csc-100%-raw-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "rpe1",
+                    "csc",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "rpe1-csc-100%-raw-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 9.68000465631485,
+                "max": 10.845950616523623,
+                "mean": 10.28872049599886,
+                "stddev": 0.5434831722963077,
+                "rounds": 5,
+                "median": 10.291518585756421,
+                "iqr": 1.0409330721013248,
+                "q1": 9.780076106078923,
+                "q3": 10.821009178180248,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 9.68000465631485,
+                "hd15iqr": 10.845950616523623,
+                "ops": 0.09719381534262556,
+                "total": 51.4436024799943,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "rpe1-csc-illico",
+            "name": "test_speed_benchmark[rpe1-csc-100%-raw-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[rpe1-csc-100%-raw-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "rpe1",
+                    "csc",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "rpe1-csc-100%-raw-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 9.415906181558967,
+                "max": 10.649775082245469,
+                "mean": 10.143642763420939,
+                "stddev": 0.5030875933186383,
+                "rounds": 5,
+                "median": 10.067797219380736,
+                "iqr": 0.7542314259335399,
+                "q1": 9.850370195228606,
+                "q3": 10.604601621162146,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 9.415906181558967,
+                "hd15iqr": 10.649775082245469,
+                "ops": 0.0985839134246828,
+                "total": 50.7182138171047,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "jurkat-dense-illico",
+            "name": "test_speed_benchmark[jurkat-dense-100%-norm-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-dense-100%-norm-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "jurkat",
+                    "dense",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "jurkat-dense-100%-norm-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 14.918674761429429,
+                "max": 15.391733748838305,
+                "mean": 15.192453896999359,
+                "stddev": 0.22400591097898748,
+                "rounds": 5,
+                "median": 15.274544309824705,
+                "iqr": 0.41691069677472115,
+                "q1": 14.97183946473524,
+                "q3": 15.388750161509961,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 14.918674761429429,
+                "hd15iqr": 15.391733748838305,
+                "ops": 0.06582215136407349,
+                "total": 75.9622694849968,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "jurkat-dense-illico",
+            "name": "test_speed_benchmark[jurkat-dense-100%-norm-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-dense-100%-norm-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "jurkat",
+                    "dense",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "jurkat-dense-100%-norm-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 12.271720807999372,
+                "max": 13.088412353768945,
+                "mean": 12.578609383106231,
+                "stddev": 0.3241270863981066,
+                "rounds": 5,
+                "median": 12.467039804905653,
+                "iqr": 0.4402361400425434,
+                "q1": 12.349601306021214,
+                "q3": 12.789837446063757,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 12.271720807999372,
+                "hd15iqr": 13.088412353768945,
+                "ops": 0.07950004404644724,
+                "total": 62.89304691553116,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "jurkat-dense-illico",
+            "name": "test_speed_benchmark[jurkat-dense-100%-raw-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-dense-100%-raw-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "jurkat",
+                    "dense",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "jurkat-dense-100%-raw-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 4.8539388831704855,
+                "max": 5.4352709017694,
+                "mean": 5.110404449701309,
+                "stddev": 0.2101207589204397,
+                "rounds": 5,
+                "median": 5.104073887690902,
+                "iqr": 0.2064816621132195,
+                "q1": 4.992437358014286,
+                "q3": 5.198919020127505,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 4.8539388831704855,
+                "hd15iqr": 5.4352709017694,
+                "ops": 0.19567922849207123,
+                "total": 25.552022248506546,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "jurkat-dense-illico",
+            "name": "test_speed_benchmark[jurkat-dense-100%-raw-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-dense-100%-raw-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "jurkat",
+                    "dense",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "jurkat-dense-100%-raw-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 6.847231199964881,
+                "max": 7.262287519872189,
+                "mean": 6.969291666150093,
+                "stddev": 0.17084125134661457,
+                "rounds": 5,
+                "median": 6.894724888727069,
+                "iqr": 0.18452724860981107,
+                "q1": 6.862256736494601,
+                "q3": 7.046783985104412,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 6.847231199964881,
+                "hd15iqr": 7.262287519872189,
+                "ops": 0.1434866049382046,
+                "total": 34.846458330750465,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "jurkat-csr-illico",
+            "name": "test_speed_benchmark[jurkat-csr-100%-norm-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-csr-100%-norm-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "jurkat",
+                    "csr",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "jurkat-csr-100%-norm-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 14.629394000396132,
+                "max": 14.830065570771694,
+                "mean": 14.726296401023864,
+                "stddev": 0.09060651448171221,
+                "rounds": 5,
+                "median": 14.762123003602028,
+                "iqr": 0.15877627581357956,
+                "q1": 14.63175659487024,
+                "q3": 14.790532870683819,
+                "iqr_outliers": 0,
+                "stddev_outliers": 3,
+                "outliers": "3;0",
+                "ld15iqr": 14.629394000396132,
+                "hd15iqr": 14.830065570771694,
+                "ops": 0.06790573629432542,
+                "total": 73.63148200511932,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "jurkat-csr-illico",
+            "name": "test_speed_benchmark[jurkat-csr-100%-norm-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-csr-100%-norm-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "jurkat",
+                    "csr",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "jurkat-csr-100%-norm-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 10.84539232775569,
+                "max": 11.60795795544982,
+                "mean": 11.415716180950403,
+                "stddev": 0.3214416532965867,
+                "rounds": 5,
+                "median": 11.55842637270689,
+                "iqr": 0.2487999014556408,
+                "q1": 11.332320427987725,
+                "q3": 11.581120329443365,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 11.494629794731736,
+                "hd15iqr": 11.60795795544982,
+                "ops": 0.08759853382381008,
+                "total": 57.078580904752016,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "jurkat-csr-illico",
+            "name": "test_speed_benchmark[jurkat-csr-100%-raw-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-csr-100%-raw-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "jurkat",
+                    "csr",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "jurkat-csr-100%-raw-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 5.648270349949598,
+                "max": 6.247463919222355,
+                "mean": 5.817984340339899,
+                "stddev": 0.24461385687831638,
+                "rounds": 5,
+                "median": 5.732828987762332,
+                "iqr": 0.21337085729464889,
+                "q1": 5.6782907717861235,
+                "q3": 5.891661629080772,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 5.648270349949598,
+                "hd15iqr": 6.247463919222355,
+                "ops": 0.17188083389402486,
+                "total": 29.089921701699495,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "jurkat-csr-illico",
+            "name": "test_speed_benchmark[jurkat-csr-100%-raw-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-csr-100%-raw-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "jurkat",
+                    "csr",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "jurkat-csr-100%-raw-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 6.185913989320397,
+                "max": 6.489643217995763,
+                "mean": 6.345138921588659,
+                "stddev": 0.12761077889616804,
+                "rounds": 5,
+                "median": 6.365908844396472,
+                "iqr": 0.22001933632418513,
+                "q1": 6.2310206913389266,
+                "q3": 6.451040027663112,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 6.185913989320397,
+                "hd15iqr": 6.489643217995763,
+                "ops": 0.15760096230479786,
+                "total": 31.725694607943296,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "jurkat-csc-illico",
+            "name": "test_speed_benchmark[jurkat-csc-100%-norm-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-csc-100%-norm-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "jurkat",
+                    "csc",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "jurkat-csc-100%-norm-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 14.809216614812613,
+                "max": 15.465517988428473,
+                "mean": 14.983211432024836,
+                "stddev": 0.27392158892479734,
+                "rounds": 5,
+                "median": 14.909904411062598,
+                "iqr": 0.23322850465774536,
+                "q1": 14.81700937775895,
+                "q3": 15.050237882416695,
+                "iqr_outliers": 1,
+                "stddev_outliers": 1,
+                "outliers": "1;1",
+                "ld15iqr": 14.809216614812613,
+                "hd15iqr": 15.465517988428473,
+                "ops": 0.06674136613080282,
+                "total": 74.91605716012418,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "jurkat-csc-illico",
+            "name": "test_speed_benchmark[jurkat-csc-100%-norm-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-csc-100%-norm-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "jurkat",
+                    "csc",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "jurkat-csc-100%-norm-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 11.17950446717441,
+                "max": 11.502623664215207,
+                "mean": 11.352237019687891,
+                "stddev": 0.11640308631688738,
+                "rounds": 5,
+                "median": 11.372606579214334,
+                "iqr": 0.11944903898984194,
+                "q1": 11.290460392367095,
+                "q3": 11.409909431356937,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 11.17950446717441,
+                "hd15iqr": 11.502623664215207,
+                "ops": 0.08808836516236632,
+                "total": 56.761185098439455,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "jurkat-csc-illico",
+            "name": "test_speed_benchmark[jurkat-csc-100%-raw-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-csc-100%-raw-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "jurkat",
+                    "csc",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "jurkat-csc-100%-raw-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 11.136626780033112,
+                "max": 12.295836091041565,
+                "mean": 11.761870915442705,
+                "stddev": 0.4783700323310696,
+                "rounds": 5,
+                "median": 11.662879135459661,
+                "iqr": 0.7774772932752967,
+                "q1": 11.433073926251382,
+                "q3": 12.210551219526678,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 11.136626780033112,
+                "hd15iqr": 12.295836091041565,
+                "ops": 0.08502048757286171,
+                "total": 58.809354577213526,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "jurkat-csc-illico",
+            "name": "test_speed_benchmark[jurkat-csc-100%-raw-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[jurkat-csc-100%-raw-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "jurkat",
+                    "csc",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "jurkat-csc-100%-raw-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 10.552943335846066,
+                "max": 11.686615800485015,
+                "mean": 11.069890078529715,
+                "stddev": 0.4099271913734916,
+                "rounds": 5,
+                "median": 11.062836159020662,
+                "iqr": 0.4342704392038286,
+                "q1": 10.830455333925784,
+                "q3": 11.264725773129612,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 10.552943335846066,
+                "hd15iqr": 11.686615800485015,
+                "ops": 0.09033513367395771,
+                "total": 55.34945039264858,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "hepg2-dense-illico",
+            "name": "test_speed_benchmark[hepg2-dense-100%-norm-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-dense-100%-norm-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "hepg2",
+                    "dense",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "hepg2-dense-100%-norm-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 8.779086070135236,
+                "max": 8.853016562759876,
+                "mean": 8.821954426169395,
+                "stddev": 0.027255730684323944,
+                "rounds": 5,
+                "median": 8.826532155275345,
+                "iqr": 0.03019156213849783,
+                "q1": 8.808093551546335,
+                "q3": 8.838285113684833,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 8.779086070135236,
+                "hd15iqr": 8.853016562759876,
+                "ops": 0.11335356675994672,
+                "total": 44.10977213084698,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "hepg2-dense-illico",
+            "name": "test_speed_benchmark[hepg2-dense-100%-norm-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-dense-100%-norm-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "hepg2",
+                    "dense",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "hepg2-dense-100%-norm-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 7.210492059588432,
+                "max": 7.971794333308935,
+                "mean": 7.464312424883246,
+                "stddev": 0.3075093173185856,
+                "rounds": 5,
+                "median": 7.351330891251564,
+                "iqr": 0.38482009479776025,
+                "q1": 7.2508550668135285,
+                "q3": 7.635675161611289,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 7.210492059588432,
+                "hd15iqr": 7.971794333308935,
+                "ops": 0.1339708124577384,
+                "total": 37.32156212441623,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "hepg2-dense-illico",
+            "name": "test_speed_benchmark[hepg2-dense-100%-raw-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-dense-100%-raw-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "hepg2",
+                    "dense",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "hepg2-dense-100%-raw-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 3.2477260194718838,
+                "max": 3.425089828670025,
+                "mean": 3.352050617337227,
+                "stddev": 0.09486435861897581,
+                "rounds": 5,
+                "median": 3.4150952864438295,
+                "iqr": 0.1755360052920878,
+                "q1": 3.2484622104093432,
+                "q3": 3.423998215701431,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 3.2477260194718838,
+                "hd15iqr": 3.425089828670025,
+                "ops": 0.2983248507131349,
+                "total": 16.760253086686134,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "hepg2-dense-illico",
+            "name": "test_speed_benchmark[hepg2-dense-100%-raw-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-dense-100%-raw-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "hepg2",
+                    "dense",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "hepg2-dense-100%-raw-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 4.190893955528736,
+                "max": 4.315712681040168,
+                "mean": 4.243631568923592,
+                "stddev": 0.046584699043328175,
+                "rounds": 5,
+                "median": 4.234242904931307,
+                "iqr": 0.056436308193951845,
+                "q1": 4.214098289143294,
+                "q3": 4.270534597337246,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 4.190893955528736,
+                "hd15iqr": 4.315712681040168,
+                "ops": 0.23564722426024662,
+                "total": 21.218157844617963,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "hepg2-csr-illico",
+            "name": "test_speed_benchmark[hepg2-csr-100%-norm-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-csr-100%-norm-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "hepg2",
+                    "csr",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "hepg2-csr-100%-norm-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 8.781899396330118,
+                "max": 9.117290506139398,
+                "mean": 8.986197464168072,
+                "stddev": 0.1311004998676855,
+                "rounds": 5,
+                "median": 9.022630903869867,
+                "iqr": 0.177659603767097,
+                "q1": 8.902006378863007,
+                "q3": 9.079665982630104,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 8.781899396330118,
+                "hd15iqr": 9.117290506139398,
+                "ops": 0.11128177452002815,
+                "total": 44.93098732084036,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "hepg2-csr-illico",
+            "name": "test_speed_benchmark[hepg2-csr-100%-norm-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-csr-100%-norm-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "hepg2",
+                    "csr",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "hepg2-csr-100%-norm-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 6.549292439594865,
+                "max": 7.00913948006928,
+                "mean": 6.714295388013125,
+                "stddev": 0.1872329553982915,
+                "rounds": 5,
+                "median": 6.704189212992787,
+                "iqr": 0.26037413300946355,
+                "q1": 6.555437851231545,
+                "q3": 6.815811984241009,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 6.549292439594865,
+                "hd15iqr": 7.00913948006928,
+                "ops": 0.14893595563062012,
+                "total": 33.57147694006562,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "hepg2-csr-illico",
+            "name": "test_speed_benchmark[hepg2-csr-100%-raw-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-csr-100%-raw-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "hepg2",
+                    "csr",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "hepg2-csr-100%-raw-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 3.517151925712824,
+                "max": 4.324633097276092,
+                "mean": 3.9931222174316643,
+                "stddev": 0.36251408051515077,
+                "rounds": 5,
+                "median": 4.190832491964102,
+                "iqr": 0.610894016455859,
+                "q1": 3.6496487092226744,
+                "q3": 4.260542725678533,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 3.517151925712824,
+                "hd15iqr": 4.324633097276092,
+                "ops": 0.25043060180692134,
+                "total": 19.965611087158322,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "hepg2-csr-illico",
+            "name": "test_speed_benchmark[hepg2-csr-100%-raw-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-csr-100%-raw-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "hepg2",
+                    "csr",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "hepg2-csr-100%-raw-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 3.4867018461227417,
+                "max": 4.1547553688287735,
+                "mean": 3.732527423277497,
+                "stddev": 0.3042632083897156,
+                "rounds": 5,
+                "median": 3.542586237192154,
+                "iqr": 0.49466715985909104,
+                "q1": 3.5123211960308254,
+                "q3": 4.006988355889916,
+                "iqr_outliers": 0,
+                "stddev_outliers": 1,
+                "outliers": "1;0",
+                "ld15iqr": 3.4867018461227417,
+                "hd15iqr": 4.1547553688287735,
+                "ops": 0.2679149773324128,
+                "total": 18.662637116387486,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "hepg2-csc-illico",
+            "name": "test_speed_benchmark[hepg2-csc-100%-norm-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-csc-100%-norm-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "hepg2",
+                    "csc",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "hepg2-csc-100%-norm-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 8.791624194011092,
+                "max": 8.921083442866802,
+                "mean": 8.852531647309661,
+                "stddev": 0.05908684195135828,
+                "rounds": 5,
+                "median": 8.839018711820245,
+                "iqr": 0.10998987313359976,
+                "q1": 8.800692975986749,
+                "q3": 8.910682849120349,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 8.791624194011092,
+                "hd15iqr": 8.921083442866802,
+                "ops": 0.11296203615424591,
+                "total": 44.262658236548305,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "hepg2-csc-illico",
+            "name": "test_speed_benchmark[hepg2-csc-100%-norm-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-csc-100%-norm-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "hepg2",
+                    "csc",
+                    1.0,
+                    true
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "hepg2-csc-100%-norm-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 6.6476153042167425,
+                "max": 7.259697509929538,
+                "mean": 7.018060693144799,
+                "stddev": 0.23122787128354783,
+                "rounds": 5,
+                "median": 7.021713197231293,
+                "iqr": 0.2611965276300907,
+                "q1": 6.918294883333147,
+                "q3": 7.179491410963237,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 6.6476153042167425,
+                "hd15iqr": 7.259697509929538,
+                "ops": 0.14248950582271172,
+                "total": 35.09030346572399,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "hepg2-csc-illico",
+            "name": "test_speed_benchmark[hepg2-csc-100%-raw-illico-ovo-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-csc-100%-raw-illico-ovo-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "hepg2",
+                    "csc",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovo",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "hepg2-csc-100%-raw-illico-ovo-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 5.939259881153703,
+                "max": 6.577953265979886,
+                "mean": 6.235560629144311,
+                "stddev": 0.288298421113778,
+                "rounds": 5,
+                "median": 6.097269793972373,
+                "iqr": 0.5018285568803549,
+                "q1": 6.0249824416823685,
+                "q3": 6.526810998562723,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 5.939259881153703,
+                "hd15iqr": 6.577953265979886,
+                "ops": 0.16037050386874793,
+                "total": 31.177803145721555,
+                "iterations": 1
+            }
+        },
+        {
+            "group": "hepg2-csc-illico",
+            "name": "test_speed_benchmark[hepg2-csc-100%-raw-illico-ovr-nthreads=8-rust]",
+            "fullname": "tests/test_asymptotic_wilcoxon.py::test_speed_benchmark[hepg2-csc-100%-raw-illico-ovr-nthreads=8-rust]",
+            "params": {
+                "adata": [
+                    "hepg2",
+                    "csc",
+                    1.0,
+                    false
+                ],
+                "method": "illico",
+                "test": "ovr",
+                "num_threads": 8,
+                "use_rust": true
+            },
+            "param": "hepg2-csc-100%-raw-illico-ovr-nthreads=8-rust",
+            "extra_info": {},
+            "options": {
+                "disable_gc": false,
+                "timer": "perf_counter",
+                "min_rounds": 5,
+                "max_time": 1.0,
+                "min_time": 5e-06,
+                "warmup": false
+            },
+            "stats": {
+                "min": 5.292850624769926,
+                "max": 6.097554927691817,
+                "mean": 5.7309775173664095,
+                "stddev": 0.2997283118860099,
+                "rounds": 5,
+                "median": 5.7137362863868475,
+                "iqr": 0.38109767297282815,
+                "q1": 5.5647815130651,
+                "q3": 5.945879186037928,
+                "iqr_outliers": 0,
+                "stddev_outliers": 2,
+                "outliers": "2;0",
+                "ld15iqr": 5.292850624769926,
+                "hd15iqr": 6.097554927691817,
+                "ops": 0.1744903023907754,
+                "total": 28.654887586832047,
+                "iterations": 1
+            }
+        }
+    ],
+    "datetime": "2026-08-28T11:41:01.677376+00:00",
+    "version": "5.2.3"
+}

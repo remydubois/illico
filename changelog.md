@@ -1,6 +1,12 @@
 Changelog
 =========
 
+Version 0.7.0
+------------
+- More robust algorithm and test suite for exotic edge cases (all values are zeros in one group or the other)
+- New algorithm is faster at the expense of a slight extra RAM footprint (+~15%). Instead of performing a linear merge (v0.6.0), `illico` now performs a binary insertion of perturbed values into sorted control values. The algorithm is more tedious to implement because of tie counts but is faster in all scenarii.
+- Overall, v0.7.0 is 2.5x (TC norm data) to 5x (non TC norm data) faster than v0.6.0.
+
 Version 0.6.0
 ------------
 - Adds support for AnnData read as Dask arrays.

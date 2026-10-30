@@ -184,7 +184,6 @@ macro_rules! run_branch {
     }};
 }
 
-type PyArr2f32<'py> = Bound<'py, PyArray2<f32>>;
 type PyArr2f64<'py> = Bound<'py, PyArray2<f64>>;
 
 #[rustfmt::skip]

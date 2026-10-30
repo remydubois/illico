@@ -24,7 +24,7 @@ myst_enable_extensions = [
 autosummary_generate = True
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "README.md"]
 
 
 # Prefer the Furo theme when available, fall back otherwise
@@ -35,6 +35,7 @@ html_static_path = ["_static"]
 # The docs workflow installs the project dependencies, and mocking scientific
 # packages breaks imports for modules that use runtime type unions such as
 # `scipy.sparse.csr_matrix | scipy.sparse.csr_array`.
+autodoc_mock_imports = ["illico.rust_backend"]
 
 # Autodoc settings
 autodoc_member_order = "bysource"
