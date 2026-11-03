@@ -15,7 +15,7 @@ A *benchmark* is defined by:
 </center>
 
 ## Impact of normalization
-Applying total count normalization (`sc.pp.normalize`) to your count matrix will make `illico` run 2x-3x slower. This is essentially due to two things:
+Applying total count normalization (`sc.pp.normalize_total`) to your count matrix will make `illico` run 2x-3x slower. This is essentially due to two things:
 1. Non-round values forbid the use of fast sorting algorithm like radix or histogram sort, and fallback to the slower quicksort.
 2. Total count normalization creates more tie blocks per column (more unique values per group), hence a longer processing time (as `illico` processes data tie block by tie block).
 Version `0.7.0` helped this a lot for the OVO case, but a slowdown remains between raw (integer count) and TC-norm data. In all cases, `illico` remains >200x faster than `sc.tl.rank_genes_groups(method="wilcoxon")` (scanpy < v1.13).
@@ -65,10 +65,10 @@ Below find a comparison of the two strategies for the dense use case of the k562
 </center>
 Figure above illustrates well both load imbalance and trailing batch problem when `batch_size=256`:
 
-- Because `adata.n_vars=8563`, a batch size of 256 means 34 batches can be formed. With 8 CPUs, it means all 8 CPUs can process 4 batches each synchronously to begin with, but the last two batches are processed by only two CPUs (in this graph: number 1 and 6), leaving the other 6 CPUs idle. That's a waste of compute time.
+- Because `adata.n_vars=8563`, a batch size of 256 means 34 batches can be formed. With 8 CPUs, it means all 8 CPUs can process 4 batches each synchronously (because 4 x 8 = 32) to begin with, but the last two batches are processed by only two CPUs (in this graph: number 1 and 6), leaving the other 6 CPUs idle. That's a waste of compute time.
 - Because `8563%256 = 115`, the last batch only contains 115 columns. This can be seen at the tail CPU 1 usage over time where it still has one batch to process after the first 4 ones. As this batch is smaller, it takes less time to process hence CPU 1 usage drops before CPU 6 is done with its batch of 256 columns. That's another waste of compute time.
 
-On the other hand, when batch_size is soft-hinted (here denoted as "auto"), CPU usage is uniform and none of the 8 CPUs sits idle. The overall processing time of the entire `AnnData` drops from 31 to 27 seconds, a 10% improvement.
+On the other hand, when batch_size is soft-hinted (here denoted as "auto", which is equivalent to "~256"), CPU usage is uniform and none of the 8 CPUs sits idle. The overall processing time of the entire `AnnData` drops from 31 to 27 seconds, a 10% improvement.
 
 ### For CSR data
 <center>

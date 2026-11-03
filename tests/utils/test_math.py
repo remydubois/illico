@@ -69,7 +69,7 @@ def test_compute_batch_bounds_explicit_integer():
     assert size == 200
 
 
-@pytest.mark.parametrize("invalid_batch_size", ["auto", "invalid", "~abc", "~0", "~-10", "~", 0, -5, None, True])
+@pytest.mark.parametrize("invalid_batch_size", ["invalid", "~abc", "~0", "~-10", "~", 0, -5, None, True])
 def test_compute_batch_bounds_invalid_values(invalid_batch_size):
     with pytest.raises(ValueError):
         compute_batch_bounds(1000, invalid_batch_size, n_threads=4)

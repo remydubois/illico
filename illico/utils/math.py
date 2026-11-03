@@ -360,7 +360,7 @@ def compute_batch_bounds(
         return bounds_iterator, batch_size
 
     # Integer batch size
-    if n_genes < n_threads or n_genes < 256:
+    if n_genes < n_threads or n_genes <= batch_size:
         return [(0, n_genes)], n_genes
 
     bounds = list(range(0, n_genes + 1, batch_size))

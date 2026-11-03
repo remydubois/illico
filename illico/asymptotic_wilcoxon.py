@@ -221,6 +221,14 @@ def ovo_lazy_csr_operator(
     if use_rust:
         raise ValueError("There is no Rust kernel for the lazy CSR format yet.")
 
+    # Reference group check
+    if group_id == grpc.encoded_ref_group:
+        results[group_id, :, 0] = 1.0  # p-value
+        results[group_id, :, 1] = -1.0  # u-stat
+        results[group_id, :, 2] = 0.0  # z-score
+        results[group_id, :, 3] = 1.0  # fc
+        return
+
     # Preprocess this group's cells
     X_tgt, mu_tgt = preprocess_group(data_handler, grpc, group_id, is_log1p, exp_post_agg)
 

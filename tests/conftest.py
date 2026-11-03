@@ -82,6 +82,10 @@ def adata(request):
     return adata
 
 
+def _mask_multiply(x, mask, value):
+    x[:] = np.where(mask, x * value, x)
+
+
 # TODO: params on log1p and normalization ? A lot of tests would result
 @pytest.fixture(
     scope="function",
@@ -118,23 +122,38 @@ def rand_adata(request, tmp_path):
     # Now cover all possible negative value scenarios: some with all negative values, some with a mix of both
     # By default dense_counts only contains positive values
     dense_counts[:, 0] *= -1.0  # ref and tgt all negative in the first column
-    dense_counts[groups == groups[0], 1] *= -1.0  # Ref all neg, target all pos in the second column
-    dense_counts[groups == groups[0], 2][::2] *= -1.0  # Ref is both pos and neg, tgt all pos in the third column
-    dense_counts[groups == groups[1], 3][::2] *= -1.0  # tgt is both pos and neg, ref all pos in the fourth column
-    dense_counts[:, 4][::2] *= -1.0  # Both ref and tgt both pos and neg in the fifth column
+    # dense_counts[groups == 0, 1] *= -1.0  # Ref all neg, target all pos in the second column
+    _mask_multiply(dense_counts[:, 1], groups == 0, -1.0)  # Ref all neg, target all pos in the second column
+    # dense_counts[groups == 0, 2][::2] *= -1.0  # Ref is both pos and neg, tgt all pos in the third column
+    _mask_multiply(
+        dense_counts[::2, 2], groups[::2] == 0, -1.0
+    )  # Ref is both pos and neg, tgt all pos in the third column
+    # dense_counts[groups == 1, 3][::2] *= -1.0  # tgt is both pos and neg, ref all pos in the fourth column
+    _mask_multiply(
+        dense_counts[::2, 3], groups[::2] == 1, -1.0
+    )  # tgt is both pos and neg, ref all pos in the fourth column
+    _mask_multiply(
+        dense_counts[:, 4], np.arange(n_cells) % 2 == 0, -1.0
+    )  # Both ref and tgt both pos and neg in the fifth column
     # Do the same for all-zero scenarios: some with all zero values, some with a mix of both
-    dense_counts[groups == groups[0], 5] *= 0.0  # Ref all zero in the sixth column
-    dense_counts[groups == groups[1], 6] *= 0.0  # Tgt all zero in the seventh column
-    dense_counts[:, 7] *= 0.0  # Ref and tgt all zero in the heighth column
+    _mask_multiply(dense_counts[:, 5], groups == 0, 0.0)  # Ref all zero in the sixth column
+    _mask_multiply(dense_counts[:, 6], groups == 1, 0.0)  # Tgt all zero in the seventh column
+    _mask_multiply(dense_counts[:, 7], np.ones(n_cells, dtype=bool), 0.0)  # Ref and tgt all zero in the heighth column
     # Now a mix of both: all zeros and sign issues
-    dense_counts[groups == groups[0], 8] *= 0.0  # Ref all zero and tgt negative in the nineth column
-    dense_counts[groups != groups[0], 8] *= -1.0  # Ref all zero and tgt negative in the nineth column
-    dense_counts[groups == groups[0], 9] *= 0.0  # Ref all zero and tgt pos and neg in the tenth column
-    dense_counts[groups != groups[0], 9][::2] *= -1.0  # Ref all zero and tgt pos and neg in the tenth column
-    dense_counts[groups != groups[0], 10] *= 0.0  # Tgt all zero and ref negative in the eleventh column
-    dense_counts[groups == groups[0], 10] *= -1.0  # Tgt all zero and ref negative in the eleventh column
-    dense_counts[groups != groups[0], 11] *= 0.0  # Tgt all zero and ref pos and neg in the twelfth column
-    dense_counts[groups == groups[0], 11][::2] *= -1.0  # Tgt all zero and ref pos and neg in the twelfth column
+    _mask_multiply(dense_counts[:, 8], groups == 0, 0.0)  # Ref all zero and tgt negative in the nineth column
+    _mask_multiply(dense_counts[:, 8], groups != 0, -1.0)  # Ref all zero and tgt negative in the nineth column
+    _mask_multiply(dense_counts[:, 9], groups == 0, 0.0)  # Ref all zero and tgt pos and neg in the tenth column
+    other_groups = groups != 0
+    _mask_multiply(
+        dense_counts[:, 9], other_groups & (np.cumsum(other_groups) % 2 == 1), -1.0
+    )  # Ref all zero and tgt pos and neg in the tenth column
+    _mask_multiply(dense_counts[:, 10], groups != 0, 0.0)  # Tgt all zero and ref negative in the eleventh column
+    _mask_multiply(dense_counts[:, 10], groups == 0, -1.0)  # Tgt all zero and ref negative in the eleventh column
+    _mask_multiply(dense_counts[:, 11], groups != 0, 0.0)  # Tgt all zero and ref pos and neg in the twelfth column
+    ref_groups = groups == 0
+    _mask_multiply(
+        dense_counts[:, 11], ref_groups & (np.cumsum(ref_groups) % 2 == 1), -1.0
+    )  # Tgt all zero and ref pos and neg in the twelfth column
 
     if fmt == "dense":
         data_matrix = dense_counts

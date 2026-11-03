@@ -88,10 +88,10 @@ use pyo3::prelude::*;
 
 pub fn compute_sparse_unique_values_and_offsets<D: SparseFloat, I: SparseIndex>(
     csc_mat: &mut OwnedCSCMatrix<D, I>,
-) -> Result<(Array1<usize>, Array1<usize>, Array1<usize>), String> {
+) -> Result<(Array1<usize>, Array1<usize>, Array1<f64>), String> {
     let ncols = csc_mat.shape.1;
     let mut offsets: Array1<usize> = Array1::zeros(csc_mat.data.dim() + ncols);
-    let mut tie_sums: Array1<usize> = Array1::zeros(ncols);
+    let mut tie_sums: Array1<f64> = Array1::zeros(ncols);
     let mut n_uniques: Array1<usize> = Array1::zeros(ncols);
     for j in 0..ncols {
         let org_lb = csc_mat.indptr[j].to_usize();
@@ -107,8 +107,9 @@ pub fn compute_sparse_unique_values_and_offsets<D: SparseFloat, I: SparseIndex>(
         // this_col_counts =
         for k in offsets_lb..nz_offset_ub {
             // First increment tie sums
-            if offsets[k] > 1 {
-                tie_sums[j] += offsets[k].pow(3) - offsets[k];
+            let this_offset = offsets[k] as f64;
+            if this_offset > 1. {
+                tie_sums[j] += this_offset.powi(3) - this_offset;
             };
             // Then replace with prefix sum
             offsets[k] += offsets[k - 1];
@@ -122,7 +123,7 @@ pub fn single_group_sparse_ovo_mwu_kernel<D: SparseFloat, I: SparseIndex>(
     sorted_tgt_data: &OwnedCSCMatrix<D, I>,
     n_uniques_ref: &Array1<usize>,
     ref_block_offsets: &Array1<usize>,
-    tie_sums_ref: &Array1<usize>,
+    tie_sums_ref: &Array1<f64>,
     use_continuity: bool,
     tie_correct: bool,
     alternative: &String,
@@ -155,8 +156,8 @@ pub fn single_group_sparse_ovo_mwu_kernel<D: SparseFloat, I: SparseIndex>(
             sorted_tgt_data.data.slice(s![lbt..ubt]),
             n_zeros_combined,
         )?;
-
-        let tie_sum = nz_ts + (n_zeros_combined.pow(3) - n_zeros_combined) + tie_sums_ref[j];
+        let nz0 = n_zeros_combined as f64;
+        let tie_sum = nz_ts as f64 + (nz0.powi(3) - nz0) + tie_sums_ref[j] as f64;
         // This is the ranksum of zero elements
         let mut ranksum = (zpos as f64 + (n_zeros_ref as f64 + n_zeros_tgt as f64 + 1.0) / 2.0)
             * (n_zeros_tgt as f64);
@@ -168,7 +169,7 @@ pub fn single_group_sparse_ovo_mwu_kernel<D: SparseFloat, I: SparseIndex>(
             n_ref as f64,
             n_tgt as f64,
             n as f64,
-            if tie_correct { tie_sum as f64 } else { 0.0 },
+            if tie_correct { tie_sum } else { 0.0 },
             u1,
             mu,
             if use_continuity { 0.5 } else { 0.0 },

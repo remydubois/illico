@@ -20,16 +20,14 @@ jobs:
       uses: actions/setup-python@v7
       with:
         python-version: "3.12"
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
     - name: Install dependencies
       run: |
-        python -m pip install ruff -q
-    - name: Lint with ruff
+        make install QUIET=1
+    - name: Format check with ruff and cargo
       run: |
-        ruff check .
-        ruff format --check .
-    - name: cargo formatter
-      run: |
-        cargo fmt -- --check
+        make format check
   build:
     runs-on: ubuntu-latest
     strategy:
@@ -44,17 +42,14 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - uses: actions-rust-lang/setup-rust-toolchain@v2
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade poetry -q
         poetry env use $(which python)
-        poetry install --with ${{ matrix.dev-extra }} -q
-        python -m pip install maturin
-    - name: Compile Rust backend
-      run: |
-        poetry run maturin develop --release
+        make install WITH=${{ matrix.dev-extra }} QUIET=1
     - name: Test with pytest (no tox because matrix already handles python version)
-      env:
-        ILLICO_DEV_GROUP: ${{ matrix.dev-extra }}
+      # env:
+      #   ILLICO_DEV_GROUP: ${{ matrix.dev-extra }}
       run: |
-        poetry run pytest -m "not speed_bench and not memory_bench" -x
+        make unit-test

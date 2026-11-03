@@ -86,7 +86,7 @@ pub fn single_group_dense_ovo_mwu_kernel<D: SparseFloat>(
     sorted_tgt_data: &Array2<D>,
     n_uniques_ref: &Array1<usize>,
     ref_block_offsets: &Array2<usize>,
-    tie_sums_ref: &Array1<usize>,
+    tie_sums_ref: &Array1<f64>,
     use_continuity: bool,
     tie_correct: bool,
     alternative: &String,
@@ -117,7 +117,7 @@ pub fn single_group_dense_ovo_mwu_kernel<D: SparseFloat>(
             n_tgt,
             n,
             if tie_correct {
-                (ts + tie_sums_ref[j]) as f64
+                ts as f64 + tie_sums_ref[j]
             } else {
                 0.0
             },
@@ -135,19 +135,19 @@ pub fn single_group_dense_ovo_mwu_kernel<D: SparseFloat>(
 
 pub fn compute_unique_values_and_offset<D: SparseFloat>(
     mut x: ArrayViewMut2<D>,
-) -> Result<(Array2<usize>, Array1<usize>, Array1<usize>), String> {
+) -> Result<(Array2<usize>, Array1<usize>, Array1<f64>), String> {
     let (nrows, ncols) = x.dim();
     let mut offsets: Array2<usize> = Array2::zeros((ncols, nrows + 1));
     let mut n_uniques: Array1<usize> = Array1::zeros(ncols);
-    let mut tie_sums: Array1<usize> = Array1::zeros(ncols);
+    let mut tie_sums: Array1<f64> = Array1::zeros(ncols);
 
     for j in 0..ncols {
         // Store unique values in x itself (F-order)
         n_uniques[j] = unique_from_sorted(x.column_mut(j), offsets.row_mut(j).slice_mut(s![1..]))?;
         // Update tie sums before overwriting x with prefix sum, then prefix sum it
         for i in 1..(n_uniques[j] + 1) {
-            let count = offsets[(j, i)];
-            tie_sums[j] += count.pow(3) - count;
+            let count = offsets[(j, i)] as f64;
+            tie_sums[j] += count.powi(3) - count;
             offsets[(j, i)] += offsets[(j, i - 1)];
         }
     }

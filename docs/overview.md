@@ -8,7 +8,7 @@
 4. 🐞 Data format agnostic: whether your data is dense, sparse along rows, or sparse along columns, `illico` will deal with it while never converting the whole data to whichever format is more optimized.
 5. 🪶 Lightweight: `illico` will process the input data in batches, making any memory allocation needed along the way much smaller than if it processed the whole data at once.
 6. 📈 Scalable: Because thread-first and batchable, `illico` scales reasonably with your compute budget. Tests showed that spanning 16 threads brings a 14-fold speedup over spanning 1 single thread.
-7. 💾 Out-of-core: `illico` supports h5-based, on-disk-backed, dense, CSC and CSR datasets natively.
+7. 💾 Out-of-core: `illico` supports h5-based (on-disk-backed) or Dask-based, dense, CSC and CSR datasets natively.
 8. 🎆 All-purpose: `illico` performs both one-versus-reference (useful for perturbation analyses) and one-versus-rest (useful for clustering analyses) wilcoxon rank-sum tests, both equally optimized and fast.
 
 Approximate speed benchmarks ran on k562-essential can be found in the Benchmarks section. All the code used to generate those numbers can be found in `tests/test_asymptotic_wilcoxon.py::test_speed_benchmark`.

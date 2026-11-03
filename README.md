@@ -1,3 +1,14 @@
+> [!TIP]
+> Starting from `scanpy` v1.13 and beyond, `illico`'s wilcoxon rank-sum is integrated in `scanpy.tl.rank_genes_groups` by specifying `scanpy.tl.rank_genes_groups(..., method="wilcoxon_illico")` :tada:
+
+<!-- [![Stars](https://img.shields.io/github/stars/remydubois/illico?style=flat&logo=GitHub&color=yellow)](https://github.com/remydubois/illico/stargazers) -->
+[![PyPI](https://img.shields.io/pypi/v/illico)](https://pypi.org/project/illico)
+[![PyPI Downloads](https://img.shields.io/pepy/dt/illico?logo=pypi)](https://pepy.tech/project/illico)
+[![CI](https://github.com/remydubois/illico/actions/workflows/maturin-CI.yaml/badge.svg)](https://github.com/remydubois/illico/actions/workflows/maturin-ci.yml)
+[![Docs](https://img.shields.io/github/actions/workflow/status/remydubois/illico/docs.yml?label=Docs&color=blue)](https://remydubois.github.io/illico/)
+<!-- [![Pages Status](https://remydubois.github.io/illico/)](https://img.shields.io/github/deployments/remydubois/illico/github-pages) -->
+<!-- [![Docs](https://img.shields.io/badge/docs-github--pages-blue)](https://remydubois.github.io/illico/) -->
+
 # illico
 `illico` is a python library performing fast and lightweight wilcoxon rank-sum tests (same as `scanpy.tl.rank_genes_groups(…, method="wilcoxon")`), useful for single-cell RNASeq data analyses and processing.
 Approximate speed benchmarks (done on a 8-CPUs, 1 GPU machine) ran on k562-essential (~300k cells, 8k genes, 2k perturbations) can be found below.

@@ -55,6 +55,13 @@ doc = [
     "myst-parser (>=5.0.0,<6.0.0)",
 ]
 
+[tool.poetry.group.dev-no-dask]
+optional = true
+[tool.poetry.group.dev]
+optional = true
+[tool.poetry.group.doc]
+optional = true
+
 [tool.black]
 line-length = 120
 
