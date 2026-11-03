@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="prev" title="Contributing" href="contributing.html">
 
-    <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
         <title>API Reference - illico documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
@@ -172,7 +172,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -234,13 +234,127 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
           <section id="api-reference">
 <h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="illico.asymptotic_wilcoxon.asymptotic_wilcoxon">
+<span class="sig-prename descclassname"><span class="pre">illico.asymptotic_wilcoxon.</span></span><span class="sig-name descname"><span class="pre">asymptotic_wilcoxon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_log1p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_keys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'~256'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alternative</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'two-sided'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_continuity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tie_correct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_post_agg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">layer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_from_ovr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">precompile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_rust</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_as_scanpy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_genes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">corr_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'benjamini-hochberg'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/illico/asymptotic_wilcoxon.html#asymptotic_wilcoxon"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#illico.asymptotic_wilcoxon.asymptotic_wilcoxon" title="Link to this definition">¶</a></dt>
+<dd><p>Perform asymptotic Mann-Whitney tests for differential gene expression.</p>
+<p>Mann-Whitney test is the same as Wilcoxon rank-sum test.
+This function takes as input an AnnData object of shape (n_cells, n_genes) with a group
+(e.g., perturbation) variable stored in .obs. It performs either one-versus-rest (OVR) or
+one-versus-one (OVO) Wilcoxon-Mann-Whitney tests for each gene, depending on whether a
+reference group is provided.</p>
+<p>It supports all the combinations of data formats (dense, sparse CSR, sparse CSC, in RAM or lazy)
+and tests (OVO, OVR), except one: the OVR test on lazy CSR datasets. The reason why this combo is
+not supported is because OVR test requires each column to be entirely in RAM as it has to be sorted,
+but CSR matrices requires the entirety of the <cite>.indices</cite> to be in RAM to chunk vertically, which
+defeats the purpose of using a lazy format in the first place.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>adata</strong> (<em>ad.AnnData</em>) – Annotated data matrix of shape (n_cells, n_genes).</p></li>
+<li><p><strong>is_log1p</strong> (<em>bool</em>) – Whether the data is log1p transformed.</p></li>
+<li><p><strong>group_keys</strong> (<em>str</em>) – Key in <cite>adata.obs</cite> specifying the group variable.</p></li>
+<li><p><strong>reference</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Name of the reference group for OVO tests. If <cite>None</cite>, OVR tests are performed.</p></li>
+<li><p><strong>n_threads</strong> (<em>int</em><em>, </em><em>default=1</em>) – Number of threads to use for parallel computation.</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em><em> or </em><em>str</em><em>, </em><em>default=&quot;~256&quot;</em>) – Number of genes to process in each batch. Can be an integer for fixed-size batches,
+or a string with an integer preceded by “~” (e.g., “~256”, “~512”, “~1024”) to target
+approximately that number of genes per chunk with balanced worker allocation.</p></li>
+<li><p><strong>alternative</strong> (<em>str</em><em>, </em><em>default=&quot;two-sided&quot;</em>) – Type of alternative hypothesis. One of ‘two-sided’, ‘less’, or ‘greater’.</p></li>
+<li><p><strong>use_continuity</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to apply continuity correction.</p></li>
+<li><p><strong>tie_correct</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to apply tie correction in the test statistic.</p></li>
+<li><p><strong>exp_post_agg</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to exponentiate the fold change after aggregation. This is relevant if the input data is log1p. See documentation for details.
+Note that <cite>scanpy.rank_genes_groups</cite> assumes the data to be log1p, and exponentiates post aggregation by default.</p></li>
+<li><p><strong>layer</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Layer in <cite>adata.layers</cite> to use for the data. If <cite>None</cite>, uses <cite>adata.X</cite>.</p></li>
+<li><p><strong>groups</strong> (<em>list</em><em> of </em><em>values</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Subset of groups to test. If <cite>None</cite>, tests all groups. This arguments serves the same purpose as scanpy’s <cite>groups</cite> argument in <cite>rank_genes_groups</cite>.
+It is used to filter which groups to compare against the reference in the OVO scenario, or which groups to compare against the rest in the OVR scenario.
+Note that in the OVR scenario, each comparison still happens against the entirety of the other groups, not just the ones listed in this argument.
+Note that in the OVO scenario, the reference group is automatically added.
+Order of the values in this list has no impact on the end results, duplicates will be trimmed away.</p></li>
+<li><p><strong>exclude_from_ovr</strong> (<em>list</em><em> of </em><em>values</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Subset of groups to exclude from the rest group in the OVR scenario (when reference=None). This argument is ignored in the OVO scenario.
+This can be useful if, for instance, one of the groups is corrupted and contains meaningless data, and we don’t want it to be part of the comparisons in the OVR scenario.
+Order of the values in this list has no impact on the end results, duplicates will be trimmed away.</p></li>
+<li><p><strong>precompile</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to precompile necessary functions for performance. It is recommended to set this to <cite>True</cite>.</p></li>
+<li><p><strong>use_rust</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to use the Rust implementation of the test. If <cite>False</cite>, uses the Numba implementation.</p></li>
+<li><p><strong>return_as_scanpy</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Whether to return results in a format compatible with Scanpy’s <cite>rank_genes_groups</cite> function.
+If yes, the output is a dictionary that can be attached to the <cite>adata</cite> object like this:
+<cite>adata.uns[‘rank_genes_groups’] = asymptotic_wilcoxon(…, return_as_scanpy=True)</cite></p></li>
+<li><p><strong>n_genes</strong> (<em>int</em><em> or </em><em>None</em><em>, </em><em>default=None</em>) – Number of top genes to return per group, sorted by z-score. If <cite>None</cite>, returns all genes. This is relevant only if <cite>return_as_scanpy=True</cite>,
+as Scanpy’s <cite>rank_genes_groups</cite> function expects the results to be sorted by significance. If <cite>return_as_scanpy=False</cite>, the results are
+not sorted and <cite>n_genes</cite> is ignored.</p></li>
+<li><p><strong>corr_method</strong> (<em>str</em><em>, </em><em>default=&quot;benjamini-hochberg&quot;</em>) – Method to use for multiple testing correction. One of ‘benjamini-hochberg’ or ‘bonferroni’.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A DataFrame with MultiIndex (pert, feature) containing columns:
+- ‘p_value’: P-value from the Mann-Whitney test
+- ‘statistic’: Test statistic (U-statistic)
+- ‘z-scores’: Test z-score
+- ‘fold_change’: Fold change between groups
+Or a dictionary formatted for Scanpy’s <cite>rank_genes_groups</cite> results, containing:
+- ‘params’: Dictionary of parameters used for the test
+- ‘names’: Record array of gene names sorted by significance for each group
+- ‘scores’: Record array of test statistics sorted by significance for each group
+- ‘pvals’: Record array of p-values sorted by significance for each group
+- ‘pvals_adj’: Record array of adjusted p-values sorted by significance for each group
+- ‘logfoldchanges’: Record array of log2 fold changes sorted by significance for each group</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Either one of pd.DataFrame or Dict, depending on the value of <cite>return_as_scanpy</cite></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If input data matrix indices are not sorted (for sparse CSR matrices).
+    If batch_size is not ‘~&lt;int&gt;’ or a positive integer.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create example AnnData object</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">n_cells</span><span class="p">,</span> <span class="n">n_genes</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">500</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">negative_binomial</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="n">n_genes</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">obs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;cell_type&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">([</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">],</span> <span class="n">n_cells</span><span class="p">)})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">var</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;gene_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_genes</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">obs</span><span class="p">,</span> <span class="n">var</span><span class="o">=</span><span class="n">var</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Perform one-versus-rest tests</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">results</span> <span class="o">=</span> <span class="n">asymptotic_wilcoxon</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">adata</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">is_log1p</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">group_keys</span><span class="o">=</span><span class="s1">&#39;cell_type&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">n_threads</span><span class="o">=</span><span class="mi">4</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">head</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Perform one-versus-one tests against reference</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">results_ovo</span> <span class="o">=</span> <span class="n">asymptotic_wilcoxon</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">adata</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">is_log1p</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">group_keys</span><span class="o">=</span><span class="s1">&#39;cell_type&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">reference</span><span class="o">=</span><span class="s1">&#39;A&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">n_threads</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">alternative</span><span class="o">=</span><span class="s1">&#39;greater&#39;</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Filter significant results</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">significant</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;p_value&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">significant</span><span class="p">)</span><span class="si">}</span><span class="s2"> significant tests&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p class="rubric">Notes</p>
+<p>The function automatically handles both dense and sparse matrices. For sparse CSR matrices,
+indices must be sorted per row to ensure correct results.</p>
+<p>Author: Rémy Dubois</p>
+</dd></dl>
+
 </section>
 
         </article>
@@ -278,8 +392,27 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">API Reference</a><ul>
+<li><a class="reference internal" href="#illico.asymptotic_wilcoxon.asymptotic_wilcoxon"><code class="docutils literal notranslate"><span class="pre">asymptotic_wilcoxon()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>

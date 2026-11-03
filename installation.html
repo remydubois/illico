@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="How to use" href="usage.html"><link rel="prev" title="Overview" href="overview.html">
 
-    <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
         <title>Installation - illico documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
@@ -243,6 +243,14 @@
 <h1>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">illico</span></code> can be installed via pip, compatible with Python 3.11 and onward:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>illico<span class="w"> </span>-U
+</pre></div>
+</div>
+<p>This will pull pre-compiled rust libraries for your platform. In case you encounter issues, you can clone and build manually:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/remydubois/illico
+<span class="nb">cd</span><span class="w"> </span>illico
+pipx<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>poetry<span class="w"> </span><span class="c1"># Use system-wide pip, not venv-specific</span>
+curl<span class="w"> </span>--proto<span class="w"> </span><span class="s1">&#39;=https&#39;</span><span class="w"> </span>--tlsv1.2<span class="w"> </span>-sSf<span class="w"> </span>https://sh.rustup.rs<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh<span class="w"> </span><span class="c1"># install Rust</span>
+make<span class="w"> </span>install<span class="w"> </span><span class="c1"># This will PATH&#39;s poetry, which will in turn create poetry&#39;s venv and compile Rust library</span>
 </pre></div>
 </div>
 <p>Documentation dependencies (used to build the Sphinx docs) are managed by Poetry. Install them with:</p>

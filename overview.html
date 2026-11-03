@@ -5,7 +5,7 @@
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Installation" href="installation.html"><link rel="prev" title="Welcome to illico’s documentation" href="index.html">
 
-    <!-- Generated with Sphinx 9.0.4 and Furo 2025.12.19 -->
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
         <title>Overview - illico documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
@@ -249,7 +249,7 @@
 <li><p>🐞 Data format agnostic: whether your data is dense, sparse along rows, or sparse along columns, <code class="docutils literal notranslate"><span class="pre">illico</span></code> will deal with it while never converting the whole data to whichever format is more optimized.</p></li>
 <li><p>🪶 Lightweight: <code class="docutils literal notranslate"><span class="pre">illico</span></code> will process the input data in batches, making any memory allocation needed along the way much smaller than if it processed the whole data at once.</p></li>
 <li><p>📈 Scalable: Because thread-first and batchable, <code class="docutils literal notranslate"><span class="pre">illico</span></code> scales reasonably with your compute budget. Tests showed that spanning 16 threads brings a 14-fold speedup over spanning 1 single thread.</p></li>
-<li><p>💾 Out-of-core: <code class="docutils literal notranslate"><span class="pre">illico</span></code> supports h5-based, on-disk-backed, dense, CSC and CSR datasets natively.</p></li>
+<li><p>💾 Out-of-core: <code class="docutils literal notranslate"><span class="pre">illico</span></code> supports h5-based (on-disk-backed) or Dask-based, dense, CSC and CSR datasets natively.</p></li>
 <li><p>🎆 All-purpose: <code class="docutils literal notranslate"><span class="pre">illico</span></code> performs both one-versus-reference (useful for perturbation analyses) and one-versus-rest (useful for clustering analyses) wilcoxon rank-sum tests, both equally optimized and fast.</p></li>
 </ol>
 <p>Approximate speed benchmarks ran on k562-essential can be found in the Benchmarks section. All the code used to generate those numbers can be found in <code class="docutils literal notranslate"><span class="pre">tests/test_asymptotic_wilcoxon.py::test_speed_benchmark</span></code>.</p>
