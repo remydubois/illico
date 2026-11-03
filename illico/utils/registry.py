@@ -74,38 +74,31 @@ class DataHandler(ABC):
     @abstractmethod
     def input_signature(self, *args, **kwargs) -> tuple:
         """Return the numba input signature for this handler."""
-        pass
 
     @abstractmethod
     def fetch_rows(self, *args, **kwargs) -> np.ndarray:
         """Fetch data from disk if needed."""
-        pass
 
     @abstractmethod
     def fetch_cols(self, *args, **kwargs) -> tuple:
         """Fetch data from disk if needed."""
-        pass
 
     @abstractmethod
     def to_nb(self, *args, **kwargs) -> Any:
         """Convert data to numba-compatible format."""
-        pass
 
     @abstractmethod
     def kernel_data_format(self) -> KernelDataFormat:
         """Return the dispatcher kernel routine for this handler."""
-        pass
 
     @abstractmethod
     def footprint(self) -> int:
         """Return estimated memory footprint of the data."""
-        pass
 
     @property
     @abstractmethod
     def is_lazy(self) -> bool:
         """Return whether the data is lazy-loaded or backed on disk."""
-        pass
 
 
 class InRAMDataHandler(DataHandler):
@@ -148,7 +141,10 @@ class CSRDataHandler(InRAMDataHandler):
         data_type = getattr(types, str(self.data.data.dtype))[::1]
         indices_type = getattr(types, str(self.data.indices.dtype))[::1]
         indptr_type = getattr(types, str(self.data.indptr.dtype))[::1]
-        return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSRMatrix)
+        return types.NamedTuple(
+            [data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)],
+            CSRMatrix,
+        )
 
     @classmethod
     def to_nb(cls, X: py_sparse.csr_matrix | py_sparse.csr_array) -> CSRMatrix:
@@ -169,7 +165,10 @@ class CSCDataHandler(InRAMDataHandler):
         data_type = getattr(types, str(self.data.data.dtype))[::1]
         indices_type = getattr(types, str(self.data.indices.dtype))[::1]
         indptr_type = getattr(types, str(self.data.indptr.dtype))[::1]
-        return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSCMatrix)
+        return types.NamedTuple(
+            [data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)],
+            CSCMatrix,
+        )
 
     @classmethod
     def to_nb(cls, X: py_sparse.csc_matrix | py_sparse.csc_array) -> CSCMatrix:
@@ -205,7 +204,10 @@ class H5pyBackedCSCDataHandler(CSCDataHandler):
         data_type = getattr(types, str(self.data._data.dtype))[::1]
         indices_type = getattr(types, str(self.data._indices.dtype))[::1]
         indptr_type = getattr(types, str(self.data._indptr.dtype))[::1]
-        return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSCMatrix)
+        return types.NamedTuple(
+            [data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)],
+            CSCMatrix,
+        )
 
     @classmethod
     def to_nb(cls, X: py_sparse.csc_matrix | py_sparse.csc_array) -> CSCMatrix:
@@ -234,7 +236,10 @@ class H5pyBackedCSRDataHandler(CSRDataHandler):
         data_type = getattr(types, str(self.data._data.dtype))[::1]
         indices_type = getattr(types, str(self.data._indices.dtype))[::1]
         indptr_type = getattr(types, str(self.data._indptr.dtype))[::1]
-        return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSRMatrix)
+        return types.NamedTuple(
+            [data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)],
+            CSRMatrix,
+        )
 
     @classmethod
     def to_nb(cls, X: py_sparse.csr_matrix | py_sparse.csr_array) -> CSRMatrix:
@@ -261,7 +266,6 @@ class H5pyBackedCSRDataHandler(CSRDataHandler):
 
 
 class DaskArrayDataHandler(DataHandler):
-
     def fetch_cols(self, lb: int, ub: int) -> tuple:
         return self.data[:, lb:ub].compute(), (0, ub - lb)
 
@@ -288,7 +292,10 @@ class CSCDaskArrayDataHandler(DaskArrayDataHandler, CSCDataHandler):
         data_type = getattr(types, str(self.data._meta.data.dtype))[::1]
         indices_type = getattr(types, str(self.data._meta.indices.dtype))[::1]
         indptr_type = getattr(types, str(self.data._meta.indptr.dtype))[::1]
-        return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSCMatrix)
+        return types.NamedTuple(
+            [data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)],
+            CSCMatrix,
+        )
 
 
 class CSRDaskArrayDataHandler(DaskArrayDataHandler, CSRDataHandler):
@@ -296,7 +303,14 @@ class CSRDaskArrayDataHandler(DaskArrayDataHandler, CSRDataHandler):
         data_type = getattr(types, str(self.data._meta.data.dtype))[::1]
         indices_type = getattr(types, str(self.data._meta.indices.dtype))[::1]
         indptr_type = getattr(types, str(self.data._meta.indptr.dtype))[::1]
-        return types.NamedTuple([data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)], CSRMatrix)
+        return types.NamedTuple(
+            [data_type, indices_type, indptr_type, types.UniTuple(types.int64, 2)],
+            CSRMatrix,
+        )
+
+    def fetch_rows(self, indices: np.ndarray) -> py_sparse.csr_matrix:
+        return self.data[indices, :].compute()
+
 
 is_dask_installed = find_spec("dask") is not None
 
@@ -319,5 +333,6 @@ if is_dask_installed:
             return CSCDaskArrayDataHandler(x)
         else:
             raise TypeError(f"Unsupported dask array backing type: {type(meta)}")
+
     data_handler_registry[da.Array] = _dask_handler_factory
     data_handler_registry[ad._core.views.DaskArrayView] = _dask_handler_factory

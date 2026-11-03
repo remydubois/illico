@@ -316,7 +316,7 @@ def csr_get_rows_contig_cols_into_csc(
     pointer = csc_indptr[:-1].copy()
     for i in range(indices.size):
         row_idx = indices[i]
-        start, _ = csr_matrix.indptr[row_idx], csr_matrix.indptr[row_idx + 1]
+        start = csr_matrix.indptr[row_idx]
         cb, rb = bounds[i, 0], bounds[i, 1]
         for j in range(start + cb, start + rb):
             col_idx = csr_matrix.indices[j] - chunk_lb

@@ -10,7 +10,7 @@ from illico.utils.registry import data_handler_registry
 
 
 @pytest.mark.skip(
-    f"Memory footprint is actually too cumbersome to estimate, especially in very low data regimes like in this test."
+    "Memory footprint is actually too cumbersome to estimate, especially in very low data regimes like in this test."
 )
 @pytest.mark.parametrize("test", ["ovo", "ovr"])
 def test_log_memory_usage(rand_adata, test, tmp_path):
@@ -30,7 +30,7 @@ def test_log_memory_usage(rand_adata, test, tmp_path):
     # precompile
     _precompile(data_handler, reference)
 
-    with memray.Tracker((_f := tmp_path / "tracker.bin")) as tracker:
+    with memray.Tracker(_f := tmp_path / "tracker.bin"):
         asymptotic_wilcoxon(
             adata=rand_adata,
             is_log1p=False,

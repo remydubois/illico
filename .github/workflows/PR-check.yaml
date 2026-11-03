@@ -11,18 +11,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Enforce changelog updated
+      # Enforce changelog updated: custom from https://github.com/tarides/changelog-check-action/blob/main/action.yml to run locally in act
       - name: Check changelog updated
-        uses: tarides/changelog-check-action@v2
-        with:
-          changelog: 'changelog.md'
+        run: |
+          set -euo pipefail
+          git remote set-url origin "https://github.com/remydubois/illico.git"
+          git fetch origin main --depth=1
+          if git diff --quiet "origin/main" -- changelog.md; then
+            echo "Error: changelog.md was not updated!"
+            exit 1
+          fi
+
+          echo "changelog.md was updated."
 
       # Enforce version bump in pyproject.toml
       - name: Verify version bump in pyproject.toml
         id: verify
         run: |
-          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
-          BASE_VERSION=$(git show origin/${{ github.event.pull_request.base.ref }}:pyproject.toml \
+          git remote set-url origin "https://github.com/remydubois/illico.git"
+          git fetch origin main --depth=1
+          BASE_VERSION=$(git show origin/main:pyproject.toml \
             | grep '^version' | head -n1 | sed 's/.*= *//; s/"//g')
           HEAD_VERSION=$(grep '^version' pyproject.toml \
             | head -n1 | sed 's/.*= *//; s/"//g')

@@ -1,14 +1,17 @@
-from importlib.util import find_spec
 import os
 import urllib.request
+from importlib.util import find_spec
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Literal
 
 import anndata as ad
+
+# import dask.array as da
 import numpy as np
 import pandas as pd
 import pytest
+import scanpy as sc
 from scipy import sparse
 from tqdm import tqdm
 
@@ -22,22 +25,21 @@ CELL_LINE_URLS = {
     "hepg2": "https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE264667&format=file&file=GSE264667%5Fhepg2%5Fraw%5Fsinglecell%5F01%2Eh5ad",
 }
 
+
 @pytest.fixture(
     params=[
-        (cell_line, fmt, fraction, use_dask)
+        (cell_line, fmt, fraction, norm)
         for cell_line in ["k562", "rpe1", "jurkat", "hepg2"]
         for fmt in ["dense", "csr", "csc"]
         for fraction in [0.0, 0.2, 1.0]
-        for use_dask in [True, False]
+        for norm in [True, False]
     ],
     scope="function",
-    ids=lambda p: f"{p[0]}-{p[1]}-{p[2]:.0%}{'-dask' if p[3] else ''}",
+    ids=lambda p: f"{p[0]}-{p[1]}-{p[2]:.0%}-{'norm' if p[3] else 'raw'}",
 )
 def adata(request):
     """Fixture to download, convert and cache cell line dataset with subsampling."""
-    cell_line, fmt, fraction, use_dask = request.param
-    if not find_spec("dask") and use_dask:
-        pytest.skip("dask is not installed")
+    cell_line, fmt, fraction, norm = request.param
     # if fraction.values[0] < 1.0:
     #     request.node.add_marker("debug")
 
@@ -60,9 +62,7 @@ def adata(request):
             adata = ad.read_h5ad(raw_path, as_sparse="X", as_sparse_fmt=sparse.csc_matrix)
         else:
             adata = ad.read_h5ad(raw_path)
-        if use_dask:
-            import dask.array as da
-            adata.X = da.from_array(adata.X, meta=type(adata.X)((2, 2)), dtype=adata.dtype)
+
         if fraction == 0.0:
             col_idxs = np.random.RandomState(0).choice(adata.n_vars, size=1, replace=False)
             adata = adata[:, col_idxs].copy()
@@ -74,22 +74,31 @@ def adata(request):
 
         adata.write_h5ad(target_path)
 
+    # log1p + total count norm
+    if norm:
+        sc.pp.log1p(adata)
+        sc.pp.normalize_total(adata, target_sum=1e4)
+
     return adata
+
+
+def _mask_multiply(x, mask, value):
+    x[:] = np.where(mask, x * value, x)
 
 
 # TODO: params on log1p and normalization ? A lot of tests would result
 @pytest.fixture(
     scope="function",
-    params=[(fmt, lazy) for fmt in ["dense", "csc", "csr"] for lazy in [False, True, "dask"]],
-    ids=lambda p: f"{p[0]}-{'lazy' if p[1] is True else ('dask' if p[1] == 'dask' else 'eager')}",
+    params=[(fmt, access) for fmt in ["dense", "csc", "csr"] for access in ["eager", "lazy", "dask"]],
+    ids=lambda p: f"{p[0]}-{p[1]}",
 )
 def rand_adata(request, tmp_path):
-    fmt, lazy = request.param
+    fmt, access = request.param
 
-    if not find_spec("dask") and lazy == "dask":
+    if not find_spec("dask") and access == "dask":
         pytest.skip("dask is not installed")
     n_cells = 10_000
-    n_genes = 15
+    n_genes = 12
     n_groups = 5
     assert n_groups >= 2
     sparsity = 0.5  # ~50% zeros
@@ -112,11 +121,39 @@ def rand_adata(request, tmp_path):
 
     # Now cover all possible negative value scenarios: some with all negative values, some with a mix of both
     # By default dense_counts only contains positive values
-    dense_counts[:, 0] *= -1.0  # all negative in the first column
-    dense_counts[groups == 0, 1] *= -1.0  # First group all negative, rest all positives in the second column
-    dense_counts[np.isin(groups, [0, 1]), 2] *= -1.0  # Two groups all negative, rest all positives in the third column
-    dense_counts[groups == 0, 3][::2] *= -1.0  # Ref is both pos and neg in the fourth column
-    dense_counts[groups == 1, 4][::2] *= -1.0  # Target is both pos and neg in the fifth column
+    dense_counts[:, 0] *= -1.0  # ref and tgt all negative in the first column
+    # dense_counts[groups == 0, 1] *= -1.0  # Ref all neg, target all pos in the second column
+    _mask_multiply(dense_counts[:, 1], groups == 0, -1.0)  # Ref all neg, target all pos in the second column
+    # dense_counts[groups == 0, 2][::2] *= -1.0  # Ref is both pos and neg, tgt all pos in the third column
+    _mask_multiply(
+        dense_counts[::2, 2], groups[::2] == 0, -1.0
+    )  # Ref is both pos and neg, tgt all pos in the third column
+    # dense_counts[groups == 1, 3][::2] *= -1.0  # tgt is both pos and neg, ref all pos in the fourth column
+    _mask_multiply(
+        dense_counts[::2, 3], groups[::2] == 1, -1.0
+    )  # tgt is both pos and neg, ref all pos in the fourth column
+    _mask_multiply(
+        dense_counts[:, 4], np.arange(n_cells) % 2 == 0, -1.0
+    )  # Both ref and tgt both pos and neg in the fifth column
+    # Do the same for all-zero scenarios: some with all zero values, some with a mix of both
+    _mask_multiply(dense_counts[:, 5], groups == 0, 0.0)  # Ref all zero in the sixth column
+    _mask_multiply(dense_counts[:, 6], groups == 1, 0.0)  # Tgt all zero in the seventh column
+    _mask_multiply(dense_counts[:, 7], np.ones(n_cells, dtype=bool), 0.0)  # Ref and tgt all zero in the heighth column
+    # Now a mix of both: all zeros and sign issues
+    _mask_multiply(dense_counts[:, 8], groups == 0, 0.0)  # Ref all zero and tgt negative in the nineth column
+    _mask_multiply(dense_counts[:, 8], groups != 0, -1.0)  # Ref all zero and tgt negative in the nineth column
+    _mask_multiply(dense_counts[:, 9], groups == 0, 0.0)  # Ref all zero and tgt pos and neg in the tenth column
+    other_groups = groups != 0
+    _mask_multiply(
+        dense_counts[:, 9], other_groups & (np.cumsum(other_groups) % 2 == 1), -1.0
+    )  # Ref all zero and tgt pos and neg in the tenth column
+    _mask_multiply(dense_counts[:, 10], groups != 0, 0.0)  # Tgt all zero and ref negative in the eleventh column
+    _mask_multiply(dense_counts[:, 10], groups == 0, -1.0)  # Tgt all zero and ref negative in the eleventh column
+    _mask_multiply(dense_counts[:, 11], groups != 0, 0.0)  # Tgt all zero and ref pos and neg in the twelfth column
+    ref_groups = groups == 0
+    _mask_multiply(
+        dense_counts[:, 11], ref_groups & (np.cumsum(ref_groups) % 2 == 1), -1.0
+    )  # Tgt all zero and ref pos and neg in the twelfth column
 
     if fmt == "dense":
         data_matrix = dense_counts
@@ -127,35 +164,31 @@ def rand_adata(request, tmp_path):
     else:
         raise ValueError(f"Unknown data format: {fmt}")
 
-    if lazy == "dask":
-        import dask.array as da
-
-        data_matrix = da.from_array(data_matrix)
-
     adata = ad.AnnData(
         data_matrix,
         obs=pd.DataFrame({"pert": [f"pert_{g}" for g in groups]}),
         var=pd.DataFrame(index=[f"gene_{i}" for i in range(n_genes)]),
     )
-    if lazy:
+    if access == "lazy":
         adata_path = tmp_path / f"rand_adata_{fmt}_lazy.h5ad"
         adata.write_h5ad(adata_path)
         adata = ad.read_h5ad(adata_path, backed="r")
-    elif lazy == "dask":
+    elif access == "dask":
         import dask.array as da
-        adata.X = da.from_array(adata.X, meta=type(adata.X)((2, 2)), dtype=adata.dtype)
+
+        adata.X = da.from_array(adata.X)
     return adata
 
 
 @pytest.fixture(scope="function")
 def eager_rand_adata(rand_adata):
-    x_is_dask = False
+    if rand_adata.isbacked:
+        pytest.skip("This fixture returns only in-RAM dataset.")
     if find_spec("dask"):
         import dask.array as da
 
-        x_is_dask = isinstance(rand_adata.X, da.Array)
-    if rand_adata.isbacked or x_is_dask:
-        pytest.skip("This fixture returns only in-RAM dataset.")
+        if isinstance(rand_adata.X, da.Array):
+            pytest.skip("This fixture returns only in-RAM dataset.")
     return rand_adata
 
 
@@ -198,10 +231,10 @@ def download_if_missing(cell_line: Literal["k562", "rpe1"], dst: Path) -> Path:
                             break
                         f.write(chunk)
                         pbar.update(len(chunk))
-            except Exception as e:
+            except Exception:
                 # Clean up temp file on error
                 Path(tmp_file.name).unlink(missing_ok=True)
-                raise e
+                raise
             # Move temp file to final destination
             Path(tmp_file.name).rename(dst)
 
@@ -214,7 +247,14 @@ def rand_csr():
     n_cols = 200
     density = 0.1
     rng = np.random.RandomState(0)
-    data = sparse.random(n_rows, n_cols, density=density, format="csr", random_state=rng, dtype=np.float64)
+    data = sparse.random(
+        n_rows,
+        n_cols,
+        density=density,
+        format="csr",
+        random_state=rng,
+        dtype=np.float64,
+    )
     handler = data_handler_registry.get(data)
     return handler.to_nb(data)
 
@@ -225,7 +265,14 @@ def rand_csc():
     n_cols = 200
     density = 0.1
     rng = np.random.RandomState(0)
-    data = sparse.random(n_rows, n_cols, density=density, format="csc", random_state=rng, dtype=np.float64)
+    data = sparse.random(
+        n_rows,
+        n_cols,
+        density=density,
+        format="csc",
+        random_state=rng,
+        dtype=np.float64,
+    )
     handler = data_handler_registry.get(data)
     return handler.to_nb(data)
 
