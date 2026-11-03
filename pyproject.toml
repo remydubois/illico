@@ -46,11 +46,11 @@ dev-no-dask = [
     "ipdb (>=0.13.13,<0.14.0)",
     "tomli (>=2.4.1,<3.0.0)",
     "ipykernel (>=7.2.0,<8.0.0)",
-    "maturin (>=1.13.3,<2.0.0)",
+    "ruff (>=0.17.3,<0.18.0)",
 ]
 # This is not optional (required to compile Rust binaries)
 maturin = [
-    "ruff (>=0.17.3,<0.18.0)",
+    "maturin (>=1.13.3,<2.0.0)",
 ]
 dev = [{ include-group = "dev-no-dask" }, "dask (>=2026.6.0)"]
 doc = [

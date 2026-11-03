@@ -24,7 +24,7 @@ jobs:
       uses: snok/install-poetry@v1
     - name: Install dependencies
       run: |
-        make install QUIET=1
+        make install QUIET=1 WITH=dev-no-dask
     - name: Format check with ruff and cargo
       run: |
         make format-check
