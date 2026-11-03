@@ -4,7 +4,7 @@ Q_FLAG = $(if $(QUIET),-q,)
 WITH ?=
 WITH_FLAG = $(if $(WITH),--with $(WITH),)
 
-# Build the python package and the Rust extension
+# Build the python package and the Rust extension.
 install:
 	poetry install $(Q_FLAG) $(WITH_FLAG)
 	poetry run maturin develop --release $(Q_FLAG)

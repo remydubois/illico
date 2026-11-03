@@ -4,7 +4,7 @@
 <!-- [![Stars](https://img.shields.io/github/stars/remydubois/illico?style=flat&logo=GitHub&color=yellow)](https://github.com/remydubois/illico/stargazers) -->
 [![PyPI](https://img.shields.io/pypi/v/illico)](https://pypi.org/project/illico)
 [![PyPI Downloads](https://img.shields.io/pepy/dt/illico?logo=pypi)](https://pepy.tech/project/illico)
-[![CI](https://github.com/remydubois/illico/actions/workflows/maturin-CI.yaml/badge.svg)](https://github.com/remydubois/illico/actions/workflows/maturin-ci.yml)
+[![CI](https://github.com/remydubois/illico/actions/workflows/maturin-CI.yaml/badge.svg)](https://github.com/remydubois/illico/actions/workflows/maturin-CI.yml)
 [![Docs](https://img.shields.io/github/actions/workflow/status/remydubois/illico/docs.yml?label=Docs&color=blue)](https://remydubois.github.io/illico/)
 <!-- [![Pages Status](https://remydubois.github.io/illico/)](https://img.shields.io/github/deployments/remydubois/illico/github-pages) -->
 <!-- [![Docs](https://img.shields.io/badge/docs-github--pages-blue)](https://remydubois.github.io/illico/) -->

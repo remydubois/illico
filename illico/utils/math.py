@@ -336,7 +336,7 @@ def compute_batch_bounds(
             raise ValueError(f"Invalid batch_size value: {batch_size}. Must be a positive integer.")
         target_batch_size = None
     else:
-        raise ValueError(
+        raise TypeError(
             f"Invalid batch_size value: {batch_size!r}. Must be an integer or a string preceded by '~' (e.g., '~256', '~512')."
         )
 

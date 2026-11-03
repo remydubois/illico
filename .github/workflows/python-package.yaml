@@ -27,7 +27,7 @@ jobs:
         make install QUIET=1
     - name: Format check with ruff and cargo
       run: |
-        make format check
+        make format-check
   build:
     runs-on: ubuntu-latest
     strategy:
