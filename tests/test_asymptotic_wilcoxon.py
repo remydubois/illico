@@ -2,6 +2,7 @@ import contextlib
 import math
 import os
 import re
+import sys
 import warnings
 from pathlib import Path
 from typing import Any
@@ -406,6 +407,34 @@ def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, use_rust, tm
             raise AssertionError(
                 f"Expected high (>150MB) heap memory usage when running in eager mode, got {max_heap / 1_000_000:.1f} MB."
             )
+
+
+@pytest.mark.parametrize("use_rust", [True, False])
+def test_precompile_lazy_csr_ovo(rand_adata, use_rust, monkeypatch):
+    """The OVO test on lazy CSR data always runs the Numba kernel, so it must be precompiled even if `use_rust=True`."""
+    data_handler = data_handler_registry.get(rand_adata.X)
+    if not (data_handler.is_lazy and data_handler.kernel_data_format() is KernelDataFormat.CSR):
+        pytest.skip("Test only relevant for lazy CSR data.")
+
+    module = sys.modules[asymptotic_wilcoxon.__module__]
+    calls = []
+    original = module._precompile
+
+    def spy(*args, **kwargs):
+        calls.append(args)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(module, "_precompile", spy)
+    asymptotic_wilcoxon(
+        adata=rand_adata,
+        is_log1p=False,
+        group_keys="pert",
+        reference="pert_0",
+        n_threads=1,
+        use_rust=use_rust,
+        precompile=True,
+    )
+    assert len(calls) == 1
 
 
 def test_unsorted_indices_error(eager_rand_adata):
