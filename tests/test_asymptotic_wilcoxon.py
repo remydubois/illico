@@ -18,6 +18,7 @@ from scipy import sparse as py_sparse
 from scipy.stats import mannwhitneyu
 
 from illico.asymptotic_wilcoxon import asymptotic_wilcoxon
+from illico.ovo.sparse_ovo import _single_group_sparse_ovo_mwu_kernel
 from illico.utils.compile import _precompile
 from illico.utils.registry import KernelDataFormat, data_handler_registry
 
@@ -417,12 +418,13 @@ def test_precompile_lazy_csr_ovo(rand_adata, use_rust, monkeypatch):
         pytest.skip("Test only relevant for lazy CSR data.")
 
     module = sys.modules[asymptotic_wilcoxon.__module__]
-    calls = []
+    dispatchers = []
     original = module._precompile
 
     def spy(*args, **kwargs):
-        calls.append(args)
-        return original(*args, **kwargs)
+        dispatcher = original(*args, **kwargs)
+        dispatchers.append((dispatcher, len(dispatcher.signatures)))
+        return dispatcher
 
     monkeypatch.setattr(module, "_precompile", spy)
     asymptotic_wilcoxon(
@@ -434,7 +436,11 @@ def test_precompile_lazy_csr_ovo(rand_adata, use_rust, monkeypatch):
         use_rust=use_rust,
         precompile=True,
     )
-    assert len(calls) == 1
+    assert len(dispatchers) == 1
+    dispatcher, n_signatures = dispatchers[0]
+    # The kernel used by `ovo_lazy_csr_operator` was precompiled, and was not recompiled by the workers
+    assert dispatcher is _single_group_sparse_ovo_mwu_kernel
+    assert len(dispatcher.signatures) == n_signatures
 
 
 def test_unsorted_indices_error(eager_rand_adata):
