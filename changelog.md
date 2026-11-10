@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Version 0.7.1
+------------
+- Fixes Numba kernels not being precompiled for the OVO test on lazy CSR data when `use_rust=True` (the default) and `precompile=True`: this case falls back to the Numba kernel, but the fallback happened after the precompilation step.
+
 Version 0.7.0
 ------------
 - New algorithm is faster at the expense of a slight extra RAM footprint (+~15%). Instead of performing a linear merge (v0.6.0), `illico` now performs a binary insertion of perturbed values into sorted control values.
