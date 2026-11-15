@@ -2,6 +2,7 @@ import contextlib
 import math
 import os
 import re
+import sys
 import warnings
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ from scipy import sparse as py_sparse
 from scipy.stats import mannwhitneyu
 
 from illico.asymptotic_wilcoxon import asymptotic_wilcoxon
+from illico.ovo.sparse_ovo import _single_group_sparse_ovo_mwu_kernel
 from illico.utils.compile import _precompile
 from illico.utils.registry import KernelDataFormat, data_handler_registry
 
@@ -406,6 +408,39 @@ def test_backed_asymptotic_wilcoxon(eager_rand_adata, test, backed, use_rust, tm
             raise AssertionError(
                 f"Expected high (>150MB) heap memory usage when running in eager mode, got {max_heap / 1_000_000:.1f} MB."
             )
+
+
+@pytest.mark.parametrize("use_rust", [True, False])
+def test_precompile_lazy_csr_ovo(rand_adata, use_rust, monkeypatch):
+    """The OVO test on lazy CSR data always runs the Numba kernel, so it must be precompiled even if `use_rust=True`."""
+    data_handler = data_handler_registry.get(rand_adata.X)
+    if not (data_handler.is_lazy and data_handler.kernel_data_format() is KernelDataFormat.CSR):
+        pytest.skip("Test only relevant for lazy CSR data.")
+
+    module = sys.modules[asymptotic_wilcoxon.__module__]
+    dispatchers = []
+    original = module._precompile
+
+    def spy(*args, **kwargs):
+        dispatcher = original(*args, **kwargs)
+        dispatchers.append((dispatcher, len(dispatcher.signatures)))
+        return dispatcher
+
+    monkeypatch.setattr(module, "_precompile", spy)
+    asymptotic_wilcoxon(
+        adata=rand_adata,
+        is_log1p=False,
+        group_keys="pert",
+        reference="pert_0",
+        n_threads=1,
+        use_rust=use_rust,
+        precompile=True,
+    )
+    assert len(dispatchers) == 1
+    dispatcher, n_signatures = dispatchers[0]
+    # The kernel used by `ovo_lazy_csr_operator` was precompiled, and was not recompiled by the workers
+    assert dispatcher is _single_group_sparse_ovo_mwu_kernel
+    assert len(dispatcher.signatures) == n_signatures
 
 
 def test_unsorted_indices_error(eager_rand_adata):

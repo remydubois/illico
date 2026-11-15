@@ -7,10 +7,9 @@ from typing import Any
 from loguru import logger
 from numba import types
 
-from illico.ovo.sparse_ovo import single_group_sparse_ovo_mwu_kernel
+from illico.ovo.sparse_ovo import _single_group_sparse_ovo_mwu_kernel
 from illico.utils.groups import GroupContainer
 from illico.utils.registry import (
-    DaskArrayDataHandler,
     DataHandler,
     KernelDataFormat,
     Test,
@@ -44,20 +43,34 @@ def _precompile(data_handler: DataHandler, reference: Any | None):
         test_type = Test.OVR
     else:
         test_type = Test.OVO
-    if (
-        data_handler.is_lazy
-        and data_handler.kernel_data_format() is KernelDataFormat.CSR
-        and test_type is Test.OVO
-        and not isinstance(data_handler, DaskArrayDataHandler)
-    ):
-        # This is the special lazy CSR OVO scenario
-        dispatcher = single_group_sparse_ovo_mwu_kernel
-        # The input to this dispatcher is CSC, not CSR, because data is converted in process_group
+    if data_handler.is_lazy and data_handler.kernel_data_format() is KernelDataFormat.CSR and test_type is Test.OVO:
+        # This is the special lazy CSR OVO scenario (backed or Dask), handled by `ovo_lazy_csr_operator`.
+        # Compile the exact signature it calls the kernel with, so that worker threads do not compile it.
+        dispatcher = _single_group_sparse_ovo_mwu_kernel
+        # The input to this dispatcher is CSC, not CSR, because data is converted in `preprocess_group`
         # Here, take advantage of the fact that CSCMatrix and CSRMatrix hold the exact same attributes
-        csc_sig = types.NamedTuple([*data_handler.input_signature()], CSCMatrix)
-        input_sig = (csc_sig, csc_sig, types.boolean, types.boolean, types.string)
-        # This kernel does not return fold change
-        out_sig = types.UniTuple(types.float64[::1], 3)
+        csr_sig = data_handler.input_signature()
+        csc_sig = types.NamedTuple([*csr_sig], CSCMatrix)
+        # Number of zeros per column of the control group: same dtype as indptr
+        n_zeros_sig = csr_sig[2].dtype[::1]
+        # Results are written in place into strided slices of the shared results array
+        result_slice_sig = types.float64[:]
+        input_sig = (
+            csc_sig,  # sorted control data
+            csc_sig,  # sorted target data
+            n_zeros_sig,  # n_zeros_ref
+            types.uint32[::1],  # n_uniques_ref
+            types.int64[::1],  # ref_block_offsets
+            types.int64[::1],  # tie_sums_ref
+            types.boolean,  # use_continuity
+            types.boolean,  # tie_correct
+            types.string,  # alternative
+            result_slice_sig,  # p-values
+            result_slice_sig,  # z-scores
+            result_slice_sig,  # U-statistics
+        )
+        # Results are written in place
+        out_sig = types.none
     else:
         GroupContainerType = types.NamedTuple(
             [

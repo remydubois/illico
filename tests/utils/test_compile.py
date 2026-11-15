@@ -1,10 +1,11 @@
 import anndata as ad
+import numpy as np
 import pytest
 
+from illico.ovo.sparse_ovo import compute_sparse_unique_values_and_offsets
 from illico.utils.compile import _precompile
 from illico.utils.groups import encode_and_count_groups
 from illico.utils.registry import (
-    DaskArrayDataHandler,
     KernelDataFormat,
     data_handler_registry,
 )
@@ -25,15 +26,27 @@ def test_precompile(rand_adata, test):
     assert (len(leg_sig := dispatcher.nopython_signatures)) > 0, "Dispatcher should be compiled now."
 
     # Now check that re-running does not trigger another compilation
-    if (
-        data_handler.is_lazy
-        and data_handler.kernel_data_format() is KernelDataFormat.CSR
-        and reference is not None
-        and not isinstance(data_handler, DaskArrayDataHandler)
-    ):
-        x_csr = data_handler.to_nb(data_handler.data[:])
-        x_csc = csr_to_csc(x_csr)
-        dispatcher(x_csc, x_csc, False, False, "two-sided")
+    if data_handler.is_lazy and data_handler.kernel_data_format() is KernelDataFormat.CSR and reference is not None:
+        # Call the kernel the same way `ovo_lazy_csr_operator` does
+        x_csr = data_handler.to_nb(data_handler.fetch_rows(np.arange(rand_adata.n_obs)))
+        x_csc = csr_to_csc(x_csr, include_indices=False)
+        n_zeros = x_csc.shape[0] - np.diff(x_csc.indptr)
+        offsets, n_uniques, tie_sums = compute_sparse_unique_values_and_offsets(x_csc)
+        results = np.empty((1, x_csc.shape[1], 4), dtype=np.float64)
+        dispatcher(
+            x_csc,
+            x_csc,
+            n_zeros,
+            n_uniques,
+            offsets,
+            tie_sums,
+            False,
+            False,
+            "two-sided",
+            results[0, :, 0],
+            results[0, :, 2],
+            results[0, :, 1],
+        )
     else:
         # Now run the dispatcher
         _, grpc = encode_and_count_groups(rand_adata.obs.pert.values, reference)

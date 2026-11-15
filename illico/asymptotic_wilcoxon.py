@@ -438,12 +438,19 @@ def asymptotic_wilcoxon(
                 "prior to computing DE genes."
             )
 
+    # The OVO test on lazy CSR data has its own operator, which only has a Numba kernel.
+    is_lazy_csr_ovo = (
+        data_handler.is_lazy and data_handler.kernel_data_format() is KernelDataFormat.CSR and reference is not None
+    )
+    if is_lazy_csr_ovo and use_rust:
+        use_rust = False
+        logger.info("There is no Rust kernel for the lazy CSR format. Falling back to the Numba kernel.")
+
     # Precompile if requested
     if precompile:
         if use_rust:
             logger.info("No precompilation needed for Rust kernels.")
         else:
-            # TODO: this branch is not reached if use_rust and special lazy ovo CSR, yet it should as Numba is used in this scenario.
             _precompile(data_handler, reference)
 
     # Process the groups information
@@ -478,11 +485,7 @@ def asymptotic_wilcoxon(
         Parallel(n_threads, prefer="threads", return_as="generator_unordered") as pool,
         tqdm(total=n_tests, smoothing=0.0, unit="it", unit_scale=True, unit_divisor=1000) as pbar,
     ):
-        if data_handler.is_lazy and data_handler.kernel_data_format() is KernelDataFormat.CSR and reference is not None:
-            if use_rust:
-                use_rust = False
-                logger.info("There is no Rust kernel for the lazy CSR format. Falling back to the Numba kernel.")
-
+        if is_lazy_csr_ovo:
             logger.trace(
                 f"Performing OVO test on lazy-loaded CSR data. Processing data group by group with {n_threads} threads."
             )
