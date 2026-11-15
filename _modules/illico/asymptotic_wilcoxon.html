@@ -675,12 +675,19 @@
                 <span class="s2">&quot;prior to computing DE genes.&quot;</span>
             <span class="p">)</span>
 
+    <span class="c1"># The OVO test on lazy CSR data has its own operator, which only has a Numba kernel.</span>
+    <span class="n">is_lazy_csr_ovo</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">data_handler</span><span class="o">.</span><span class="n">is_lazy</span> <span class="ow">and</span> <span class="n">data_handler</span><span class="o">.</span><span class="n">kernel_data_format</span><span class="p">()</span> <span class="ow">is</span> <span class="n">KernelDataFormat</span><span class="o">.</span><span class="n">CSR</span> <span class="ow">and</span> <span class="n">reference</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">is_lazy_csr_ovo</span> <span class="ow">and</span> <span class="n">use_rust</span><span class="p">:</span>
+        <span class="n">use_rust</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;There is no Rust kernel for the lazy CSR format. Falling back to the Numba kernel.&quot;</span><span class="p">)</span>
+
     <span class="c1"># Precompile if requested</span>
     <span class="k">if</span> <span class="n">precompile</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">use_rust</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;No precompilation needed for Rust kernels.&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># TODO: this branch is not reached if use_rust and special lazy ovo CSR, yet it should as Numba is used in this scenario.</span>
             <span class="n">_precompile</span><span class="p">(</span><span class="n">data_handler</span><span class="p">,</span> <span class="n">reference</span><span class="p">)</span>
 
     <span class="c1"># Process the groups information</span>
@@ -715,11 +722,7 @@
         <span class="n">Parallel</span><span class="p">(</span><span class="n">n_threads</span><span class="p">,</span> <span class="n">prefer</span><span class="o">=</span><span class="s2">&quot;threads&quot;</span><span class="p">,</span> <span class="n">return_as</span><span class="o">=</span><span class="s2">&quot;generator_unordered&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">,</span>
         <span class="n">tqdm</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="n">n_tests</span><span class="p">,</span> <span class="n">smoothing</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;it&quot;</span><span class="p">,</span> <span class="n">unit_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">unit_divisor</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span> <span class="k">as</span> <span class="n">pbar</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="k">if</span> <span class="n">data_handler</span><span class="o">.</span><span class="n">is_lazy</span> <span class="ow">and</span> <span class="n">data_handler</span><span class="o">.</span><span class="n">kernel_data_format</span><span class="p">()</span> <span class="ow">is</span> <span class="n">KernelDataFormat</span><span class="o">.</span><span class="n">CSR</span> <span class="ow">and</span> <span class="n">reference</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">use_rust</span><span class="p">:</span>
-                <span class="n">use_rust</span> <span class="o">=</span> <span class="kc">False</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;There is no Rust kernel for the lazy CSR format. Falling back to the Numba kernel.&quot;</span><span class="p">)</span>
-
+        <span class="k">if</span> <span class="n">is_lazy_csr_ovo</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Performing OVO test on lazy-loaded CSR data. Processing data group by group with </span><span class="si">{</span><span class="n">n_threads</span><span class="si">}</span><span class="s2"> threads.&quot;</span>
             <span class="p">)</span>
